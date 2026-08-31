@@ -1,0 +1,65 @@
+{
+  "name": "@blazingagents/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Blazing Agents API",
+  "homepage": "https://docs.blazingagents.com",
+  "bugs": {
+    "url": "https://github.com/blazingagents/typescript-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blazingagents/typescript-sdk.git"
+  },
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "check": "npm run typecheck && npm run test && npm run lint",
+    "fix": "ultracite fix",
+    "lint": "ultracite check",
+    "prepack": "npm run build",
+    "test": "vitest run --coverage",
+    "test:consumer": "npm run build && vitest run -c vitest.consumer.config.mts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json"
+  },
+  "dependencies": {
+    "croner": "10.0.1",
+    "nanoid": "6.0.1",
+    "yaml": "2.9.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "@types/node": "^26.4.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "ai": "^7.0.84",
+    "typescript": "^7.0.2",
+    "ultracite": "^7.10.2",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "ai": "^7.0.84"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -10,6 +10,7 @@ const publicContractNames = [
   "agentVersionSchema",
   "agentVersionsResponseSchema",
   "agentsResponseSchema",
+  "apiKeyTokenSchema",
   "approveMcpOauthAuthorizationBodySchema",
   "artifactDownloadUrlResponseSchema",
   "artifactListItemSchema",
@@ -33,6 +34,8 @@ const publicContractNames = [
   "createWorkspaceBodySchema",
   "decideToolApprovalBodySchema",
   "generationRequestBodySchema",
+  "isAdminAgentId",
+  "jsonSchemaShapeSchema",
   "mcpAttachmentResponseSchema",
   "mcpAttachmentsResponseSchema",
   "mcpConnectionAuthTypeSchema",
@@ -47,8 +50,11 @@ const publicContractNames = [
   "memoriesListResponseSchema",
   "memoryResponseSchema",
   "memorySchema",
+  "metadataSchema",
+  "promptIdSchema",
   "promptResponseSchema",
   "promptSchema",
+  "promptVariablesSchema",
   "promptsResponseSchema",
   "providerModelsResponseSchema",
   "providerResponseSchema",
@@ -108,5 +114,9 @@ describe("public contracts", () => {
       "ag_0123456789abcdef"
     );
     expect(() => contracts.agentIdSchema.parse("agent_1")).toThrow();
+    expect(contracts.promptIdSchema.parse("prompt_0123456789abcdef")).toBe(
+      "prompt_0123456789abcdef"
+    );
+    expect(contracts.isAdminAgentId("ag_adm0123456789ABC")).toBe(true);
   });
 });

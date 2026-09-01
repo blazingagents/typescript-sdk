@@ -2,6 +2,12 @@
 
 The resource-style client SDK for the Blazing Agents `/v1` API.
 
+## Installation
+
+```bash
+npm install @blazingagents/sdk ai@7.0.84
+```
+
 ## Overview
 
 The SDK wraps the Blazing Agents REST API with a thin, typed client in the

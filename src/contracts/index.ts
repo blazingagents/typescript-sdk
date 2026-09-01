@@ -17,13 +17,19 @@ export {
   artifactListItemSchema,
   artifactsListResponseSchema,
 } from "./entities/artifacts.ts";
-export { attributionCreateInputSchema } from "./entities/attribution.ts";
+export {
+  attributionCreateInputSchema,
+  metadataSchema,
+} from "./entities/attribution.ts";
+export type { PromptVariables, UsageSummary } from "./entities/chat.ts";
 export {
   blazingAgentsChatMessageMetadataSchema,
   chatModeSchema,
   chatRequestBodySchema,
   chatTriggerSchema,
   generationRequestBodySchema,
+  jsonSchemaShapeSchema,
+  promptVariablesSchema,
   usageSummarySchema,
 } from "./entities/chat.ts";
 export {
@@ -66,6 +72,10 @@ export {
   providerTypeSchema,
   updateProviderBodySchema,
 } from "./entities/providers.ts";
+export type {
+  ToolApprovalDecisionResponse,
+  ToolApprovalsResponse,
+} from "./entities/sessions.ts";
 export {
   decideToolApprovalBodySchema,
   sessionListItemSchema,
@@ -116,4 +126,10 @@ export {
   workspaceSchema,
   workspacesListResponseSchema,
 } from "./entities/workspaces.ts";
-export { agentIdSchema, sessionIdSchema } from "./ids.ts";
+export {
+  agentIdSchema,
+  apiKeyTokenSchema,
+  isAdminAgentId,
+  promptIdSchema,
+  sessionIdSchema,
+} from "./ids.ts";

@@ -18,6 +18,23 @@ stripe/openai-node shape. It provides:
 `ai` is a peer dependency (`^7`). The SDK re-exports `UIMessage` from `ai` —
 it never redeclares it.
 
+## Runtime contracts
+
+Import the public Zod schemas from the explicit contracts entry point:
+
+```ts
+import {
+  agentIdSchema,
+  createAgentBodySchema,
+} from "@blazingagents/sdk/contracts";
+
+const agentId = agentIdSchema.parse("ag_0123456789abcdef");
+const input = createAgentBodySchema.parse({ name: "Support agent" });
+```
+
+The contracts entry point contains public HTTP request and response schemas.
+Platform-only persistence and service contracts are not part of the SDK.
+
 ## Quick start
 
 ```ts

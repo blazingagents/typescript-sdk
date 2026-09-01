@@ -1,6 +1,25 @@
-# `@blazingagents/sdk`
+<div align="center">
+  <a href="https://docs.blazingagents.com">
+    <img src="https://raw.githubusercontent.com/blazingagents/docs/main/public/brand/icon.svg" alt="Blazing Agents logo" width="96">
+  </a>
+  <h1>Blazing Agents TypeScript SDK</h1>
+  <p>Build production agents with a typed TypeScript client for the Blazing Agents API.</p>
+  <p>
+    <a href="https://docs.blazingagents.com/sdk/typescript">Documentation</a> ·
+    <a href="https://www.npmjs.com/package/@blazingagents/sdk">npm</a>
+  </p>
+</div>
 
-The resource-style client SDK for the Blazing Agents `/v1` API.
+The official resource-style client SDK for the Blazing Agents `/v1` API.
+
+## Features
+
+- Typed resource clients for Agents, Workspaces, Skills, Providers, Prompts,
+  Tasks, Sessions, Artifacts, usage, and Tenant settings.
+- Stateful chat streams and stateless text or structured-object generation.
+- Public Zod contracts for validating API requests and responses.
+- Cursor pagination, binary uploads and downloads, and request correlation.
+- A single typed error model with forward-compatible server error codes.
 
 ## Installation
 
@@ -8,18 +27,11 @@ The resource-style client SDK for the Blazing Agents `/v1` API.
 npm install @blazingagents/sdk ai@7.0.84
 ```
 
-## Overview
+## Documentation
 
-The SDK wraps the Blazing Agents REST API with a thin, typed client in the
-stripe/openai-node shape. It provides:
-
-- **Resource namespaces** for management CRUD (`agents`, `workspaces`,
-  `prompts`, `providers`, `tasks`, `sessions`, `artifacts`, `tenant`, `usage`),
-  plus Agent-scoped Skills through `client.agent(agentId).skills`.
-- **Generation methods** with a raw `useChat` SSE relay and AI SDK–shaped
-  completion/object results.
-- **A single error class** (`BlazingAgentsError`) with known-code completion
-  and forward-compatible server codes.
+Read the
+[TypeScript SDK documentation](https://docs.blazingagents.com/sdk/typescript)
+for guides and the complete API reference.
 
 `ai` is a peer dependency (`^7`). The SDK re-exports `UIMessage` from `ai` —
 it never redeclares it.

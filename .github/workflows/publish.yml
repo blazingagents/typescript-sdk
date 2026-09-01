@@ -26,4 +26,4 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run test:consumer
-      - run: npm publish
+      - run: npm publish --provenance

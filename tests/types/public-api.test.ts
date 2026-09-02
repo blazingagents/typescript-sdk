@@ -227,7 +227,10 @@ sdk.tasks
   .then((run) => run.status.toUpperCase());
 sdk.tasks
   .runMessages("tk_0123456789abcdef", "tr_0123456789abcdef")
-  .then((messages) => messages.data.map((runMessage) => runMessage.id));
+  .then((messages) => ({
+    finishedAt: messages.finishedAt,
+    status: messages.status,
+  }));
 // @ts-expect-error unknown task fields are rejected
 sdk.tasks.update("tk_0123456789abcdef", { unknown: true });
 sdk.sessions

@@ -17,7 +17,7 @@ import {
 import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
 import { agentVersionNumberSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
-import { sessionMessageSchema } from "./sessions.ts";
+import { sessionMessagesResponseSchema } from "./sessions.ts";
 
 /**
  * Schedule kinds — discriminated union, Cohand's kinds with croner-forked
@@ -289,14 +289,14 @@ export const createTaskRunResponseSchema = z
   })
   .strict();
 
-// `GET .../runs/{runId}/messages` — task-run session transcript, paginated.
-// Mirrors `sessionMessagesResponseSchema`: `latestCursor` is the tail
-// position (newest seq) for the poll loop's `?after=` cursor.
-export const taskRunMessagesResponseSchema = z
-  .object({
-    data: z.array(sessionMessageSchema),
-    nextCursor: z.string().nullable(),
-    latestCursor: z.string().nullable(),
+// `GET .../runs/{runId}/messages` — task-run session transcript, paginated,
+// plus `status`, `error`, and `finishedAt` for a single client poll loop.
+// `latestCursor` remains the tail position for the next `?after=` request.
+export const taskRunMessagesResponseSchema = sessionMessagesResponseSchema
+  .extend({
+    error: z.string().nullable(),
+    finishedAt: z.iso.datetime({ offset: true }).nullable(),
+    status: taskRunStatusSchema,
   })
   .strict();
 

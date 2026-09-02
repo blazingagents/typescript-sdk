@@ -39,6 +39,14 @@ const taskRunRow = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
+const taskRunMessagesPage = {
+  data: [],
+  error: null,
+  finishedAt: null,
+  latestCursor: null,
+  nextCursor: null,
+  status: "running",
+};
 
 function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
   return new BlazingAgents({ apiKey: "ba_test", baseUrl: BASE, fetch });
@@ -262,12 +270,18 @@ describe("client.tasks", () => {
 
   it("runMessages gets /v1/tasks/:id/runs/:runId/messages", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { data: [], latestCursor: null, nextCursor: null },
+      body: taskRunMessagesPage,
     });
     const c = client(fetch);
-    await c.tasks.runMessages("tk_0123456789abcdef", "tr_0123456789abcdef", {
-      after: "tail",
-      limit: 5,
+    const page = await c.tasks.runMessages(
+      "tk_0123456789abcdef",
+      "tr_0123456789abcdef",
+      { after: "tail", limit: 5 }
+    );
+    expect(page).toMatchObject({
+      error: null,
+      finishedAt: null,
+      status: "running",
     });
     expect(calls[0].url).toContain("after=tail");
     expect(calls[0].url).toContain("limit=5");
@@ -284,7 +298,7 @@ describe("client.tasks", () => {
     ],
   ])("serializes run message options %#", async (options, suffix) => {
     const { fetch, calls } = createMockFetch({
-      body: { data: [], latestCursor: null, nextCursor: null },
+      body: taskRunMessagesPage,
     });
     await client(fetch).tasks.runMessages(
       "tk_0123456789abcdef",

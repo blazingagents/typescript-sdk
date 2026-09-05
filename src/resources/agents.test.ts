@@ -13,6 +13,7 @@ const agentVersion = {
   agentId: "ag_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
   version: 3,
+  thinkingLevel: "high",
   name: "Historical Builder",
   model: "anthropic/claude-sonnet-4.5",
   providerId: "prv_0123456789abcdef",
@@ -25,6 +26,37 @@ const agentVersion = {
 };
 
 describe("client.agents", () => {
+  it.each([null, "off", "max", "custom-level"])(
+    "round-trips thinking %s and preserves omission",
+    async (thinkingLevel) => {
+      const { fetch, calls } = createMockFetch({
+        body: agentRow({ thinkingLevel }),
+      });
+      const c = client(fetch);
+      expect(
+        (
+          await c.agents.create({
+            name: "Thinking",
+            model: "openrouter/test",
+            providerId: "prv_0123456789abcdef",
+            thinkingLevel,
+          })
+        ).thinkingLevel
+      ).toBe(thinkingLevel);
+      await c.agents.update("ag_0123456789abcdef", { thinkingLevel });
+      await c.agents.update("ag_0123456789abcdef", { name: "Renamed" });
+      expect(JSON.parse(calls[0].init?.body as string).thinkingLevel).toBe(
+        thinkingLevel
+      );
+      expect(JSON.parse(calls[1].init?.body as string)).toEqual({
+        thinkingLevel,
+      });
+      expect(JSON.parse(calls[2].init?.body as string)).not.toHaveProperty(
+        "thinkingLevel"
+      );
+    }
+  );
+
   it("create posts to /v1/agents and parses the response", async () => {
     const { fetch, calls } = createMockFetch({ body: agentRow() });
     const c = client(fetch);
@@ -191,6 +223,7 @@ describe("client.agents", () => {
       name: agentVersion.name,
       model: agentVersion.model,
       providerId: agentVersion.providerId,
+      thinkingLevel: agentVersion.thinkingLevel,
       memoryInjectionEnabled: agentVersion.memoryInjectionEnabled,
       tools: agentVersion.tools,
       instructions: agentVersion.instructions,

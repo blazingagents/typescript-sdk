@@ -45,6 +45,7 @@ import type {
   ProviderModelsResponse,
   ProviderResponse,
   ProvidersResponse,
+  ThinkingLevelsResponse,
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 import type {
@@ -413,6 +414,7 @@ export interface ProvidersResource {
   create(body: CreateProviderBody): Promise<ProviderResponse>;
   delete(id: string, options?: DeleteProviderOptions): Promise<void>;
   get(id: string): Promise<ProviderResponse>;
+  getThinkingLevels(id: string, model: string): Promise<ThinkingLevelsResponse>;
   list(): Promise<ProvidersResponse>;
   listModels(id: string): Promise<ProviderModelsResponse>;
   update(id: string, body: UpdateProviderBody): Promise<ProviderResponse>;

@@ -156,3 +156,13 @@ export interface DeleteProviderOptions {
 export type ProviderResponse = z.infer<typeof providerResponseSchema>;
 export type CreateProviderBody = z.infer<typeof createProviderBodySchema>;
 export type UpdateProviderBody = z.infer<typeof updateProviderBodySchema>;
+
+export const thinkingLevelsResponseSchema = z
+  .object({
+    known: z.boolean(),
+    levels: z.array(z.string().min(1)),
+  })
+  .strict();
+export type ThinkingLevelsResponse = z.infer<
+  typeof thinkingLevelsResponseSchema
+>;

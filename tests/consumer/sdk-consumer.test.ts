@@ -18,6 +18,7 @@ const agent = {
   model: null,
   name: "Consumer Agent",
   providerId: null,
+  thinkingLevel: null,
   workspaceId: "ws_0123456789abcdef",
   status: "active",
   tenantId: "ten_0123456789abcdef",

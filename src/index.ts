@@ -50,6 +50,7 @@ export type {
   ProviderResponse,
   ProvidersResponse,
   ProviderType,
+  ThinkingLevelsResponse,
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 export type {

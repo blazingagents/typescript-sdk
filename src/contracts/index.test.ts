@@ -85,6 +85,7 @@ const publicContractNames = [
   "tenantResponseSchema",
   "tenantSchema",
   "tenantSettingsResponseSchema",
+  "thinkingLevelsResponseSchema",
   "toolApprovalContinuationStateSchema",
   "toolApprovalDecisionResponseSchema",
   "toolApprovalStateSchema",

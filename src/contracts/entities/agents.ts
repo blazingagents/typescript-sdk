@@ -67,6 +67,7 @@ export const agentSchema = z
     tenantId: tenantIdSchema,
     name: agentNameSchema,
     model: agentModelIdSchema.nullable(),
+    thinkingLevel: z.string().min(1).nullable(),
     providerId: providerIdSchema.nullable(),
     workspaceId: workspaceIdSchema,
     memoryInjectionEnabled: z.boolean(),
@@ -110,6 +111,7 @@ export const agentVersionSchema = z
     version: agentVersionNumberSchema,
     name: agentSchema.shape.name,
     model: agentSchema.shape.model,
+    thinkingLevel: agentSchema.shape.thinkingLevel,
     providerId: agentSchema.shape.providerId,
     memoryInjectionEnabled: agentSchema.shape.memoryInjectionEnabled,
     tools: agentSchema.shape.tools,
@@ -143,6 +145,7 @@ export const createAgentBodySchema = z
   .object({
     name: agentNameSchema,
     model: agentModelIdSchema.nullable().default(null),
+    thinkingLevel: z.string().min(1).nullable().default(null),
     providerId: providerIdSchema.nullable().default(null),
     workspaceId: workspaceIdSchema.optional(),
     memoryInjectionEnabled: z.boolean().default(false),
@@ -162,6 +165,7 @@ export const updateAgentBodySchema = z
   .object({
     name: agentNameSchema.optional(),
     model: agentModelIdSchema.nullable().optional(),
+    thinkingLevel: z.string().min(1).nullable().optional(),
     providerId: providerIdSchema.nullable().optional(),
     workspaceId: workspaceIdSchema.optional(),
     memoryInjectionEnabled: z.boolean().optional(),

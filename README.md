@@ -70,3 +70,14 @@ npm run test:consumer
 ## License
 
 [MIT](LICENSE)
+
+### Thinking level
+
+Agent create/update accepts `thinkingLevel: "high"`, `"off"`, `"max"`, or
+another nonempty string supported by the selected Model. Omission on creation
+means Provider default; omission on update preserves the saved value, while
+`thinkingLevel: null` clears it. Agent and Version responses include the
+selection, and `restoreVersion` restores it through ordinary validation.
+Use `client.providers.getThinkingLevels(providerId, model)` to read
+`{ known, levels }`. Unknown capabilities permit custom values that can still
+be rejected during execution. Levels control reasoning, not a token/cost cap.

@@ -128,6 +128,7 @@ export function agentRow(
     name: "Test Agent",
     model: "openrouter/test-model",
     providerId: "prv_0123456789abcdef",
+    thinkingLevel: null,
     workspaceId: "ws_0123456789abcdef",
     memoryInjectionEnabled: false,
     tools: ["workspace"],

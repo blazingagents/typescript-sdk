@@ -11,6 +11,7 @@ import {
   createTaskResponseSchema,
   createTaskRunResponseSchema,
   taskListItemSchema,
+  taskRunMessagesResponseSchema,
   taskRunSchema,
   taskSchema,
   tasksListQuerySchema,
@@ -132,5 +133,30 @@ describe("createTaskResponseSchema + createTaskRunResponseSchema", () => {
     expect(
       createTaskRunResponseSchema.parse({ runId: taskRunId })
     ).toStrictEqual({ runId: taskRunId });
+  });
+});
+
+describe("taskRunMessagesResponseSchema", () => {
+  it("includes run state with the transcript", () => {
+    expect(
+      taskRunMessagesResponseSchema.parse({
+        data: [],
+        error: null,
+        finishedAt: iso,
+        latestCursor: null,
+        nextCursor: null,
+        status: "succeeded",
+      })
+    ).toMatchObject({ error: null, finishedAt: iso, status: "succeeded" });
+  });
+
+  it("requires run state", () => {
+    expect(
+      taskRunMessagesResponseSchema.safeParse({
+        data: [],
+        latestCursor: null,
+        nextCursor: null,
+      }).success
+    ).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import {
   providerModelsResponseSchema,
   providerResponseSchema,
   providersResponseSchema,
+  thinkingLevelsResponseSchema,
 } from "../contracts/entities/providers.ts";
 import { requestJson } from "../http.ts";
 import type { HttpConfig, ProvidersResource } from "../types.ts";
@@ -45,6 +46,14 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         `/v1/providers/${id}/models`,
         {},
         providerModelsResponseSchema
+      );
+    },
+    async getThinkingLevels(id, model) {
+      return await requestJson(
+        config,
+        `/v1/providers/${id}/thinking-levels`,
+        { query: { model } },
+        thinkingLevelsResponseSchema
       );
     },
     async update(id, body) {

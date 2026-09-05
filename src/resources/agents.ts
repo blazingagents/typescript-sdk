@@ -108,6 +108,7 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
       return update(agentId, {
         name: version.name,
         model: version.model,
+        thinkingLevel: version.thinkingLevel,
         providerId: version.providerId,
         memoryInjectionEnabled: version.memoryInjectionEnabled,
         tools: version.tools,

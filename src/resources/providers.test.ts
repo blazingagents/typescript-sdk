@@ -19,6 +19,26 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 }
 
 describe("client.providers", () => {
+  it.each([
+    { known: true, levels: ["off", "high", "max"] },
+    { known: true, levels: [] },
+    { known: false, levels: [] },
+  ])("reads exact model thinking capabilities %j", async (body) => {
+    const { fetch, calls } = createMockFetch({ body });
+    expect(
+      await client(fetch).providers.getThinkingLevels(
+        providerRow.id,
+        "openai/gpt-5"
+      )
+    ).toEqual(body);
+    expect(new URL(calls[0].url).searchParams.get("model")).toBe(
+      "openai/gpt-5"
+    );
+    expect(new URL(calls[0].url).pathname).toBe(
+      `/v1/providers/${providerRow.id}/thinking-levels`
+    );
+  });
+
   it("create posts to /v1/providers", async () => {
     const { fetch, calls } = createMockFetch({ body: providerRow });
     const c = client(fetch);

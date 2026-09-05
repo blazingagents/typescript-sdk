@@ -70,6 +70,7 @@ export {
   providerResponseSchema,
   providersResponseSchema,
   providerTypeSchema,
+  thinkingLevelsResponseSchema,
   updateProviderBodySchema,
 } from "./entities/providers.ts";
 export type {

@@ -239,11 +239,15 @@ export interface ChatResult {
    */
   sessionId: Promise<string>;
   toResponse: () => Response;
+  /** Claims the SSE bytes once, without constructing a Response. Shares ownership with toResponse(). */
+  toStream: () => ReadableStream<Uint8Array>;
 }
 
 export interface TerminalStreamResult {
   requestId?: string;
   toResponse: () => Response;
+  /** Claims the SSE bytes once, without constructing a Response. Shares ownership with toResponse(). */
+  toStream: () => ReadableStream<Uint8Array>;
 }
 
 interface StatelessGenerationInput

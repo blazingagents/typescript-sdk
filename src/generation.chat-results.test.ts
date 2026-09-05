@@ -33,6 +33,7 @@ describe("client.chat result", () => {
       "requestId",
       "sessionId",
       "toResponse",
+      "toStream",
     ]);
     expect(result.requestId).toBe("request-chat-1");
 

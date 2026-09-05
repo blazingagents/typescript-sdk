@@ -81,3 +81,8 @@ selection, and `restoreVersion` restores it through ordinary validation.
 Use `client.providers.getThinkingLevels(providerId, model)` to read
 `{ known, levels }`. Unknown capabilities permit custom values that can still
 be rejected during execution. Levels control reasoning, not a token/cost cap.
+
+For native clients whose `Response` constructor does not support streaming bodies,
+use `result.toStream()` on chat or terminal continuation results to read the
+original SSE bytes. It shares one-shot ownership with `toResponse()`; choose one
+accessor per result. Stream errors and cancellation retain the same behavior.

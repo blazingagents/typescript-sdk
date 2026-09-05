@@ -175,6 +175,7 @@ export function buildTerminalStreamResult(
 
   return {
     requestId,
+    toStream: claimBody,
     toResponse: () => {
       const headers = replacementResponseHeaders(requestId, location);
       headers.set("content-type", "text/event-stream");

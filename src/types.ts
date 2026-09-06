@@ -206,22 +206,22 @@ type ChatSessionInput = NewSessionInput | ExistingSessionInput;
 interface ChatMessageContentInput
   extends AttributionInput,
     CorrelatedRequestInput {
+  abortSignal?: AbortSignal;
   agentId: string;
   message: UIMessage;
   messageId?: string;
   promptId?: never;
-  signal?: AbortSignal;
   variables?: never;
 }
 
 interface ChatPromptContentInput
   extends AttributionInput,
     CorrelatedRequestInput {
+  abortSignal?: AbortSignal;
   agentId: string;
   message?: never;
   messageId?: string;
   promptId: string;
-  signal?: AbortSignal;
   variables?: Record<string, string>;
 }
 
@@ -257,20 +257,20 @@ interface StatelessGenerationInput
 }
 
 export interface CompletionPromptInput extends StatelessGenerationInput {
+  abortSignal?: AbortSignal;
   agentId: string;
   prompt: string;
   promptId?: never;
   schema?: never;
-  signal?: AbortSignal;
   variables?: never;
 }
 
 export interface CompletionPromptIdInput extends StatelessGenerationInput {
+  abortSignal?: AbortSignal;
   agentId: string;
   prompt?: never;
   promptId: string;
   schema?: never;
-  signal?: AbortSignal;
   variables?: Record<string, string>;
 }
 
@@ -284,20 +284,20 @@ export interface CompletionResult {
 }
 
 export interface ObjectPromptInput extends StatelessGenerationInput {
+  abortSignal?: AbortSignal;
   agentId: string;
   prompt: string;
   promptId?: never;
   schema: Record<string, unknown>;
-  signal?: AbortSignal;
   variables?: never;
 }
 
 export interface ObjectPromptIdInput extends StatelessGenerationInput {
+  abortSignal?: AbortSignal;
   agentId: string;
   prompt?: never;
   promptId: string;
   schema: Record<string, unknown>;
-  signal?: AbortSignal;
   variables?: Record<string, string>;
 }
 
@@ -310,115 +310,132 @@ export interface ObjectResult {
   toResponse: () => Response;
 }
 
-export type ResourceReadOptions = Pick<RequestOptions, "signal">;
+export interface ResourceRequestOptions {
+  abortSignal?: AbortSignal;
+}
 
 export interface AgentsResource {
   /** Omitting `workspaceId` attaches a default Workspace with a lazy runtime. */
-  create(body: CreateAgentBody): Promise<Agent>;
+  create(input: CreateAgentBody & ResourceRequestOptions): Promise<Agent>;
   /** Deletes the Agent while preserving its attached Workspace. */
-  delete(agentId: string, includeArtifacts: boolean): Promise<void>;
-  disable(agentId: string): Promise<Agent>;
-  enable(agentId: string): Promise<Agent>;
-  get(agentId: string, options?: ResourceReadOptions): Promise<Agent>;
+  delete(
+    input: {
+      agentId: string;
+      includeArtifacts: boolean;
+    } & ResourceRequestOptions
+  ): Promise<void>;
+  disable(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
+  enable(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
+  get(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
   getVersion(
-    agentId: string,
-    version: number,
-    options?: ResourceReadOptions
+    input: { agentId: string; version: number } & ResourceRequestOptions
   ): Promise<AgentVersion>;
-  list(options?: AgentsListOptions): Promise<AgentsResponse>;
+  list(input?: AgentsListOptions): Promise<AgentsResponse>;
   listMcpAttachments(
-    agentId: string,
-    options?: ResourceReadOptions
+    input: { agentId: string } & ResourceRequestOptions
   ): Promise<McpAttachmentsResponse>;
   listVersions(
-    agentId: string,
-    options?: AgentVersionsListOptions
+    input: { agentId: string } & AgentVersionsListOptions
   ): Promise<AgentVersionsResponse>;
-  removeAvatar(agentId: string): Promise<Agent>;
-  /**
-   * Copies an immutable Version's configuration into the Agent through the
-   * ordinary update path, creating a new latest Version without rewriting history.
-   */
-  restoreVersion(agentId: string, version: number): Promise<Agent>;
+  removeAvatar(
+    input: { agentId: string } & ResourceRequestOptions
+  ): Promise<Agent>;
+  /** Copies an immutable Version into the Agent, creating a new latest Version. */
+  restoreVersion(
+    input: { agentId: string; version: number } & ResourceRequestOptions
+  ): Promise<Agent>;
   /** A concrete `workspaceId` switches the Agent; detachment is unsupported. */
-  update(agentId: string, body: UpdateAgentBody): Promise<Agent>;
+  update(
+    input: UpdateAgentBody & { agentId: string } & ResourceRequestOptions
+  ): Promise<Agent>;
   updateMcpAttachment(
-    agentId: string,
-    mcpConnectionId: string,
-    body: UpdateMcpAttachmentBody
+    input: UpdateMcpAttachmentBody & {
+      agentId: string;
+      mcpConnectionId: string;
+    } & ResourceRequestOptions
   ): Promise<McpAttachmentResponse>;
-  uploadAvatar(agentId: string, file: File): Promise<Agent>;
+  uploadAvatar(
+    input: { agentId: string; file: File } & ResourceRequestOptions
+  ): Promise<Agent>;
 }
 
 export interface AgentClient {
   readonly skills: AgentSkillsResource;
 }
 
-export interface AgentsListOptions extends ResourceReadOptions {
+export interface AgentsListOptions extends ResourceRequestOptions {
   userId?: string;
   workspaceId?: string;
 }
 
 export interface WorkspacesResource {
-  create(body?: CreateWorkspaceBody): Promise<Workspace>;
-  delete(input: { workspaceId: string }): Promise<"completed" | "pending">;
-  get(
-    input: { workspaceId: string },
-    options?: ResourceReadOptions
+  create(
+    input?: CreateWorkspaceBody & ResourceRequestOptions
   ): Promise<Workspace>;
-  list(options?: WorkspacesListOptions): Promise<WorkspacesListResponse>;
+  delete(
+    input: { workspaceId: string } & ResourceRequestOptions
+  ): Promise<"completed" | "pending">;
+  get(
+    input: { workspaceId: string } & ResourceRequestOptions
+  ): Promise<Workspace>;
+  list(input?: WorkspacesListOptions): Promise<WorkspacesListResponse>;
   update(
-    input: UpdateWorkspaceBody & { workspaceId: string }
+    input: UpdateWorkspaceBody & {
+      workspaceId: string;
+    } & ResourceRequestOptions
   ): Promise<Workspace>;
 }
 
-export interface WorkspacesListOptions extends ResourceReadOptions {
+export interface WorkspacesListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
   userId?: string;
 }
 
-export interface AgentVersionsListOptions extends ResourceReadOptions {
+export interface AgentVersionsListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
 }
 
-export interface ArtifactsListOptions extends ResourceReadOptions {
+export interface ArtifactsListOptions extends ResourceRequestOptions {
   agentId?: string;
   cursor?: string;
   sessionId?: string;
 }
 
 export interface ArtifactsResource {
-  createDownloadUrl(artifactId: string): Promise<ArtifactDownloadUrlResponse>;
-  delete(artifactId: string): Promise<void>;
+  createDownloadUrl(
+    input: { artifactId: string } & ResourceRequestOptions
+  ): Promise<ArtifactDownloadUrlResponse>;
+  delete(input: { artifactId: string } & ResourceRequestOptions): Promise<void>;
   get(
-    artifactId: string,
-    options?: ResourceReadOptions
+    input: { artifactId: string } & ResourceRequestOptions
   ): Promise<ArtifactListItem>;
-  list(options?: ArtifactsListOptions): Promise<ArtifactsListResponse>;
+  list(input?: ArtifactsListOptions): Promise<ArtifactsListResponse>;
 }
 
 export interface MemoriesResource {
-  create(agentId: string, body: CreateMemoryBody): Promise<MemoryResponse>;
-  delete(agentId: string, memoryId: string): Promise<void>;
+  create(
+    input: CreateMemoryBody & { agentId: string } & ResourceRequestOptions
+  ): Promise<MemoryResponse>;
+  delete(
+    input: { agentId: string; memoryId: string } & ResourceRequestOptions
+  ): Promise<void>;
   get(
-    agentId: string,
-    memoryId: string,
-    options?: ResourceReadOptions
+    input: { agentId: string; memoryId: string } & ResourceRequestOptions
   ): Promise<MemoryResponse>;
   list(
-    agentId: string,
-    options?: MemoriesListOptions
+    input: { agentId: string } & MemoriesListOptions
   ): Promise<MemoriesListResponse>;
   update(
-    agentId: string,
-    memoryId: string,
-    body: UpdateMemoryBody
+    input: UpdateMemoryBody & {
+      agentId: string;
+      memoryId: string;
+    } & ResourceRequestOptions
   ): Promise<MemoryResponse>;
 }
 
-export interface MemoriesListOptions extends ResourceReadOptions {
+export interface MemoriesListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
   search?: string;
@@ -426,60 +443,81 @@ export interface MemoriesListOptions extends ResourceReadOptions {
 }
 
 export interface PromptsResource {
-  create(body: CreatePromptBody): Promise<PromptResponse>;
-  delete(promptId: string): Promise<void>;
-  get(promptId: string, options?: ResourceReadOptions): Promise<PromptResponse>;
+  create(
+    input: CreatePromptBody & ResourceRequestOptions
+  ): Promise<PromptResponse>;
+  delete(input: { promptId: string } & ResourceRequestOptions): Promise<void>;
+  get(
+    input: { promptId: string } & ResourceRequestOptions
+  ): Promise<PromptResponse>;
   list(
-    userId?: string,
-    options?: ResourceReadOptions
+    input?: { userId?: string } & ResourceRequestOptions
   ): Promise<PromptsResponse>;
-  update(promptId: string, body: UpdatePromptBody): Promise<PromptResponse>;
+  update(
+    input: UpdatePromptBody & { promptId: string } & ResourceRequestOptions
+  ): Promise<PromptResponse>;
 }
 
 export interface ProvidersResource {
-  create(body: CreateProviderBody): Promise<ProviderResponse>;
-  delete(id: string, options?: DeleteProviderOptions): Promise<void>;
-  get(id: string, options?: ResourceReadOptions): Promise<ProviderResponse>;
+  create(
+    input: CreateProviderBody & ResourceRequestOptions
+  ): Promise<ProviderResponse>;
+  delete(
+    input: DeleteProviderOptions & {
+      providerId: string;
+    } & ResourceRequestOptions
+  ): Promise<void>;
+  get(
+    input: { providerId: string } & ResourceRequestOptions
+  ): Promise<ProviderResponse>;
   getThinkingLevels(
-    id: string,
-    model: string,
-    options?: ResourceReadOptions
+    input: { providerId: string; model: string } & ResourceRequestOptions
   ): Promise<ThinkingLevelsResponse>;
-  list(options?: ResourceReadOptions): Promise<ProvidersResponse>;
+  list(input?: ResourceRequestOptions): Promise<ProvidersResponse>;
   listModels(
-    id: string,
-    options?: ResourceReadOptions
+    input: { providerId: string } & ResourceRequestOptions
   ): Promise<ProviderModelsResponse>;
-  update(id: string, body: UpdateProviderBody): Promise<ProviderResponse>;
+  update(
+    input: UpdateProviderBody & { providerId: string } & ResourceRequestOptions
+  ): Promise<ProviderResponse>;
 }
 
 export interface McpConnectionsResource {
-  connect(id: string): Promise<McpConnectionOauthConnectResponse>;
-  create(body: CreateMcpConnectionBody): Promise<McpConnectionResponse>;
-  delete(id: string): Promise<void>;
-  get(
-    id: string,
-    options?: ResourceReadOptions
+  connect(
+    input: { mcpConnectionId: string } & ResourceRequestOptions
+  ): Promise<McpConnectionOauthConnectResponse>;
+  create(
+    input: CreateMcpConnectionBody & ResourceRequestOptions
   ): Promise<McpConnectionResponse>;
-  list(options?: ResourceReadOptions): Promise<McpConnectionsResponse>;
+  delete(
+    input: { mcpConnectionId: string } & ResourceRequestOptions
+  ): Promise<void>;
+  get(
+    input: { mcpConnectionId: string } & ResourceRequestOptions
+  ): Promise<McpConnectionResponse>;
+  list(input?: ResourceRequestOptions): Promise<McpConnectionsResponse>;
   reconnect(
-    id: string,
-    body: ReconnectMcpConnectionBody
+    input: ReconnectMcpConnectionBody & {
+      mcpConnectionId: string;
+    } & ResourceRequestOptions
   ): Promise<McpConnectionReconnectResult>;
-  test(id: string): Promise<McpConnectionTestResponse>;
+  test(
+    input: { mcpConnectionId: string } & ResourceRequestOptions
+  ): Promise<McpConnectionTestResponse>;
   update(
-    id: string,
-    body: UpdateMcpConnectionBody
+    input: UpdateMcpConnectionBody & {
+      mcpConnectionId: string;
+    } & ResourceRequestOptions
   ): Promise<McpConnectionResponse>;
 }
 
-export interface SessionsListOptions extends ResourceReadOptions {
+export interface SessionsListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
   userId?: string;
 }
 
-export interface SessionMessagesOptions extends ResourceReadOptions {
+export interface SessionMessagesOptions extends ResourceRequestOptions {
   after?: string;
   cursor?: string;
   limit?: number;
@@ -487,130 +525,134 @@ export interface SessionMessagesOptions extends ResourceReadOptions {
 
 export interface SessionsResource {
   decideToolApproval(
-    agentId: string,
-    sessionId: string,
-    approvalId: string,
-    decision: DecideToolApprovalBody,
-    options?: { signal?: AbortSignal }
+    input: DecideToolApprovalBody & {
+      agentId: string;
+      sessionId: string;
+      approvalId: string;
+    } & ResourceRequestOptions
   ): Promise<ToolApprovalDecisionResponse>;
   delete(
-    agentId: string,
-    sessionId: string,
-    deleteArtifacts: boolean
+    input: {
+      agentId: string;
+      sessionId: string;
+      deleteArtifacts: boolean;
+    } & ResourceRequestOptions
   ): Promise<void>;
   joinToolApprovalContinuation(
-    agentId: string,
-    sessionId: string,
-    continuationId: string,
-    options?: { signal?: AbortSignal }
+    input: {
+      agentId: string;
+      sessionId: string;
+      continuationId: string;
+    } & ResourceRequestOptions
   ): Promise<TerminalStreamResult>;
   list(
-    agentId: string,
-    options?: SessionsListOptions
+    input: { agentId: string } & SessionsListOptions
   ): Promise<SessionsListResponse>;
   messages(
-    agentId: string,
-    sessionId: string,
-    options?: SessionMessagesOptions
+    input: { agentId: string; sessionId: string } & SessionMessagesOptions
   ): Promise<SessionMessagesResponse>;
   toolApprovals(
-    agentId: string,
-    sessionId: string,
-    options?: ResourceReadOptions
+    input: { agentId: string; sessionId: string } & ResourceRequestOptions
   ): Promise<ToolApprovalsResponse>;
 }
 
 export interface AgentSkillsResource {
-  copy(input: {
-    skillId: string;
-    to: { agentIds: string[] };
-  }): Promise<SkillCopyResults>;
-  create(input: CreateSkillBody): Promise<SkillDetail>;
-  delete(input: { skillId: string }): Promise<void>;
-  deleteFile(input: { path: string; skillId: string }): Promise<SkillDetail>;
+  copy(
+    input: {
+      skillId: string;
+      to: { agentIds: string[] };
+    } & ResourceRequestOptions
+  ): Promise<SkillCopyResults>;
+  create(input: CreateSkillBody & ResourceRequestOptions): Promise<SkillDetail>;
+  delete(input: { skillId: string } & ResourceRequestOptions): Promise<void>;
+  deleteFile(
+    input: { path: string; skillId: string } & ResourceRequestOptions
+  ): Promise<SkillDetail>;
   get(
-    input: { skillId: string },
-    options?: ResourceReadOptions
+    input: { skillId: string } & ResourceRequestOptions
   ): Promise<SkillDetail>;
   getFile(
-    input: { path: string; skillId: string },
-    options?: ResourceReadOptions
+    input: { path: string; skillId: string } & ResourceRequestOptions
   ): Promise<Uint8Array>;
-  list(options?: SkillsListOptions): Promise<SkillsListResponse>;
-  putFile(input: {
-    content: Blob | string | Uint8Array;
-    path: string;
-    skillId: string;
-  }): Promise<SkillDetail>;
-  upload(input: {
-    source: {
-      file: Blob | Uint8Array;
-      type: SkillArchiveType;
-    };
-  }): Promise<SkillDetail>;
+  list(input?: SkillsListOptions): Promise<SkillsListResponse>;
+  putFile(
+    input: {
+      content: Blob | string | Uint8Array;
+      path: string;
+      skillId: string;
+    } & ResourceRequestOptions
+  ): Promise<SkillDetail>;
+  upload(
+    input: {
+      source: { file: Blob | Uint8Array; type: SkillArchiveType };
+    } & ResourceRequestOptions
+  ): Promise<SkillDetail>;
 }
 
-export interface SkillsListOptions extends ResourceReadOptions {
+export interface SkillsListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
 }
 
-export interface TasksListOptions extends ResourceReadOptions {
+export interface TasksListOptions extends ResourceRequestOptions {
   agentId?: string;
   cursor?: string;
   limit?: number;
   userId?: string;
 }
 
-export interface TaskRunsListOptions extends ResourceReadOptions {
+export interface TaskRunsListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
 }
 
-export interface TaskRunMessagesOptions extends ResourceReadOptions {
+export interface TaskRunMessagesOptions extends ResourceRequestOptions {
   after?: string;
   cursor?: string;
   limit?: number;
 }
 
 export interface TasksResource {
-  cancelRun(taskId: string, runId: string): Promise<void>;
-  create(body: CreateTaskBody): Promise<CreateTaskResponse>;
+  cancelRun(
+    input: { taskId: string; runId: string } & ResourceRequestOptions
+  ): Promise<void>;
+  create(
+    input: CreateTaskBody & ResourceRequestOptions
+  ): Promise<CreateTaskResponse>;
   createRun(
-    taskId: string,
-    body?: CreateTaskRunBody
+    input: CreateTaskRunBody & { taskId: string } & ResourceRequestOptions
   ): Promise<CreateTaskRunResponse>;
-  delete(taskId: string): Promise<void>;
-  get(taskId: string, options?: ResourceReadOptions): Promise<TaskResponse>;
+  delete(input: { taskId: string } & ResourceRequestOptions): Promise<void>;
+  get(
+    input: { taskId: string } & ResourceRequestOptions
+  ): Promise<TaskResponse>;
   getRun(
-    taskId: string,
-    runId: string,
-    options?: ResourceReadOptions
+    input: { taskId: string; runId: string } & ResourceRequestOptions
   ): Promise<TaskRunResponse>;
-  list(options?: TasksListOptions): Promise<TasksListResponse>;
+  list(input?: TasksListOptions): Promise<TasksListResponse>;
   listRuns(
-    taskId: string,
-    options?: TaskRunsListOptions
+    input: { taskId: string } & TaskRunsListOptions
   ): Promise<TaskRunsListResponse>;
   runMessages(
-    taskId: string,
-    runId: string,
-    options?: TaskRunMessagesOptions
+    input: { taskId: string; runId: string } & TaskRunMessagesOptions
   ): Promise<TaskRunMessagesResponse>;
-  update(taskId: string, body: UpdateTaskBody): Promise<TaskResponse>;
+  update(
+    input: UpdateTaskBody & { taskId: string } & ResourceRequestOptions
+  ): Promise<TaskResponse>;
 }
 
 export interface TenantResource {
-  get(options?: ResourceReadOptions): Promise<TenantSettingsResponse>;
-  patch(body: UpdateTenantSettingsBody): Promise<TenantSettingsResponse>;
+  get(input?: ResourceRequestOptions): Promise<TenantSettingsResponse>;
+  patch(
+    input: UpdateTenantSettingsBody & ResourceRequestOptions
+  ): Promise<TenantSettingsResponse>;
 }
 
 export interface UsageResource {
   get(
-    query?: Partial<UsageQuery> & ResourceReadOptions
+    input?: Partial<UsageQuery> & ResourceRequestOptions
   ): Promise<UsageResponse>;
   getForAgent(
-    agentId: string,
-    query?: Partial<UsageQuery> & ResourceReadOptions
+    input: Partial<UsageQuery> & { agentId: string } & ResourceRequestOptions
   ): Promise<UsageResponse>;
 }

@@ -13,74 +13,83 @@ import type { HttpConfig, McpConnectionsResource } from "../types.ts";
 export function createMcpConnectionsResource(
   config: HttpConfig
 ): McpConnectionsResource {
-  const create = (async (
-    body: Parameters<McpConnectionsResource["create"]>[0]
-  ) =>
+  const create = (async ({
+    abortSignal,
+    ...body
+  }: Parameters<McpConnectionsResource["create"]>[0]) =>
     requestJson(
       config,
       "/v1/mcp-connections",
       {
         json: body,
+        signal: abortSignal,
         method: "POST",
       },
       mcpConnectionResponseSchema
     )) as McpConnectionsResource["create"];
   return {
-    async connect(id) {
+    async connect({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${id}/connect`,
-        { method: "POST" },
+        `/v1/mcp-connections/${mcpConnectionId}/connect`,
+        { method: "POST", signal: abortSignal },
         mcpConnectionOauthConnectResponseSchema
       );
     },
     create,
-    async list(options = {}) {
+    async list({ abortSignal } = {}) {
       return await requestJson(
         config,
         "/v1/mcp-connections",
-        options,
+        { signal: abortSignal },
         mcpConnectionsResponseSchema
       );
     },
-    async get(id, options = {}) {
+    async get({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${id}`,
-        options,
+        `/v1/mcp-connections/${mcpConnectionId}`,
+        { signal: abortSignal },
         mcpConnectionResponseSchema
       );
     },
-    async update(id, body) {
+    async update({ mcpConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${id}`,
+        `/v1/mcp-connections/${mcpConnectionId}`,
         {
           json: updateMcpConnectionBodySchema.parse(body),
+          signal: abortSignal,
           method: "PATCH",
         },
         mcpConnectionResponseSchema
       );
     },
-    async delete(id) {
-      await requestJson<void>(config, `/v1/mcp-connections/${id}`, {
-        method: "DELETE",
-      });
+    async delete({ mcpConnectionId, abortSignal }) {
+      await requestJson<void>(
+        config,
+        `/v1/mcp-connections/${mcpConnectionId}`,
+        {
+          method: "DELETE",
+          signal: abortSignal,
+        }
+      );
     },
-    async test(id) {
+    async test({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${id}/test`,
-        { method: "POST" },
+        `/v1/mcp-connections/${mcpConnectionId}/test`,
+        { method: "POST", signal: abortSignal },
         mcpConnectionTestResponseSchema
       );
     },
-    async reconnect(id, body) {
+    async reconnect({ mcpConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${id}/reconnect`,
+        `/v1/mcp-connections/${mcpConnectionId}/reconnect`,
         {
           json: reconnectMcpConnectionBodySchema.parse(body),
+          signal: abortSignal,
           method: "POST",
         },
         mcpConnectionReconnectResultSchema

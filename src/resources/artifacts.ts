@@ -12,28 +12,28 @@ import type { ArtifactsResource, HttpConfig } from "../types.ts";
 
 export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
   return {
-    async createDownloadUrl(artifactId) {
+    async createDownloadUrl({ artifactId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/artifacts/${artifactId}/download-url`,
-        { method: "POST" },
+        { method: "POST", signal: abortSignal },
         artifactDownloadUrlResponseSchema
       );
     },
-    async get(artifactId, options = {}) {
+    async get({ artifactId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/artifacts/${artifactId}`,
-        options,
+        { signal: abortSignal },
         artifactListItemSchema
       );
     },
-    async list(options = {}) {
+    async list({ abortSignal, ...options } = {}) {
       return await requestJson(
         config,
         "/v1/artifacts",
         {
-          signal: options.signal,
+          signal: abortSignal,
           query: {
             agentId: options.agentId,
             sessionId: options.sessionId,
@@ -43,9 +43,10 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactsListResponseSchema
       );
     },
-    async delete(artifactId) {
+    async delete({ artifactId, abortSignal }) {
       await requestJson<void>(config, `/v1/artifacts/${artifactId}`, {
         method: "DELETE",
+        signal: abortSignal,
       });
     },
   };

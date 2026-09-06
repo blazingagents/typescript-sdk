@@ -137,7 +137,8 @@ describe("client.tasks", () => {
     });
 
     const updateMock = createMockFetch({ body: taskRow });
-    await client(updateMock.fetch).tasks.update("tk_0123456789abcdef", {
+    await client(updateMock.fetch).tasks.update({
+      taskId: "tk_0123456789abcdef",
       agentVersion: null,
     });
     expect(JSON.parse(updateMock.calls[0].init?.body as string)).toEqual({
@@ -164,7 +165,7 @@ describe("client.tasks", () => {
   it("get gets /v1/tasks/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: taskRow });
     const c = client(fetch);
-    const task = await c.tasks.get("tk_0123456789abcdef");
+    const task = await c.tasks.get({ taskId: "tk_0123456789abcdef" });
     expect(task.id).toBe("tk_0123456789abcdef");
     expect(calls[0].url).toBe(`${BASE}/v1/tasks/tk_0123456789abcdef`);
   });
@@ -172,7 +173,7 @@ describe("client.tasks", () => {
   it("update PATCHes /v1/tasks/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: taskRow });
     const c = client(fetch);
-    await c.tasks.update("tk_0123456789abcdef", { name: "Renamed" });
+    await c.tasks.update({ taskId: "tk_0123456789abcdef", name: "Renamed" });
     expect(calls[0].init?.method).toBe("PATCH");
     expect(calls[0].url).toBe(`${BASE}/v1/tasks/tk_0123456789abcdef`);
   });
@@ -180,7 +181,7 @@ describe("client.tasks", () => {
   it("delete DELETEs /v1/tasks/:id", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.tasks.delete("tk_0123456789abcdef");
+    await c.tasks.delete({ taskId: "tk_0123456789abcdef" });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(`${BASE}/v1/tasks/tk_0123456789abcdef`);
   });
@@ -190,7 +191,8 @@ describe("client.tasks", () => {
       body: { runId: "tr_0123456789abcdef" },
     });
     const c = client(fetch);
-    const result = await c.tasks.createRun("tk_0123456789abcdef", {
+    const result = await c.tasks.createRun({
+      taskId: "tk_0123456789abcdef",
       idempotencyKey: "key1",
     });
     expect(result.runId).toBe("tr_0123456789abcdef");
@@ -207,7 +209,7 @@ describe("client.tasks", () => {
       body: { runId: "tr_0123456789abcdef" },
     });
     const c = client(fetch);
-    await c.tasks.createRun("tk_0123456789abcdef");
+    await c.tasks.createRun({ taskId: "tk_0123456789abcdef" });
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({});
   });
 
@@ -216,7 +218,10 @@ describe("client.tasks", () => {
       body: { data: [taskRunRow], nextCursor: null },
     });
     const c = client(fetch);
-    const page = await c.tasks.listRuns("tk_0123456789abcdef", { limit: 10 });
+    const page = await c.tasks.listRuns({
+      taskId: "tk_0123456789abcdef",
+      limit: 10,
+    });
     expect(page.data).toHaveLength(1);
     expect(calls[0].url).toContain("limit=10");
   });
@@ -229,7 +234,10 @@ describe("client.tasks", () => {
     const { fetch, calls } = createMockFetch({
       body: { data: [], nextCursor: null },
     });
-    await client(fetch).tasks.listRuns("tk_0123456789abcdef", options);
+    await client(fetch).tasks.listRuns({
+      taskId: "tk_0123456789abcdef",
+      ...options,
+    });
     expect(calls[0].url).toBe(
       `${BASE}/v1/tasks/tk_0123456789abcdef/runs${suffix}`
     );
@@ -238,10 +246,10 @@ describe("client.tasks", () => {
   it("getRun retrieves durable state in a later request", async () => {
     const { fetch, calls } = createMockFetch({ body: taskRunRow });
     const c = client(fetch);
-    const run = await c.tasks.getRun(
-      "tk_0123456789abcdef",
-      "tr_0123456789abcdef"
-    );
+    const run = await c.tasks.getRun({
+      taskId: "tk_0123456789abcdef",
+      runId: "tr_0123456789abcdef",
+    });
     expect(run.id).toBe("tr_0123456789abcdef");
     expect(calls[0].url).toBe(
       `${BASE}/v1/tasks/tk_0123456789abcdef/runs/tr_0123456789abcdef`
@@ -260,7 +268,10 @@ describe("client.tasks", () => {
     });
 
     await expect(
-      client(fetch).tasks.getRun("tk_0123456789abcdef", "tr_0123456789abcdef")
+      client(fetch).tasks.getRun({
+        taskId: "tk_0123456789abcdef",
+        runId: "tr_0123456789abcdef",
+      })
     ).resolves.toMatchObject({
       error: "provider_required",
       sessionId: null,
@@ -273,11 +284,12 @@ describe("client.tasks", () => {
       body: taskRunMessagesPage,
     });
     const c = client(fetch);
-    const page = await c.tasks.runMessages(
-      "tk_0123456789abcdef",
-      "tr_0123456789abcdef",
-      { after: "tail", limit: 5 }
-    );
+    const page = await c.tasks.runMessages({
+      taskId: "tk_0123456789abcdef",
+      runId: "tr_0123456789abcdef",
+      after: "tail",
+      limit: 5,
+    });
     expect(page).toMatchObject({
       error: null,
       finishedAt: null,
@@ -300,11 +312,11 @@ describe("client.tasks", () => {
     const { fetch, calls } = createMockFetch({
       body: taskRunMessagesPage,
     });
-    await client(fetch).tasks.runMessages(
-      "tk_0123456789abcdef",
-      "tr_0123456789abcdef",
-      options
-    );
+    await client(fetch).tasks.runMessages({
+      taskId: "tk_0123456789abcdef",
+      runId: "tr_0123456789abcdef",
+      ...options,
+    });
     expect(calls[0].url).toBe(
       `${BASE}/v1/tasks/tk_0123456789abcdef/runs/tr_0123456789abcdef/messages${suffix}`
     );
@@ -313,7 +325,10 @@ describe("client.tasks", () => {
   it("cancelRun posts to /v1/tasks/:id/runs/:runId/cancel", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.tasks.cancelRun("tk_0123456789abcdef", "tr_0123456789abcdef");
+    await c.tasks.cancelRun({
+      taskId: "tk_0123456789abcdef",
+      runId: "tr_0123456789abcdef",
+    });
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].url).toBe(
       `${BASE}/v1/tasks/tk_0123456789abcdef/runs/tr_0123456789abcdef/cancel`

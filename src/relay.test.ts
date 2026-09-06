@@ -75,7 +75,7 @@ describe("relay factories", () => {
       message,
       messageId: undefined,
       metadata: context.metadata,
-      signal: expect.any(AbortSignal),
+      abortSignal: expect.any(AbortSignal),
       trigger: "submit-message",
       userId: context.userId,
       version: 2,
@@ -208,7 +208,7 @@ describe("relay factories", () => {
       agentId: context.agentId,
       metadata: context.metadata,
       prompt: "Explain",
-      signal: expect.any(AbortSignal),
+      abortSignal: expect.any(AbortSignal),
       userId: context.userId,
       version: 2,
     });

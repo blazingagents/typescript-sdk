@@ -171,14 +171,15 @@ sdk.agents.create({
   name: "shared workspace",
   workspaceId: "ws_0123456789abcdef",
 });
-sdk.agents.update("ag_0123456789abcdef", { name: "renamed" });
-sdk.agents.update("ag_0123456789abcdef", {
+sdk.agents.update({ agentId: "ag_0123456789abcdef", name: "renamed" });
+sdk.agents.update({
+  agentId: "ag_0123456789abcdef",
   workspaceId: "ws_fedcba9876543210",
 });
 // @ts-expect-error an Agent cannot be created detached from a Workspace
 sdk.agents.create({ name: "detached", workspaceId: null });
 // @ts-expect-error an Agent cannot be detached from its Workspace
-sdk.agents.update("ag_0123456789abcdef", { workspaceId: null });
+sdk.agents.update({ agentId: "ag_0123456789abcdef", workspaceId: null });
 sdk.agents.list({ workspaceId: "ws_0123456789abcdef" });
 const createAgentWithMcp = {
   name: "connected",
@@ -188,9 +189,9 @@ const updateAgentMcp = {
   mcpConnectionIds: [],
 } satisfies UpdateAgentBody;
 sdk.agents.create(createAgentWithMcp);
-sdk.agents.update("ag_0123456789abcdef", updateAgentMcp);
+sdk.agents.update({ agentId: "ag_0123456789abcdef", ...updateAgentMcp });
 sdk.agents
-  .get("ag_0123456789abcdef")
+  .get({ agentId: "ag_0123456789abcdef" })
   .then((agent: AgentResponse) =>
     agent.mcpConnectionIds.map((id) => id.toUpperCase())
   );
@@ -214,29 +215,91 @@ sdk.workspaces.update({
 });
 sdk.workspaces.delete({ workspaceId: "ws_0123456789abcdef" });
 // @ts-expect-error agent id is immutable
-sdk.agents.update("ag_0123456789abcdef", { id: "ag_other" });
-sdk.prompts.update("prompt_0123456789abcdef", { name: "renamed" });
-// @ts-expect-error prompt tenant is immutable
-sdk.prompts.update("prompt_0123456789abcdef", { tenantId: "ten_other" });
-sdk.tasks.update("tk_0123456789abcdef", { name: "renamed" });
+sdk.agents.update({ agentId: "ag_0123456789abcdef", id: "ag_other" });
+sdk.prompts.update({ promptId: "prompt_0123456789abcdef", name: "renamed" });
+sdk.prompts.update({
+  promptId: "prompt_0123456789abcdef",
+  // @ts-expect-error prompt tenant is immutable
+  tenantId: "ten_other",
+});
+sdk.tasks.update({ taskId: "tk_0123456789abcdef", name: "renamed" });
 sdk.tasks
-  .createRun("tk_0123456789abcdef", { idempotencyKey: "submission-key" })
+  .createRun({
+    taskId: "tk_0123456789abcdef",
+    idempotencyKey: "submission-key",
+  })
   .then(({ runId }) => runId.toUpperCase());
 sdk.tasks
-  .getRun("tk_0123456789abcdef", "tr_0123456789abcdef")
+  .getRun({ taskId: "tk_0123456789abcdef", runId: "tr_0123456789abcdef" })
   .then((run) => run.status.toUpperCase());
 sdk.tasks
-  .runMessages("tk_0123456789abcdef", "tr_0123456789abcdef")
+  .runMessages({ taskId: "tk_0123456789abcdef", runId: "tr_0123456789abcdef" })
   .then((messages) => ({
     finishedAt: messages.finishedAt,
     status: messages.status,
   }));
 // @ts-expect-error unknown task fields are rejected
-sdk.tasks.update("tk_0123456789abcdef", { unknown: true });
+sdk.tasks.update({ taskId: "tk_0123456789abcdef", unknown: true });
 sdk.sessions
-  .joinToolApprovalContinuation(
-    "ag_0123456789abcdef",
-    "ss_0123456789abcdef",
-    "continuation-1"
-  )
+  .joinToolApprovalContinuation({
+    agentId: "ag_0123456789abcdef",
+    sessionId: "ss_0123456789abcdef",
+    continuationId: "continuation-1",
+  })
   .then((result) => result.requestId?.toUpperCase());
+
+const abortSignal = new AbortController().signal;
+sdk.agent({ agentId: "ag_0123456789abcdef" }).skills.list({ abortSignal });
+sdk.agents.update({
+  agentId: "ag_0123456789abcdef",
+  name: "renamed",
+  abortSignal,
+});
+sdk.providers.get({ providerId: "prv_0123456789abcdef", abortSignal });
+sdk.mcpConnections.get({
+  mcpConnectionId: "mcp_0123456789abcdef",
+  abortSignal,
+});
+sdk.sessions.messages({
+  agentId: "ag_0123456789abcdef",
+  sessionId: "ss_0123456789abcdef",
+  abortSignal,
+});
+sdk.chat({
+  agentId: "ag_0123456789abcdef",
+  promptId: "prompt_0123456789abcdef",
+  abortSignal,
+});
+sdk.completion({
+  agentId: "ag_0123456789abcdef",
+  prompt: "hello",
+  abortSignal,
+});
+sdk.object({
+  agentId: "ag_0123456789abcdef",
+  prompt: "hello",
+  schema: {},
+  abortSignal,
+});
+// @ts-expect-error resource methods accept one flat parameter object
+sdk.agents.update("ag_0123456789abcdef", { name: "renamed" });
+// @ts-expect-error scoped Agent access accepts an object
+sdk.agent("ag_0123456789abcdef");
+// @ts-expect-error the public cancellation parameter is abortSignal
+sdk.agents.list({ signal: abortSignal });
+sdk.chat({
+  agentId: "ag_0123456789abcdef",
+  promptId: "prompt_0123456789abcdef",
+  // @ts-expect-error the public cancellation parameter is abortSignal
+  signal: abortSignal,
+});
+// @ts-expect-error deletion requires an explicit artifact choice
+sdk.agents.delete({ agentId: "ag_0123456789abcdef", abortSignal });
+// @ts-expect-error Session deletion requires an explicit artifact choice
+sdk.sessions.delete({
+  agentId: "ag_0123456789abcdef",
+  sessionId: "ss_0123456789abcdef",
+  abortSignal,
+});
+// @ts-expect-error required provider update fields remain required
+sdk.providers.update({ providerId: "prv_0123456789abcdef", abortSignal });

@@ -183,7 +183,7 @@ describe("client.chat requests", () => {
         role: "user",
         parts: [{ type: "text", text: "hi" }],
       },
-      signal: controller.signal,
+      abortSignal: controller.signal,
     });
     expect(calls[0].init?.signal).toBe(controller.signal);
     controller.abort();

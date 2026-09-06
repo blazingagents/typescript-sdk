@@ -59,7 +59,7 @@ export function createChatRelay(
         message: validated.data[0] as UIMessage,
         messageId: body.messageId,
         metadata: context.metadata,
-        signal: request.signal,
+        abortSignal: request.signal,
         userId: context.userId,
       };
       const result = await options.client.chat(
@@ -108,7 +108,7 @@ export function createCompletionRelay(
         agentId: context.agentId,
         metadata: context.metadata,
         prompt: body.prompt,
-        signal: request.signal,
+        abortSignal: request.signal,
         userId: context.userId,
         version: context.version,
       });

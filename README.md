@@ -78,7 +78,7 @@ another nonempty string supported by the selected Model. Omission on creation
 means Provider default; omission on update preserves the saved value, while
 `thinkingLevel: null` clears it. Agent and Version responses include the
 selection, and `restoreVersion` restores it through ordinary validation.
-Use `client.providers.getThinkingLevels(providerId, model)` to read
+Use `client.providers.getThinkingLevels({ providerId, model })` to read
 `{ known, levels }`. Unknown capabilities permit custom values that can still
 be rejected during execution. Levels control reasoning, not a token/cost cap.
 
@@ -122,17 +122,39 @@ preserves user message IDs, regeneration targets, and `useChat` cancellation.
 Regeneration requires an existing Session. Reconnection returns `null`; the
 adapter does not retry interrupted Turns or resume their streams.
 
-### Cancel resource reads
+### Cancel requests
 
-Pass an optional `signal` to resource reads when leaving a screen or switching
-credentials:
+Pass an optional `abortSignal` in the request object for reads, writes, uploads,
+and generation:
 
 ```ts
 const controller = new AbortController();
-const agents = client.agents.list({ signal: controller.signal });
+const agents = client.agents.list({ abortSignal: controller.signal });
 controller.abort();
 await agents; // Rejects with the SDK's typed cancellation error.
 ```
 
 SDK response parsing strips unknown object fields while validating required
 fields and known field types. Request validation remains strict.
+
+### Migrating from 0.2.x to 0.3.0
+
+Resource and generation methods take a single request object, optional when no
+fields are required. Move positional identifiers, body fields, and request
+options into that object. Use `abortSignal` instead of
+`signal`; custom fetch implementations still receive the native `signal`.
+
+```ts
+// Before (0.2.x)
+client.agents.update(agentId, { name: "Builder" });
+client.sessions.messages(agentId, sessionId, { signal });
+client.agent(agentId).skills.list();
+
+// After (0.3.0)
+client.agents.update({ agentId, name: "Builder", abortSignal: signal });
+client.sessions.messages({ agentId, sessionId, abortSignal: signal });
+client.agent({ agentId }).skills.list({ abortSignal: signal });
+```
+
+`ResourceRequestOptions` replaces `ResourceReadOptions`. Cancellation stops the
+request; it does not roll back a mutation already accepted by the server.

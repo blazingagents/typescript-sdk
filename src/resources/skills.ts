@@ -24,82 +24,82 @@ export function createAgentSkillsResource(
   agentId: string
 ): AgentSkillsResource {
   return {
-    async copy({ skillId, to }) {
+    async copy({ skillId, to, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}/copies`,
-        { json: to, method: "POST" },
+        { json: to, method: "POST", signal: abortSignal },
         skillCopyResultsSchema
       );
     },
-    async create(body) {
+    async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills`,
-        { json: body, method: "POST" },
+        { json: body, method: "POST", signal: abortSignal },
         skillDetailSchema
       );
     },
-    async delete({ skillId }) {
+    async delete({ skillId, abortSignal }) {
       await requestJson<void>(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`,
-        { method: "DELETE" }
+        { method: "DELETE", signal: abortSignal }
       );
     },
-    async deleteFile(input) {
+    async deleteFile({ abortSignal, ...input }) {
       return await requestJson(
         config,
         fileUrl(agentId, input),
         {
           method: "DELETE",
+          signal: abortSignal,
         },
         skillDetailSchema
       );
     },
-    async get({ skillId }, options = {}) {
+    async get({ skillId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`,
-        options,
+        { signal: abortSignal },
         skillDetailSchema
       );
     },
-    async getFile(input, options = {}) {
-      const response = await requestStream(
-        config,
-        fileUrl(agentId, input),
-        options
-      );
+    async getFile({ abortSignal, ...input }) {
+      const response = await requestStream(config, fileUrl(agentId, input), {
+        signal: abortSignal,
+      });
       try {
         return new Uint8Array(await response.arrayBuffer());
       } catch (cause) {
-        if (isRequestAborted(cause, options.signal)) {
+        if (isRequestAborted(cause, abortSignal)) {
           throw requestAbortedError(cause);
         }
         throw cause;
       }
     },
-    async list({ cursor, limit, signal } = {}) {
+    async list({ cursor, limit, abortSignal } = {}) {
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills`,
-        { signal, query: { cursor, limit } },
+        { signal: abortSignal, query: { cursor, limit } },
         skillsListResponseSchema
       );
     },
-    async putFile({ content, ...input }) {
+    async putFile({ content, abortSignal, ...input }) {
       return await requestJson(
         config,
         fileUrl(agentId, input),
         {
           body: content as BodyInit,
           method: "PUT",
+          signal: abortSignal,
         },
         skillDetailSchema
       );
     },
-    async upload({ source }) {
+    async upload({ source, abortSignal }) {
       const form = new FormData();
       form.set("type", source.type);
       const file =
@@ -110,7 +110,7 @@ export function createAgentSkillsResource(
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills/upload`,
-        { body: form, method: "POST" },
+        { body: form, method: "POST", signal: abortSignal },
         skillDetailSchema
       );
     },

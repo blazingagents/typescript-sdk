@@ -43,8 +43,11 @@ describe("client.agents", () => {
           })
         ).thinkingLevel
       ).toBe(thinkingLevel);
-      await c.agents.update("ag_0123456789abcdef", { thinkingLevel });
-      await c.agents.update("ag_0123456789abcdef", { name: "Renamed" });
+      await c.agents.update({ agentId: "ag_0123456789abcdef", thinkingLevel });
+      await c.agents.update({
+        agentId: "ag_0123456789abcdef",
+        name: "Renamed",
+      });
       expect(JSON.parse(calls[0].init?.body as string).thinkingLevel).toBe(
         thinkingLevel
       );
@@ -108,7 +111,8 @@ describe("client.agents", () => {
       })
     ).resolves.toMatchObject({ memoryInjectionEnabled: true });
     await expect(
-      client(updated.fetch).agents.update("ag_0123456789abcdef", {
+      client(updated.fetch).agents.update({
+        agentId: "ag_0123456789abcdef",
         memoryInjectionEnabled: false,
       })
     ).resolves.toMatchObject({ memoryInjectionEnabled: false });
@@ -148,7 +152,7 @@ describe("client.agents", () => {
   it("get gets /v1/agents/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: agentRow() });
     const c = client(fetch);
-    const agent = await c.agents.get("ag_0123456789abcdef");
+    const agent = await c.agents.get({ agentId: "ag_0123456789abcdef" });
     expect(agent.id).toBe("ag_0123456789abcdef");
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef`);
   });
@@ -159,7 +163,8 @@ describe("client.agents", () => {
     });
 
     await expect(
-      client(fetch).agents.listVersions("ag_0123456789abcdef", {
+      client(fetch).agents.listVersions({
+        agentId: "ag_0123456789abcdef",
         cursor: "opaque page",
         limit: 25,
       })
@@ -174,7 +179,7 @@ describe("client.agents", () => {
       body: { data: [], nextCursor: null },
     });
 
-    await client(fetch).agents.listVersions("ag_0123456789abcdef");
+    await client(fetch).agents.listVersions({ agentId: "ag_0123456789abcdef" });
 
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef/versions`);
   });
@@ -183,7 +188,10 @@ describe("client.agents", () => {
     const { fetch, calls } = createMockFetch({ body: agentVersion });
 
     await expect(
-      client(fetch).agents.getVersion("ag_0123456789abcdef", 3)
+      client(fetch).agents.getVersion({
+        agentId: "ag_0123456789abcdef",
+        version: 3,
+      })
     ).resolves.toEqual(agentVersion);
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef/versions/3`
@@ -191,6 +199,7 @@ describe("client.agents", () => {
   });
 
   it("restores by copying every versioned field through ordinary update", async () => {
+    const abortSignal = new AbortController().signal;
     const fetch = vi
       .fn<BlazingAgentsFetch>()
       .mockResolvedValueOnce(Response.json(agentVersion))
@@ -205,13 +214,19 @@ describe("client.agents", () => {
       );
 
     await expect(
-      client(fetch).agents.restoreVersion("ag_0123456789abcdef", 3)
+      client(fetch).agents.restoreVersion({
+        abortSignal,
+        agentId: "ag_0123456789abcdef",
+        version: 3,
+      })
     ).resolves.toMatchObject({
       name: "Historical Builder",
       version: 4,
     });
 
     expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[0][1]?.signal).toBe(abortSignal);
+    expect(fetch.mock.calls[1][1]?.signal).toBe(abortSignal);
     expect(fetch.mock.calls[0][0]).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef/versions/3`
     );
@@ -237,7 +252,8 @@ describe("client.agents", () => {
       body: agentRow({ name: "Renamed" }),
     });
     const c = client(fetch);
-    const agent = await c.agents.update("ag_0123456789abcdef", {
+    const agent = await c.agents.update({
+      agentId: "ag_0123456789abcdef",
       name: "Renamed",
     });
     expect(agent.name).toBe("Renamed");
@@ -257,7 +273,7 @@ describe("client.agents", () => {
       const { fetch, calls } = createMockFetch({ body: agentRow({ status }) });
 
       await expect(
-        client(fetch).agents[verb]("ag_0123456789abcdef")
+        client(fetch).agents[verb]({ agentId: "ag_0123456789abcdef" })
       ).resolves.toMatchObject({ status });
       expect(calls[0].url).toBe(
         `${BASE}/v1/agents/ag_0123456789abcdef/${verb}`
@@ -287,14 +303,17 @@ describe("client.agents", () => {
     });
 
     await expect(
-      client(listed.fetch).agents.listMcpAttachments("ag_0123456789abcdef")
+      client(listed.fetch).agents.listMcpAttachments({
+        agentId: "ag_0123456789abcdef",
+      })
     ).resolves.toEqual({ mcpAttachments: [attachment] });
     await expect(
-      client(updated.fetch).agents.updateMcpAttachment(
-        "ag_0123456789abcdef",
-        attachment.mcpConnectionId,
-        { forwardUserId: true, forwardedMetadataKeys: ["locale"] }
-      )
+      client(updated.fetch).agents.updateMcpAttachment({
+        agentId: "ag_0123456789abcdef",
+        mcpConnectionId: attachment.mcpConnectionId,
+        forwardUserId: true,
+        forwardedMetadataKeys: ["locale"],
+      })
     ).resolves.toMatchObject({
       forwardUserId: true,
       forwardedMetadataKeys: ["locale"],
@@ -323,7 +342,8 @@ describe("client.agents", () => {
       name: "Shared Workspace",
       workspaceId: sharedWorkspaceId,
     });
-    await c.agents.update("ag_0123456789abcdef", {
+    await c.agents.update({
+      agentId: "ag_0123456789abcdef",
       workspaceId: replacementWorkspaceId,
     });
 
@@ -338,7 +358,10 @@ describe("client.agents", () => {
   it("delete DELETEs /v1/agents/:id and resolves on 204", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.agents.delete("ag_0123456789abcdef", false);
+    await c.agents.delete({
+      agentId: "ag_0123456789abcdef",
+      includeArtifacts: false,
+    });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef?includeArtifacts=false`
@@ -349,10 +372,10 @@ describe("client.agents", () => {
     const { fetch, calls } = createMockFetch({
       body: agentRow({ avatarUrl: "https://signed.example/avatar" }),
     });
-    const avatar = await client(fetch).agents.uploadAvatar(
-      "ag_0123456789abcdef",
-      new File(["image"], "avatar.png", { type: "image/png" })
-    );
+    const avatar = await client(fetch).agents.uploadAvatar({
+      agentId: "ag_0123456789abcdef",
+      file: new File(["image"], "avatar.png", { type: "image/png" }),
+    });
     expect(avatar.avatarUrl).toBe("https://signed.example/avatar");
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef/avatar`);
     expect(calls[0].init?.method).toBe("POST");
@@ -369,9 +392,9 @@ describe("client.agents", () => {
     const { fetch, calls } = createMockFetch({
       body: agentRow({ avatarUrl: null }),
     });
-    const avatar = await client(fetch).agents.removeAvatar(
-      "ag_0123456789abcdef"
-    );
+    const avatar = await client(fetch).agents.removeAvatar({
+      agentId: "ag_0123456789abcdef",
+    });
     expect(avatar.avatarUrl).toBeNull();
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef/avatar`);
@@ -383,7 +406,7 @@ describe("client.agents", () => {
       text: errorEnvelope("not_found", "Agent not found"),
     });
     const c = client(fetch);
-    await expect(c.agents.get("ag_x")).rejects.toMatchObject({
+    await expect(c.agents.get({ agentId: "ag_x" })).rejects.toMatchObject({
       code: "not_found",
       status: 404,
     });
@@ -392,7 +415,7 @@ describe("client.agents", () => {
   it("rejects malformed response shapes (parse-on-read)", async () => {
     const { fetch } = createMockFetch({ body: { wrong: "shape" } });
     const c = client(fetch);
-    await expect(c.agents.get("ag_x")).rejects.toBeDefined();
+    await expect(c.agents.get({ agentId: "ag_x" })).rejects.toBeDefined();
   });
 
   it("rejects a detached Agent response", async () => {
@@ -400,7 +423,7 @@ describe("client.agents", () => {
       body: agentRow({ workspaceId: null }),
     });
     await expect(
-      client(fetch).agents.get("ag_0123456789abcdef")
+      client(fetch).agents.get({ agentId: "ag_0123456789abcdef" })
     ).rejects.toBeDefined();
   });
 });

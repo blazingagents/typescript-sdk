@@ -9,20 +9,21 @@ import type { HttpConfig, TenantResource } from "../types.ts";
 
 export function createTenantResource(config: HttpConfig): TenantResource {
   return {
-    async get(options = {}) {
+    async get({ abortSignal } = {}) {
       return await requestJson(
         config,
         "/v1/tenant",
-        options,
+        { signal: abortSignal },
         tenantSettingsResponseSchema
       );
     },
-    async patch(body) {
+    async patch({ abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/tenant",
         {
           json: body,
+          signal: abortSignal,
           method: "PATCH",
         },
         tenantSettingsResponseSchema

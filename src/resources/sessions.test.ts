@@ -41,10 +41,10 @@ describe("client.sessions", () => {
     const { fetch, calls } = createMockFetch({ body: response });
 
     await expect(
-      client(fetch).sessions.toolApprovals(
-        "ag_0123456789abcdef",
-        "ss_0123456789abcdef"
-      )
+      client(fetch).sessions.toolApprovals({
+        agentId: "ag_0123456789abcdef",
+        sessionId: "ss_0123456789abcdef",
+      })
     ).resolves.toEqual(response);
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef/sessions/ss_0123456789abcdef/tool-approvals`
@@ -60,13 +60,14 @@ describe("client.sessions", () => {
     const abort = new AbortController();
 
     await expect(
-      client(fetch).sessions.decideToolApproval(
-        "ag_0123456789abcdef",
-        "ss_0123456789abcdef",
-        "approval-1",
-        { approved: false, reason: "Keep it" },
-        { signal: abort.signal }
-      )
+      client(fetch).sessions.decideToolApproval({
+        agentId: "ag_0123456789abcdef",
+        sessionId: "ss_0123456789abcdef",
+        approvalId: "approval-1",
+        approved: false,
+        reason: "Keep it",
+        abortSignal: abort.signal,
+      })
     ).resolves.toEqual(response);
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.body).toBe(
@@ -84,12 +85,12 @@ describe("client.sessions", () => {
       status: 202,
     });
 
-    await client(fetch).sessions.decideToolApproval(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      "approval-1",
-      { approved: true }
-    );
+    await client(fetch).sessions.decideToolApproval({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      approvalId: "approval-1",
+      approved: true,
+    });
 
     expect(calls[0].init?.signal).toBeUndefined();
   });
@@ -108,12 +109,12 @@ describe("client.sessions", () => {
     });
     const abort = new AbortController();
 
-    const result = await client(fetch).sessions.joinToolApprovalContinuation(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      "tool-approval:ss:assistant",
-      { signal: abort.signal }
-    );
+    const result = await client(fetch).sessions.joinToolApprovalContinuation({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      continuationId: "tool-approval:ss:assistant",
+      abortSignal: abort.signal,
+    });
     await expect(result.toResponse().text()).resolves.toContain(
       '"delta":"Done"'
     );
@@ -130,11 +131,11 @@ describe("client.sessions", () => {
   it("rejoins a continuation without an AbortSignal", async () => {
     const { fetch, calls } = createMockFetch({ stream: sseStream([]) });
 
-    const result = await client(fetch).sessions.joinToolApprovalContinuation(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      "tool-approval:ss:assistant"
-    );
+    const result = await client(fetch).sessions.joinToolApprovalContinuation({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      continuationId: "tool-approval:ss:assistant",
+    });
     await result.toResponse().body?.cancel();
 
     expect(calls[0].init?.signal).toBeUndefined();
@@ -151,11 +152,11 @@ describe("client.sessions", () => {
       stream: sseStream([]),
     });
 
-    const result = await client(fetch).sessions.joinToolApprovalContinuation(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      "tool-approval:ss:assistant"
-    );
+    const result = await client(fetch).sessions.joinToolApprovalContinuation({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      continuationId: "tool-approval:ss:assistant",
+    });
     expect(result.requestId).toBe("request-continuation-response");
     const response = result.toResponse();
     expect(response.status).toBe(202);
@@ -181,7 +182,10 @@ describe("client.sessions", () => {
     const { fetch, calls } = createMockFetch({
       body: { data: [], nextCursor: null },
     });
-    await client(fetch).sessions.list("ag_0123456789abcdef", options);
+    await client(fetch).sessions.list({
+      agentId: "ag_0123456789abcdef",
+      ...options,
+    });
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef/sessions${suffix}`
     );
@@ -200,11 +204,11 @@ describe("client.sessions", () => {
     const { fetch, calls } = createMockFetch({
       body: { data: [], nextCursor: null, latestCursor: null },
     });
-    await client(fetch).sessions.messages(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      options
-    );
+    await client(fetch).sessions.messages({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      ...options,
+    });
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef/sessions/ss_0123456789abcdef/messages${suffix}`
     );
@@ -215,7 +219,8 @@ describe("client.sessions", () => {
       body: { data: [sessionListItem], nextCursor: "next" },
     });
     const c = client(fetch);
-    const page = await c.sessions.list("ag_0123456789abcdef", {
+    const page = await c.sessions.list({
+      agentId: "ag_0123456789abcdef",
       cursor: "abc",
       limit: 50,
     });
@@ -230,7 +235,7 @@ describe("client.sessions", () => {
       body: { data: [], nextCursor: null },
     });
     const c = client(fetch);
-    const page = await c.sessions.list("ag_0123456789abcdef");
+    const page = await c.sessions.list({ agentId: "ag_0123456789abcdef" });
     expect(page.nextCursor).toBeNull();
   });
 
@@ -243,11 +248,12 @@ describe("client.sessions", () => {
       },
     });
     const c = client(fetch);
-    const page = await c.sessions.messages(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      { after: "tail", limit: 10 }
-    );
+    const page = await c.sessions.messages({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      after: "tail",
+      limit: 10,
+    });
     expect(page.data).toHaveLength(1);
     expect(page.latestCursor).toBe("tail");
     expect(calls[0].url).toContain("after=tail");
@@ -257,7 +263,11 @@ describe("client.sessions", () => {
   it("delete DELETEs /v1/agents/:id/sessions/:sid", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.sessions.delete("ag_0123456789abcdef", "ss_0123456789abcdef", true);
+    await c.sessions.delete({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      deleteArtifacts: true,
+    });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/ag_0123456789abcdef/sessions/ss_0123456789abcdef?deleteArtifacts=true`
@@ -267,7 +277,7 @@ describe("client.sessions", () => {
   it("rejects malformed success payloads", async () => {
     const { fetch } = createMockFetch({ body: { data: "wrong" } });
     await expect(
-      client(fetch).sessions.list("ag_0123456789abcdef")
+      client(fetch).sessions.list({ agentId: "ag_0123456789abcdef" })
     ).rejects.toBeDefined();
   });
 });

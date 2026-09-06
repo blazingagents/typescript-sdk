@@ -25,7 +25,8 @@ describe("client.memories", () => {
     const { fetch, calls } = createMockFetch({
       body: { data: [memoryRow], nextCursor: "next" },
     });
-    const result = await client(fetch).memories.list(agentId, {
+    const result = await client(fetch).memories.list({
+      agentId,
       cursor: "next page",
       limit: 25,
       search: "dark mode",
@@ -43,7 +44,7 @@ describe("client.memories", () => {
       body: { data: [], nextCursor: null },
     });
 
-    await client(fetch).memories.list(agentId);
+    await client(fetch).memories.list({ agentId });
 
     expect(calls[0].url).toBe(`${BASE}/v1/agents/${agentId}/memories`);
   });
@@ -51,7 +52,8 @@ describe("client.memories", () => {
   it("create posts to /v1/agents/:agentId/memories", async () => {
     const { fetch, calls } = createMockFetch({ body: { memory: memoryRow } });
     const c = client(fetch);
-    const result = await c.memories.create(agentId, {
+    const result = await c.memories.create({
+      agentId,
       text: "Prefers dark mode",
     });
     expect(result.memory.id).toBe(memoryId);
@@ -66,7 +68,8 @@ describe("client.memories", () => {
       body: { memory: { ...memoryRow, userId: "user-42" } },
     });
     const c = client(fetch);
-    const result = await c.memories.create(agentId, {
+    const result = await c.memories.create({
+      agentId,
       text: "Prefers dark mode",
       userId: "user-42",
     });
@@ -78,7 +81,7 @@ describe("client.memories", () => {
   it("get gets /v1/agents/:agentId/memories/:memoryId", async () => {
     const { fetch, calls } = createMockFetch({ body: { memory: memoryRow } });
     const c = client(fetch);
-    const result = await c.memories.get(agentId, memoryId);
+    const result = await c.memories.get({ agentId, memoryId });
     expect(result.memory.text).toBe("Prefers dark mode");
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/memories/${memoryId}`
@@ -88,7 +91,14 @@ describe("client.memories", () => {
   it("update PATCHes /v1/agents/:agentId/memories/:memoryId with { text }", async () => {
     const { fetch, calls } = createMockFetch({ body: { memory: memoryRow } });
     const c = client(fetch);
-    await c.memories.update(agentId, memoryId, { text: "Prefers dark mode" });
+    const controller = new AbortController();
+    await c.memories.update({
+      agentId,
+      memoryId,
+      text: "Prefers dark mode",
+      abortSignal: controller.signal,
+    });
+    expect(calls[0].init?.signal).toBe(controller.signal);
     expect(calls[0].init?.method).toBe("PATCH");
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/memories/${memoryId}`
@@ -100,7 +110,7 @@ describe("client.memories", () => {
   it("delete DELETEs /v1/agents/:agentId/memories/:memoryId", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.memories.delete(agentId, memoryId);
+    await c.memories.delete({ agentId, memoryId });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/memories/${memoryId}`
@@ -110,12 +120,14 @@ describe("client.memories", () => {
   it("rejects malformed success payloads", async () => {
     const { fetch } = createMockFetch({ body: { memory: { id: 1 } } });
     await expect(
-      client(fetch).memories.get(agentId, memoryId)
+      client(fetch).memories.get({ agentId, memoryId })
     ).rejects.toBeDefined();
   });
 
   it("rejects malformed list payloads", async () => {
     const { fetch } = createMockFetch({ body: { data: "wrong" } });
-    await expect(client(fetch).memories.list(agentId)).rejects.toBeDefined();
+    await expect(
+      client(fetch).memories.list({ agentId })
+    ).rejects.toBeDefined();
   });
 });

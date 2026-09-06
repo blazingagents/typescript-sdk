@@ -26,7 +26,7 @@ describe("client.artifacts", () => {
     const { fetch, calls } = createMockFetch({ body: artifact });
 
     await expect(
-      client(fetch).artifacts.get(artifact.artifactId)
+      client(fetch).artifacts.get({ artifactId: artifact.artifactId })
     ).resolves.toEqual(artifact);
     expect(calls[0].url).toBe(`${baseUrl}/v1/artifacts/${artifact.artifactId}`);
   });
@@ -37,7 +37,9 @@ describe("client.artifacts", () => {
     const { fetch, calls } = createMockFetch({ body: { expiresAt, url } });
 
     await expect(
-      client(fetch).artifacts.createDownloadUrl(artifact.artifactId)
+      client(fetch).artifacts.createDownloadUrl({
+        artifactId: artifact.artifactId,
+      })
     ).resolves.toEqual({ expiresAt, url });
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.body).toBeNull();
@@ -73,7 +75,7 @@ describe("client.artifacts", () => {
   it("deletes through the Tenant-level Artifact route", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
 
-    await client(fetch).artifacts.delete(artifact.artifactId);
+    await client(fetch).artifacts.delete({ artifactId: artifact.artifactId });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(`${baseUrl}/v1/artifacts/${artifact.artifactId}`);
   });
@@ -87,10 +89,14 @@ describe("client.artifacts", () => {
     });
 
     await expect(
-      client(invalidDetail.fetch).artifacts.get(artifact.artifactId)
+      client(invalidDetail.fetch).artifacts.get({
+        artifactId: artifact.artifactId,
+      })
     ).rejects.toBeDefined();
     await expect(
-      client(invalidUrl.fetch).artifacts.createDownloadUrl(artifact.artifactId)
+      client(invalidUrl.fetch).artifacts.createDownloadUrl({
+        artifactId: artifact.artifactId,
+      })
     ).rejects.toBeDefined();
   });
 });

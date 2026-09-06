@@ -54,7 +54,10 @@ describe("client.usage", () => {
   it("getForAgent queries /v1/agents/:id/usage", async () => {
     const { fetch, calls } = createMockFetch({ body: usageResponse });
     const c = client(fetch);
-    await c.usage.getForAgent("ag_0123456789abcdef", { groupBy: "agent" });
+    await c.usage.getForAgent({
+      agentId: "ag_0123456789abcdef",
+      groupBy: "agent",
+    });
     expect(calls[0].url).toContain("/v1/agents/ag_0123456789abcdef/usage");
     expect(calls[0].url).toContain("groupBy=agent");
   });

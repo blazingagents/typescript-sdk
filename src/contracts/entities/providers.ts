@@ -67,13 +67,13 @@ export const providerResponseSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const providersResponseSchema = z
   .object({
     providers: z.array(providerResponseSchema),
   })
-  .strict();
+  .strip();
 
 export const providerModelsResponseSchema = z
   .object({
@@ -82,10 +82,10 @@ export const providerModelsResponseSchema = z
         .object({
           id: z.string().trim().min(1),
         })
-        .strict()
+        .strip()
     ),
   })
-  .strict();
+  .strip();
 
 export const providerHistoricalUseDetailsSchema = z
   .object({
@@ -95,12 +95,12 @@ export const providerHistoricalUseDetailsSchema = z
           agentId: agentIdSchema,
           version: agentVersionNumberSchema,
         })
-        .strict()
+        .strip()
     ),
     sessionIds: z.array(sessionIdSchema),
     taskIds: z.array(taskIdSchema),
   })
-  .strict();
+  .strip();
 
 /**
  * `POST /v1/providers` — name, type, optional base URL, and the API key
@@ -162,7 +162,7 @@ export const thinkingLevelsResponseSchema = z
     known: z.boolean(),
     levels: z.array(z.string().min(1)),
   })
-  .strict();
+  .strip();
 export type ThinkingLevelsResponse = z.infer<
   typeof thinkingLevelsResponseSchema
 >;

@@ -37,13 +37,13 @@ export const memorySchema = z
     updatedAt: z.iso.datetime({ offset: true }),
     lastAccessedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const memoryResponseSchema = z
   .object({
     memory: memorySchema,
   })
-  .strict();
+  .strip();
 
 export const memoriesListResponseSchema = paginatedResponseSchema(memorySchema);
 

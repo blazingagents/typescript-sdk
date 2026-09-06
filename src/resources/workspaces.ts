@@ -28,11 +28,11 @@ export function createWorkspacesResource(
       );
       return response.status === 202 ? "pending" : "completed";
     },
-    async get({ workspaceId }) {
+    async get({ workspaceId }, options = {}) {
       return await requestJson(
         config,
         `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
-        {},
+        options,
         workspaceSchema
       );
     },
@@ -41,6 +41,7 @@ export function createWorkspacesResource(
         config,
         "/v1/workspaces",
         {
+          signal: options.signal,
           query: {
             cursor: options.cursor,
             limit: options.limit,

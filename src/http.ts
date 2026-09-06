@@ -191,7 +191,10 @@ async function errorFromResponse(
   return parseErrorEnvelope(read.diagnosticBody, response.status, headers);
 }
 
-function isRequestAborted(cause: unknown, signal?: AbortSignal): boolean {
+export function isRequestAborted(
+  cause: unknown,
+  signal?: AbortSignal
+): boolean {
   return (
     signal?.aborted === true ||
     (cause !== null &&
@@ -201,7 +204,7 @@ function isRequestAborted(cause: unknown, signal?: AbortSignal): boolean {
   );
 }
 
-function requestAbortedError(cause: unknown): BlazingAgentsError {
+export function requestAbortedError(cause: unknown): BlazingAgentsError {
   return new BlazingAgentsError(
     {
       code: "request_aborted",

@@ -33,9 +33,9 @@ describe("tenantSchema", () => {
     });
   });
 
-  it("rejects extra fields", () => {
+  it("strips extra fields", () => {
     expect(
-      tenantSchema.safeParse({
+      tenantSchema.parse({
         id: tenantId,
         authUserId,
         email: "dev@example.com",
@@ -43,8 +43,8 @@ describe("tenantSchema", () => {
         createdAt: iso,
         updatedAt: iso,
         extra: true,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("extra");
   });
 
   it("rejects a malformed tenant id", () => {
@@ -93,14 +93,14 @@ describe("tenantResponseSchema", () => {
     }
   );
 
-  it("rejects provider lifecycle details", () => {
+  it("strips provider lifecycle details and rejects invalid status", () => {
     expect(
-      tenantResponseSchema.safeParse({
+      tenantResponseSchema.parse({
         ...tenant,
         subscriptionStatus: "active",
         subscriptionProvider: "polar",
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("subscriptionProvider");
     expect(
       tenantResponseSchema.safeParse({
         ...tenant,
@@ -275,4 +275,25 @@ describe("updateTenantSettingsBodySchema", () => {
   it("rejects empty updates", () => {
     expect(updateTenantSettingsBodySchema.safeParse({}).success).toBe(false);
   });
+});
+
+it("strips nested quota response additions but rejects them in writes", () => {
+  const quota = {
+    monthlyTokenLimit: 100,
+    monthlyRequestLimit: null,
+    resetDay: 1,
+  };
+  const expanded = { ...quota, futureLimit: 1 };
+  expect(
+    tenantSettingsResponseSchema.parse({ name: "Tenant", quota: expanded })
+  ).toEqual({ name: "Tenant", quota });
+  expect(
+    updateTenantSettingsBodySchema.safeParse({ quota: expanded }).success
+  ).toBe(false);
+  expect(
+    tenantSettingsResponseSchema.safeParse({
+      name: "Tenant",
+      quota: { ...expanded, monthlyTokenLimit: null },
+    }).success
+  ).toBe(false);
 });

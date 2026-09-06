@@ -83,7 +83,7 @@ export const agentSchema = z
     version: agentVersionNumberSchema,
     status: agentStatusSchema,
   })
-  .strict()
+  .strip()
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],
@@ -93,7 +93,7 @@ export const agentsResponseSchema = z
   .object({
     agents: z.array(agentSchema),
   })
-  .strict();
+  .strip();
 
 export const agentResponseSchema = agentSchema;
 
@@ -120,7 +120,7 @@ export const agentVersionSchema = z
     mcpConnectionIds: agentSchema.shape.mcpConnectionIds,
     createdAt: agentSchema.shape.createdAt,
   })
-  .strict()
+  .strip()
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],

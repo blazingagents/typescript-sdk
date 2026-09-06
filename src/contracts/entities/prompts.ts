@@ -79,13 +79,13 @@ export const promptSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const promptsResponseSchema = z
   .object({
     prompts: z.array(promptSchema),
   })
-  .strict();
+  .strip();
 
 export const promptResponseSchema = promptSchema;
 

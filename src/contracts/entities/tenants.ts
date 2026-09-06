@@ -20,13 +20,13 @@ export const tenantSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const subscriptionStatusSchema = z.enum(["active", "inactive"]);
 
 export const tenantResponseSchema = tenantSchema
   .extend({ subscriptionStatus: subscriptionStatusSchema })
-  .strict();
+  .strip();
 
 /**
  * Quota — `GET/PATCH /v1/tenant` carries the tenant's self-set quota.
@@ -52,9 +52,9 @@ export const quotaSchema = z
 export const tenantSettingsSchema = z
   .object({
     name: z.string().trim().min(1).max(MAX_TENANT_NAME_LENGTH),
-    quota: quotaSchema.nullable(),
+    quota: quotaSchema.strip().nullable(),
   })
-  .strict();
+  .strip();
 
 export const tenantSettingsResponseSchema = tenantSettingsSchema;
 

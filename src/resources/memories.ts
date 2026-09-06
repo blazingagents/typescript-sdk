@@ -18,6 +18,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
         config,
         `/v1/agents/${agentId}/memories`,
         {
+          signal: options.signal,
           query: {
             ...(options.userId === undefined ? {} : { userId: options.userId }),
             search: options.search,
@@ -36,11 +37,11 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
         memoryResponseSchema
       );
     },
-    async get(agentId, memoryId) {
+    async get(agentId, memoryId, options = {}) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/memories/${memoryId}`,
-        {},
+        options,
         memoryResponseSchema
       );
     },

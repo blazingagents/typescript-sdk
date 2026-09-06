@@ -108,7 +108,7 @@ export const usageBucketSchema = z
     requestCount: z.number().int().nonnegative(),
     durationMs: z.number().int().nonnegative(),
   })
-  .strict();
+  .strip();
 
 export const usageTotalsSchema = z
   .object({
@@ -117,14 +117,14 @@ export const usageTotalsSchema = z
     requestCount: z.number().int().nonnegative(),
     durationMs: z.number().int().nonnegative(),
   })
-  .strict();
+  .strip();
 
 export const usageResponseSchema = z
   .object({
     buckets: z.array(usageBucketSchema),
     totals: usageTotalsSchema,
   })
-  .strict();
+  .strip();
 
 export type UsageGroupBy = z.infer<typeof usageGroupBySchema>;
 export type UsageQuery = z.infer<typeof usageQuerySchema>;

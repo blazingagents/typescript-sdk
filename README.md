@@ -81,3 +81,58 @@ selection, and `restoreVersion` restores it through ordinary validation.
 Use `client.providers.getThinkingLevels(providerId, model)` to read
 `{ known, levels }`. Unknown capabilities permit custom values that can still
 be rejected during execution. Levels control reasoning, not a token/cost cap.
+
+For native clients whose `Response` constructor does not support streaming bodies,
+use `result.toStream()` on chat or terminal continuation results to read the
+original SSE bytes. It shares one-shot ownership with `toResponse()`; choose one
+accessor per result. Stream errors and cancellation retain the same behavior.
+
+### Direct native chat
+
+For a direct SDK integration, use `BlazingAgentsDirectChatTransport` with AI SDK
+`useChat`. It sends through `client.chat()` and uses AI SDK's stream decoder
+without constructing a streaming `Response`. Inject your native streaming fetch
+implementation into `BlazingAgents` when the runtime requires one.
+
+```tsx
+import { useMemo } from "react";
+import { useChat } from "@ai-sdk/react";
+import { BlazingAgentsDirectChatTransport } from "@blazingagents/sdk";
+
+function Chat({ client, agentId, initialSessionId, saveSessionId }) {
+  const transport = useMemo(
+    () => new BlazingAgentsDirectChatTransport({
+      client,
+      agentId,
+      sessionId: initialSessionId,
+      onSessionId: saveSessionId,
+    }),
+    [client, agentId, initialSessionId, saveSessionId],
+  );
+  const chat = useChat({ transport });
+  // Render chat.messages and submit using chat.sendMessage({ text }).
+}
+```
+
+Install `@ai-sdk/react` for the React hook. Keep the transport stable for one chat;
+remount the chat with a new transport when switching credentials, Agents, or
+Sessions. `onSessionId` runs once for a newly created Session before stream
+consumption, so it can be saved even if streaming later fails. The adapter
+preserves user message IDs, regeneration targets, and `useChat` cancellation.
+Regeneration requires an existing Session. Reconnection returns `null`; the
+adapter does not retry interrupted Turns or resume their streams.
+
+### Cancel resource reads
+
+Pass an optional `signal` to resource reads when leaving a screen or switching
+credentials:
+
+```ts
+const controller = new AbortController();
+const agents = client.agents.list({ signal: controller.signal });
+controller.abort();
+await agents; // Rejects with the SDK's typed cancellation error.
+```
+
+SDK response parsing strips unknown object fields while validating required
+fields and known field types. Request validation remains strict.

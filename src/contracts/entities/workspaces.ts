@@ -34,6 +34,12 @@ export const workspaceNetworkPolicySchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("offline") }).strict(),
 ]);
 
+const workspaceNetworkPolicyResponseSchema = z.discriminatedUnion("mode", [
+  workspaceNetworkPolicySchema.options[0].strip(),
+  workspaceNetworkPolicySchema.options[1].strip(),
+  workspaceNetworkPolicySchema.options[2].strip(),
+]);
+
 export const workspaceSchema = z
   .object({
     id: workspaceIdSchema,
@@ -41,11 +47,11 @@ export const workspaceSchema = z
     name: workspaceNameSchema.nullable(),
     userId: userIdSchema,
     metadata: metadataSchema,
-    networkPolicy: workspaceNetworkPolicySchema,
+    networkPolicy: workspaceNetworkPolicyResponseSchema,
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const createWorkspaceBodySchema = z
   .object({

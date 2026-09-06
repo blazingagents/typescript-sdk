@@ -54,7 +54,7 @@ export const skillSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const skillFilePathSchema = z
   .string()
@@ -77,13 +77,13 @@ export const skillFileSchema = z
     path: skillFilePathSchema,
     sizeBytes: z.number().int().nonnegative(),
   })
-  .strict();
+  .strip();
 
 export const skillDetailSchema = skillSchema
   .extend({
     files: z.array(skillFileSchema),
   })
-  .strict();
+  .strip();
 
 export const skillResponseSchema = skillDetailSchema;
 
@@ -135,7 +135,7 @@ const skillCopyCreatedResultSchema = z
     status: z.literal("created"),
     skill: skillDetailSchema,
   })
-  .strict();
+  .strip();
 
 const skillCopyFailedResultSchema = z
   .object({
@@ -147,9 +147,9 @@ const skillCopyFailedResultSchema = z
         message: z.string().min(1),
         details: z.unknown().optional(),
       })
-      .strict(),
+      .strip(),
   })
-  .strict();
+  .strip();
 
 export const skillCopyResultSchema = z.discriminatedUnion("status", [
   skillCopyCreatedResultSchema,

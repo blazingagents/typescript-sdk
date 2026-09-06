@@ -24,35 +24,35 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         providerResponseSchema
       );
     },
-    async list() {
+    async list(options = {}) {
       return await requestJson(
         config,
         "/v1/providers",
-        {},
+        options,
         providersResponseSchema
       );
     },
-    async get(id) {
+    async get(id, options = {}) {
       return await requestJson(
         config,
         `/v1/providers/${id}`,
-        {},
+        options,
         providerResponseSchema
       );
     },
-    async listModels(id) {
+    async listModels(id, options = {}) {
       return await requestJson(
         config,
         `/v1/providers/${id}/models`,
-        {},
+        options,
         providerModelsResponseSchema
       );
     },
-    async getThinkingLevels(id, model) {
+    async getThinkingLevels(id, model, options = {}) {
       return await requestJson(
         config,
         `/v1/providers/${id}/thinking-levels`,
-        { query: { model } },
+        { ...options, query: { model } },
         thinkingLevelsResponseSchema
       );
     },

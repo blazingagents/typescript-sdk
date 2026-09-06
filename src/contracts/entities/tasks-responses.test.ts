@@ -8,6 +8,7 @@ import {
   taskRunId,
 } from "../test/fixtures/tasks.ts";
 import {
+  createTaskBodySchema,
   createTaskResponseSchema,
   createTaskRunResponseSchema,
   taskListItemSchema,
@@ -31,13 +32,13 @@ describe("taskSchema", () => {
     expect(taskSchema.safeParse(taskWithoutPin).success).toBe(false);
   });
 
-  it("rejects extra fields", () => {
+  it("strips extra fields", () => {
     expect(
-      taskSchema.safeParse({
+      taskSchema.parse({
         ...createTaskFixture(),
         extra: true,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("extra");
   });
 });
 
@@ -159,4 +160,41 @@ describe("taskRunMessagesResponseSchema", () => {
       }).success
     ).toBe(false);
   });
+});
+
+describe("additive schedule response fields", () => {
+  it.each([
+    { kind: "once", config: { at: "2099-01-01T00:00:00Z" } },
+    { kind: "interval", config: { everyMs: 60_000 } },
+    { kind: "cron", config: { expression: "0 9 * * *", timezone: "UTC" } },
+  ])(
+    "strips nested $kind response additions but rejects them in writes",
+    (schedule) => {
+      const expanded = {
+        ...schedule,
+        futureSchedule: true,
+        config: { ...schedule.config, futureConfig: true },
+      };
+      expect(
+        taskSchema.parse({ ...createTaskFixture(), schedule: expanded })
+          .schedule
+      ).toEqual(schedule);
+      expect(
+        createTaskBodySchema.safeParse({
+          agentId,
+          name: "Task",
+          prompt: "Run",
+          schedule: expanded,
+        }).success
+      ).toBe(false);
+      expect(
+        createTaskBodySchema.safeParse({
+          agentId,
+          name: "Task",
+          prompt: "Run",
+          schedule: { ...schedule, config: expanded.config },
+        }).success
+      ).toBe(false);
+    }
+  );
 });

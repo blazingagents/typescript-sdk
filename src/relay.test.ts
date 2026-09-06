@@ -42,6 +42,7 @@ describe("relay factories", () => {
       Promise.resolve({
         requestId: "request-1",
         sessionId: Promise.resolve("ss_0123456789abcdef"),
+        toStream: () => new ReadableStream<Uint8Array>(),
         toResponse: () =>
           new Response("chat", {
             headers: {
@@ -90,6 +91,7 @@ describe("relay factories", () => {
     const chat = vi.fn(() =>
       Promise.resolve({
         sessionId: Promise.resolve("ss_0123456789abcdef"),
+        toStream: () => new ReadableStream<Uint8Array>(),
         toResponse: () => new Response("resumed"),
       })
     );
@@ -164,6 +166,7 @@ describe("relay factories", () => {
         chat: () =>
           Promise.resolve({
             sessionId: Promise.resolve("ss_0123456789abcdef"),
+            toStream: () => new ReadableStream<Uint8Array>(),
             toResponse: () =>
               new Response(new ReadableStream({ cancel })) as Response,
           }),

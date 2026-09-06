@@ -74,8 +74,8 @@ describe("Workspace contracts", () => {
   it("accepts the exact public resource projection", () => {
     expect(workspaceSchema.parse(workspace)).toEqual(workspace);
     expect(
-      workspaceSchema.safeParse({ ...workspace, attachedAgentId: null }).success
-    ).toBe(false);
+      workspaceSchema.parse({ ...workspace, attachedAgentId: null })
+    ).not.toHaveProperty("attachedAgentId");
   });
 
   it("accepts a nullable display name", () => {
@@ -139,4 +139,27 @@ describe("Workspace contracts", () => {
       updateWorkspaceBodySchema.safeParse({ userId: "changed" }).success
     ).toBe(false);
   });
+});
+
+describe("additive network policy response fields", () => {
+  it.each([
+    { mode: "unrestricted" },
+    { mode: "offline" },
+    { mode: "allowlist", allowedHosts: ["example.com"] },
+  ])(
+    "strips $mode response additions but rejects them in writes",
+    (networkPolicy) => {
+      const expanded = { ...networkPolicy, futurePolicy: true };
+      expect(
+        workspaceSchema.parse({ ...workspace, networkPolicy: expanded })
+          .networkPolicy
+      ).toEqual(networkPolicy);
+      expect(
+        createWorkspaceBodySchema.safeParse({ networkPolicy: expanded }).success
+      ).toBe(false);
+      expect(
+        updateWorkspaceBodySchema.safeParse({ networkPolicy: expanded }).success
+      ).toBe(false);
+    }
+  );
 });

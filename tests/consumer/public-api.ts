@@ -2,6 +2,7 @@ import {
   type AgentSkillsResource,
   type ArtifactDownloadUrlResponse,
   BlazingAgents,
+  BlazingAgentsDirectChatTransport,
   BlazingAgentsError,
   type BlazingAgentsErrorCode,
   type BlazingAgentsOptions,
@@ -10,6 +11,7 @@ import {
   type CompletionInput,
   type KnownBlazingAgentsErrorCode,
   type ObjectInput,
+  type ResourceReadOptions,
   type SkillCopyResults,
   type SkillDetail,
 } from "@blazingagents/sdk";
@@ -20,6 +22,13 @@ const options = {
 } satisfies BlazingAgentsOptions;
 
 const client = new BlazingAgents(options);
+const readOptions = {
+  signal: new AbortController().signal,
+} satisfies ResourceReadOptions;
+export const nativeTransport = new BlazingAgentsDirectChatTransport({
+  client,
+  agentId: "ag_0123456789abcdef",
+});
 // @ts-expect-error API-key lifecycle is dashboard-only and absent from the SDK.
 export const removedApiKeysResource = client.apiKeys;
 const knownErrorCode: KnownBlazingAgentsErrorCode = "invalid_response";
@@ -65,7 +74,13 @@ const skillsResource: AgentSkillsResource = client.agent(
 ).skills;
 
 export async function publicApiConsumer() {
-  const agents = await client.agents.list();
+  const agents = await client.agents.list(readOptions);
+  await client.sessions.list("ag_0123456789abcdef", readOptions);
+  await client.sessions.messages(
+    "ag_0123456789abcdef",
+    "ss_0123456789abcdef",
+    readOptions
+  );
   const implicitWorkspaceAgent = await client.agents.create({
     name: "Implicit Workspace Agent",
   });

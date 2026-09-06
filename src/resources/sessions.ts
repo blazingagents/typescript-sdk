@@ -1,4 +1,5 @@
 import {
+  latestSessionsListResponseSchema,
   sessionMessagesResponseSchema,
   sessionsListResponseSchema,
   toolApprovalDecisionResponseSchema,
@@ -49,6 +50,22 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
           },
         },
         sessionsListResponseSchema
+      );
+    },
+    async listLatest(options = {}) {
+      return await requestJson(
+        config,
+        "/v1/sessions/latest",
+        {
+          signal: options.abortSignal,
+          query: {
+            cursor: options.cursor,
+            limit: options.limit,
+            // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
+            ...(options.userId === undefined ? {} : { userId: options.userId }),
+          },
+        },
+        latestSessionsListResponseSchema
       );
     },
     async messages({ agentId, sessionId, ...options }) {

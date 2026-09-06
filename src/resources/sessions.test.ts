@@ -239,6 +239,44 @@ describe("client.sessions", () => {
     expect(page.nextCursor).toBeNull();
   });
 
+  it.each([
+    [undefined, ""],
+    [{}, ""],
+    [{ cursor: "next page" }, "?cursor=next+page"],
+    [{ limit: 20 }, "?limit=20"],
+    [{ userId: "" }, "?userId="],
+    [
+      { cursor: "next", limit: 20, userId: "end-user" },
+      "?cursor=next&limit=20&userId=end-user",
+    ],
+  ])("listLatest serializes options %#", async (options, suffix) => {
+    const { fetch, calls } = createMockFetch({
+      body: { data: [], nextCursor: null },
+    });
+    await client(fetch).sessions.listLatest(options);
+    expect(calls[0].url).toBe(`${BASE}/v1/sessions/latest${suffix}`);
+  });
+
+  it("listLatest returns one latest Session per Agent with its agentId", async () => {
+    const item = { ...sessionListItem, agentId: "ag_0123456789abcdef" };
+    const { fetch, calls } = createMockFetch({
+      body: { data: [item], nextCursor: "next" },
+    });
+    const abort = new AbortController();
+    const page = await client(fetch).sessions.listLatest({
+      abortSignal: abort.signal,
+    });
+    expect(page).toEqual({ data: [item], nextCursor: "next" });
+    expect(calls[0].init?.signal).toBe(abort.signal);
+  });
+
+  it("listLatest rejects items without an agentId", async () => {
+    const { fetch } = createMockFetch({
+      body: { data: [sessionListItem], nextCursor: null },
+    });
+    await expect(client(fetch).sessions.listLatest()).rejects.toBeDefined();
+  });
+
   it("messages gets /v1/agents/:id/sessions/:sid/messages", async () => {
     const { fetch, calls } = createMockFetch({
       body: {

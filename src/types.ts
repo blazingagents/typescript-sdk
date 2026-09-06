@@ -50,6 +50,7 @@ import type {
 } from "./contracts/entities/providers.ts";
 import type {
   DecideToolApprovalBody,
+  LatestSessionsListResponse,
   SessionMessagesResponse,
   SessionsListResponse,
   ToolApprovalDecisionResponse,
@@ -517,6 +518,12 @@ export interface SessionsListOptions extends ResourceRequestOptions {
   userId?: string;
 }
 
+export interface LatestSessionsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  userId?: string;
+}
+
 export interface SessionMessagesOptions extends ResourceRequestOptions {
   after?: string;
   cursor?: string;
@@ -548,6 +555,14 @@ export interface SessionsResource {
   list(
     input: { agentId: string } & SessionsListOptions
   ): Promise<SessionsListResponse>;
+  /**
+   * `GET /v1/sessions/latest` — each Agent's most recently updated Session
+   * across the Tenant, one item per Agent, newest first. `userId` narrows
+   * the candidate Sessions to one end user's before picking the latest.
+   */
+  listLatest(
+    input?: LatestSessionsListOptions
+  ): Promise<LatestSessionsListResponse>;
   messages(
     input: { agentId: string; sessionId: string } & SessionMessagesOptions
   ): Promise<SessionMessagesResponse>;

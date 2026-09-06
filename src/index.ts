@@ -104,6 +104,7 @@ export type {
   CompletionPromptInput,
   CompletionResult,
   KnownBlazingAgentsErrorCode,
+  LatestSessionsListOptions,
   McpConnectionsResource,
   MemoriesListOptions,
   MemoriesResource,

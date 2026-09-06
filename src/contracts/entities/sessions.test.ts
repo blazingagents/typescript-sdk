@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   decideToolApprovalBodySchema,
+  latestSessionListItemSchema,
+  latestSessionsListResponseSchema,
   sessionListItemSchema,
   sessionMessagesQuerySchema,
   sessionMessagesResponseSchema,
@@ -92,6 +94,43 @@ describe("sessionListItemSchema", () => {
     expect(
       sessionListItemSchema.parse({ ...baseSession, extra: true })
     ).not.toHaveProperty("extra");
+  });
+});
+
+describe("latestSessionListItemSchema", () => {
+  const agentId = "ag_xxxxxxxxxxxxxxxx";
+
+  it("is a session list item that also names its Agent", () => {
+    expect(
+      latestSessionListItemSchema.parse({ ...baseSession, agentId })
+    ).toStrictEqual({ ...baseSession, agentId });
+  });
+
+  it.each(["", "ss_xxxxxxxxxxxxxxxx", "ag_short"])(
+    "rejects malformed agentId %j",
+    (value) => {
+      expect(
+        latestSessionListItemSchema.safeParse({
+          ...baseSession,
+          agentId: value,
+        }).success
+      ).toBe(false);
+    }
+  );
+
+  it("requires agentId", () => {
+    expect(latestSessionListItemSchema.safeParse(baseSession).success).toBe(
+      false
+    );
+  });
+
+  it("paginates like the per-Agent list", () => {
+    expect(
+      latestSessionsListResponseSchema.parse({
+        data: [{ ...baseSession, agentId }],
+        nextCursor: null,
+      })
+    ).toStrictEqual({ data: [{ ...baseSession, agentId }], nextCursor: null });
   });
 });
 

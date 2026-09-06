@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { paginatedResponseSchema } from "../api.ts";
-import { sessionIdSchema } from "../ids.ts";
+import { agentIdSchema, sessionIdSchema } from "../ids.ts";
 import {
   DEFAULT_SESSION_MESSAGES_LIMIT,
   MAX_SESSION_MESSAGES_LIMIT,
@@ -30,6 +30,19 @@ export const sessionListItemSchema = z
 
 export const sessionsListResponseSchema = paginatedResponseSchema(
   sessionListItemSchema
+);
+
+/**
+ * `GET /v1/sessions/latest` list item — one per Agent: the Agent's most
+ * recently updated Session (optionally among one end user's Sessions).
+ * Carries `agentId` because the list spans the whole Tenant.
+ */
+export const latestSessionListItemSchema = sessionListItemSchema
+  .extend({ agentId: agentIdSchema })
+  .strip();
+
+export const latestSessionsListResponseSchema = paginatedResponseSchema(
+  latestSessionListItemSchema
 );
 
 /**
@@ -139,6 +152,10 @@ export const toolApprovalDecisionResponseSchema = z
 
 export type SessionListItem = z.infer<typeof sessionListItemSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
+export type LatestSessionListItem = z.infer<typeof latestSessionListItemSchema>;
+export type LatestSessionsListResponse = z.infer<
+  typeof latestSessionsListResponseSchema
+>;
 export type SessionMessage = z.infer<typeof sessionMessageSchema>;
 export type SessionMessagesResponse = z.infer<
   typeof sessionMessagesResponseSchema

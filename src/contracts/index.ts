@@ -79,6 +79,8 @@ export type {
 } from "./entities/sessions.ts";
 export {
   decideToolApprovalBodySchema,
+  latestSessionListItemSchema,
+  latestSessionsListResponseSchema,
   sessionListItemSchema,
   sessionMessageSchema,
   sessionMessagesResponseSchema,

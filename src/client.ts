@@ -80,7 +80,7 @@ export class BlazingAgents {
     this.workspaces = createWorkspacesResource(this.config);
   }
 
-  agent(agentId: string): AgentClient {
+  agent({ agentId }: { agentId: string }): AgentClient {
     return { skills: createAgentSkillsResource(this.config, agentId) };
   }
 

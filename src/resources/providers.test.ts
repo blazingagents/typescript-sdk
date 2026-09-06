@@ -26,10 +26,10 @@ describe("client.providers", () => {
   ])("reads exact model thinking capabilities %j", async (body) => {
     const { fetch, calls } = createMockFetch({ body });
     expect(
-      await client(fetch).providers.getThinkingLevels(
-        providerRow.id,
-        "openai/gpt-5"
-      )
+      await client(fetch).providers.getThinkingLevels({
+        providerId: providerRow.id,
+        model: "openai/gpt-5",
+      })
     ).toEqual(body);
     expect(new URL(calls[0].url).searchParams.get("model")).toBe(
       "openai/gpt-5"
@@ -95,7 +95,7 @@ describe("client.providers", () => {
   it("get gets /v1/providers/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: providerRow });
     const c = client(fetch);
-    await c.providers.get("prv_0123456789abcdef");
+    await c.providers.get({ providerId: "prv_0123456789abcdef" });
     expect(calls[0].url).toBe(`${BASE}/v1/providers/prv_0123456789abcdef`);
   });
 
@@ -106,7 +106,7 @@ describe("client.providers", () => {
     });
 
     const error = await client(fetch)
-      .providers.get("prv_0123456789abcdef")
+      .providers.get({ providerId: "prv_0123456789abcdef" })
       .catch((caught: unknown) => caught);
 
     expect(BlazingAgentsError.isInstance(error)).toBe(true);
@@ -122,9 +122,9 @@ describe("client.providers", () => {
     const { fetch, calls } = createMockFetch({
       body: { models: [{ id: "gpt-4.1" }] },
     });
-    const result = await client(fetch).providers.listModels(
-      "prv_0123456789abcdef"
-    );
+    const result = await client(fetch).providers.listModels({
+      providerId: "prv_0123456789abcdef",
+    });
     expect(result.models).toEqual([{ id: "gpt-4.1" }]);
     expect(calls[0].url).toBe(
       `${BASE}/v1/providers/prv_0123456789abcdef/models`
@@ -134,7 +134,10 @@ describe("client.providers", () => {
   it("update PATCHes /v1/providers/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: providerRow });
     const c = client(fetch);
-    await c.providers.update("prv_0123456789abcdef", { name: "Renamed" });
+    await c.providers.update({
+      providerId: "prv_0123456789abcdef",
+      name: "Renamed",
+    });
     expect(calls[0].url).toBe(`${BASE}/v1/providers/prv_0123456789abcdef`);
     expect(calls[0].init?.method).toBe("PATCH");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
@@ -145,7 +148,7 @@ describe("client.providers", () => {
   it("delete DELETEs /v1/providers/:id", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.providers.delete("prv_0123456789abcdef");
+    await c.providers.delete({ providerId: "prv_0123456789abcdef" });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(`${BASE}/v1/providers/prv_0123456789abcdef`);
   });
@@ -153,7 +156,8 @@ describe("client.providers", () => {
   it("delete exposes historical Version invalidation confirmation", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.providers.delete("prv_0123456789abcdef", {
+    await c.providers.delete({
+      providerId: "prv_0123456789abcdef",
       confirmVersionInvalidation: true,
     });
     expect(calls[0].url).toBe(

@@ -172,7 +172,7 @@ describe("client.completion", () => {
     await c.completion({
       agentId: "ag_0123456789abcdef",
       prompt: "hi",
-      signal: controller.signal,
+      abortSignal: controller.signal,
     });
     expect(calls[0].init?.signal).toBe(controller.signal);
   });

@@ -379,7 +379,7 @@ describe("installed SDK consumer contract", () => {
 
   it("creates an Artifact R2 download URL through compiled real HTTP", async () => {
     await expect(
-      client.artifacts.createDownloadUrl("at_0123456789abcdef")
+      client.artifacts.createDownloadUrl({ artifactId: "at_0123456789abcdef" })
     ).resolves.toEqual({
       expiresAt: "2026-07-31T12:05:00.000Z",
       url: "https://r2.example.test/signed-object",
@@ -411,10 +411,10 @@ describe("installed SDK consumer contract", () => {
       })
     ).resolves.toMatchObject({ name: "Updated Consumer Workspace" });
     await expect(
-      client.agents.update(agent.id, { workspaceId: workspace.id })
+      client.agents.update({ agentId: agent.id, workspaceId: workspace.id })
     ).resolves.toMatchObject({ workspaceId: workspace.id });
 
-    const skills = client.agent(agent.id).skills;
+    const skills = client.agent({ agentId: agent.id }).skills;
     const created = await skills.create({
       content: "---\nname: consumer\ndescription: Consumer Skill.\n---\n",
       path: "SKILL.md",
@@ -462,13 +462,13 @@ describe("installed SDK consumer contract", () => {
     const bytes = Uint8Array.from([0, 255, 128, 1]);
 
     await expect(
-      client.agent(agent.id).skills.getFile({
+      client.agent({ agentId: agent.id }).skills.getFile({
         path: "assets/icon one.bin",
         skillId: skill.id,
       })
     ).resolves.toEqual(bytes);
     await expect(
-      client.agent(agent.id).skills.putFile({
+      client.agent({ agentId: agent.id }).skills.putFile({
         content: bytes,
         path: "assets/upload.bin",
         skillId: skill.id,
@@ -479,7 +479,7 @@ describe("installed SDK consumer contract", () => {
 
   it("preserves a future API error through compiled real HTTP", async () => {
     const error = await client.agents
-      .get("ag_0000000000000000")
+      .get({ agentId: "ag_0000000000000000" })
       .catch((caught) => caught);
 
     expect(BlazingAgentsError.isInstance(error)).toBe(true);

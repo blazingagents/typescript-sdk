@@ -17,30 +17,30 @@ import type { HttpConfig, SessionsResource } from "../types.ts";
 
 export function createSessionsResource(config: HttpConfig): SessionsResource {
   return {
-    async decideToolApproval(
+    async decideToolApproval({
       agentId,
       sessionId,
       approvalId,
-      decision,
-      options = {}
-    ) {
+      abortSignal,
+      ...decision
+    }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/${approvalId}`,
         {
           json: decision,
           method: "POST",
-          ...(options.signal ? { signal: options.signal } : {}),
+          signal: abortSignal,
         },
         toolApprovalDecisionResponseSchema
       );
     },
-    async list(agentId, options = {}) {
+    async list({ agentId, ...options }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/sessions`,
         {
-          signal: options.signal,
+          signal: options.abortSignal,
           query: {
             cursor: options.cursor,
             limit: options.limit,
@@ -51,12 +51,12 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionsListResponseSchema
       );
     },
-    async messages(agentId, sessionId, options = {}) {
+    async messages({ agentId, sessionId, ...options }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}/messages`,
         {
-          signal: options.signal,
+          signal: options.abortSignal,
           query: {
             cursor: options.cursor,
             after: options.after,
@@ -66,32 +66,32 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionMessagesResponseSchema
       );
     },
-    async joinToolApprovalContinuation(
+    async joinToolApprovalContinuation({
       agentId,
       sessionId,
       continuationId,
-      options = {}
-    ) {
+      abortSignal,
+    }) {
       const response = await requestStream(
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/${continuationId}`,
-        options.signal ? { signal: options.signal } : {}
+        { signal: abortSignal }
       );
       return buildTerminalStreamResult(response, "continuation");
     },
-    async toolApprovals(agentId, sessionId, options = {}) {
+    async toolApprovals({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`,
-        options,
+        { signal: abortSignal },
         toolApprovalsResponseSchema
       );
     },
-    async delete(agentId, sessionId, deleteArtifacts) {
+    async delete({ agentId, sessionId, deleteArtifacts, abortSignal }) {
       await requestJson<void>(
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}`,
-        { method: "DELETE", query: { deleteArtifacts } }
+        { method: "DELETE", query: { deleteArtifacts }, signal: abortSignal }
       );
     },
   };

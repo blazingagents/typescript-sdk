@@ -31,7 +31,7 @@ describe("client.agent(agentId).skills", () => {
     const { fetch, calls } = createMockFetch({ body: skill });
 
     await expect(
-      client(fetch).agent(agentId).skills.create({
+      client(fetch).agent({ agentId }).skills.create({
         content: markdown,
         path: "SKILL.md",
       })
@@ -50,7 +50,7 @@ describe("client.agent(agentId).skills", () => {
 
     await expect(
       client(fetch)
-        .agent(agentId)
+        .agent({ agentId })
         .skills.upload({
           source: { file: archive, type: "tar.gz" },
         })
@@ -69,7 +69,7 @@ describe("client.agent(agentId).skills", () => {
     const archive = new Blob([Uint8Array.from([80, 75, 3, 4])]);
 
     await client(fetch)
-      .agent(agentId)
+      .agent({ agentId })
       .skills.upload({
         source: { file: archive, type: "zip" },
       });
@@ -90,7 +90,9 @@ describe("client.agent(agentId).skills", () => {
     });
 
     await expect(
-      client(fetch).agent(agentId).skills.list({ cursor: "page", limit: 25 })
+      client(fetch)
+        .agent({ agentId })
+        .skills.list({ cursor: "page", limit: 25 })
     ).resolves.toEqual({ data: [skillListItem], nextCursor: "next" });
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/skills?cursor=page&limit=25`
@@ -103,7 +105,9 @@ describe("client.agent(agentId).skills", () => {
       body: { data: [skillListItem], nextCursor: null },
     });
 
-    await expect(client(fetch).agent(agentId).skills.list()).resolves.toEqual({
+    await expect(
+      client(fetch).agent({ agentId }).skills.list()
+    ).resolves.toEqual({
       data: [skillListItem],
       nextCursor: null,
     });
@@ -114,7 +118,7 @@ describe("client.agent(agentId).skills", () => {
     const { fetch, calls } = createMockFetch({ body: skill });
 
     await expect(
-      client(fetch).agent(agentId).skills.get({ skillId })
+      client(fetch).agent({ agentId }).skills.get({ skillId })
     ).resolves.toEqual(skill);
     expect(calls[0].url).toBe(`${BASE}/v1/agents/${agentId}/skills/${skillId}`);
   });
@@ -123,7 +127,7 @@ describe("client.agent(agentId).skills", () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
 
     await expect(
-      client(fetch).agent(agentId).skills.delete({ skillId })
+      client(fetch).agent({ agentId }).skills.delete({ skillId })
     ).resolves.toBeUndefined();
     expect(calls[0].url).toBe(`${BASE}/v1/agents/${agentId}/skills/${skillId}`);
     expect(calls[0].init?.method).toBe("DELETE");
@@ -140,10 +144,9 @@ describe("client.agent(agentId).skills", () => {
       }),
     });
 
-    const responseBytes = await client(fetch).agent(agentId).skills.getFile({
-      path: "assets/icon one.bin",
-      skillId,
-    });
+    const responseBytes = await client(fetch)
+      .agent({ agentId })
+      .skills.getFile({ path: "assets/icon one.bin", skillId });
 
     expect(responseBytes).toBeInstanceOf(Uint8Array);
     expect(responseBytes).toEqual(bytes);
@@ -171,8 +174,8 @@ describe("client.agent(agentId).skills", () => {
       ),
     });
     const result = client(fetch)
-      .agent(agentId)
-      .skills.getFile({ path: "SKILL.md", skillId }, { signal: abort.signal });
+      .agent({ agentId })
+      .skills.getFile({ path: "SKILL.md", skillId, abortSignal: abort.signal });
     await reading.promise;
     abort.abort();
 
@@ -193,7 +196,9 @@ describe("client.agent(agentId).skills", () => {
       }),
     });
     await expect(
-      client(fetch).agent(agentId).skills.getFile({ path: "SKILL.md", skillId })
+      client(fetch)
+        .agent({ agentId })
+        .skills.getFile({ path: "SKILL.md", skillId })
     ).rejects.toBe(cause);
   });
 
@@ -202,7 +207,7 @@ describe("client.agent(agentId).skills", () => {
     const { fetch, calls } = createMockFetch({ body: skill });
 
     await expect(
-      client(fetch).agent(agentId).skills.putFile({
+      client(fetch).agent({ agentId }).skills.putFile({
         content: bytes,
         path: "assets/icon.bin",
         skillId,
@@ -219,7 +224,7 @@ describe("client.agent(agentId).skills", () => {
     const { fetch, calls } = createMockFetch({ body: skill });
 
     await expect(
-      client(fetch).agent(agentId).skills.deleteFile({
+      client(fetch).agent({ agentId }).skills.deleteFile({
         path: "notes.txt",
         skillId,
       })
@@ -249,7 +254,7 @@ describe("client.agent(agentId).skills", () => {
 
     await expect(
       client(fetch)
-        .agent(agentId)
+        .agent({ agentId })
         .skills.copy({
           skillId,
           to: { agentIds: [destinationAgentId, failedAgentId] },

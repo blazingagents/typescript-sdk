@@ -7,7 +7,9 @@ describe("sdk smoke", () => {
     const client = new BlazingAgents({ apiKey: "ba_test" });
     expect(client.agents).toBeDefined();
     expect(client.sessions).toBeDefined();
-    expect(client.agent("ag_0123456789abcdef").skills).toBeDefined();
+    expect(
+      client.agent({ agentId: "ag_0123456789abcdef" }).skills
+    ).toBeDefined();
     expect("skills" in client).toBe(false);
     expect(client.providers).toBeDefined();
     expect(client.mcpConnections).toBeDefined();

@@ -43,7 +43,7 @@ export class BlazingAgentsDirectChatTransport<
       ...(this.#sessionId === undefined
         ? { trigger: "submit-message" as const }
         : { sessionId: this.#sessionId, trigger: input.trigger }),
-      signal: input.abortSignal,
+      abortSignal: input.abortSignal,
     });
     const stream = result.toStream();
     try {

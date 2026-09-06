@@ -9,39 +9,40 @@ export function createWorkspacesResource(
   config: HttpConfig
 ): WorkspacesResource {
   return {
-    async create(body = {}) {
+    async create({ abortSignal, ...body } = {}) {
       return await requestJson(
         config,
         "/v1/workspaces",
         {
           json: body,
+          signal: abortSignal,
           method: "POST",
         },
         workspaceSchema
       );
     },
-    async delete({ workspaceId }) {
+    async delete({ workspaceId, abortSignal }) {
       const response = await requestStream(
         config,
         `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
-        { method: "DELETE" }
+        { method: "DELETE", signal: abortSignal }
       );
       return response.status === 202 ? "pending" : "completed";
     },
-    async get({ workspaceId }, options = {}) {
+    async get({ workspaceId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
-        options,
+        { signal: abortSignal },
         workspaceSchema
       );
     },
-    async list(options = {}) {
+    async list({ abortSignal, ...options } = {}) {
       return await requestJson(
         config,
         "/v1/workspaces",
         {
-          signal: options.signal,
+          signal: abortSignal,
           query: {
             cursor: options.cursor,
             limit: options.limit,
@@ -51,11 +52,11 @@ export function createWorkspacesResource(
         workspacesListResponseSchema
       );
     },
-    async update({ workspaceId, ...body }) {
+    async update({ workspaceId, abortSignal, ...body }) {
       return await requestJson(
         config,
         `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
-        { json: body, method: "PUT" },
+        { json: body, signal: abortSignal, method: "PUT" },
         workspaceSchema
       );
     },

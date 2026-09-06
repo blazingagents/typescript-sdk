@@ -13,63 +13,66 @@ import type { HttpConfig, ProvidersResource } from "../types.ts";
 
 export function createProvidersResource(config: HttpConfig): ProvidersResource {
   return {
-    async create(body) {
+    async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/providers",
         {
           json: body,
+          signal: abortSignal,
           method: "POST",
         },
         providerResponseSchema
       );
     },
-    async list(options = {}) {
+    async list({ abortSignal } = {}) {
       return await requestJson(
         config,
         "/v1/providers",
-        options,
+        { signal: abortSignal },
         providersResponseSchema
       );
     },
-    async get(id, options = {}) {
+    async get({ providerId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/providers/${id}`,
-        options,
+        `/v1/providers/${providerId}`,
+        { signal: abortSignal },
         providerResponseSchema
       );
     },
-    async listModels(id, options = {}) {
+    async listModels({ providerId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/providers/${id}/models`,
-        options,
+        `/v1/providers/${providerId}/models`,
+        { signal: abortSignal },
         providerModelsResponseSchema
       );
     },
-    async getThinkingLevels(id, model, options = {}) {
+    async getThinkingLevels({ providerId, model, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/providers/${id}/thinking-levels`,
-        { ...options, query: { model } },
+        `/v1/providers/${providerId}/thinking-levels`,
+        { signal: abortSignal, query: { model } },
         thinkingLevelsResponseSchema
       );
     },
-    async update(id, body) {
+    async update({ providerId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/providers/${id}`,
+        `/v1/providers/${providerId}`,
         {
           json: body,
+          signal: abortSignal,
           method: "PATCH",
         },
         providerResponseSchema
       );
     },
-    async delete(id, options = {}) {
-      await requestJson<void>(config, `/v1/providers/${id}`, {
+    async delete({ providerId, abortSignal, ...options }) {
+      await requestJson<void>(config, `/v1/providers/${providerId}`, {
         method: "DELETE",
+        signal: abortSignal,
         query: {
           confirmVersionInvalidation: options.confirmVersionInvalidation,
         },

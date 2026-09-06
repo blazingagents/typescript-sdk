@@ -113,7 +113,7 @@ export type {
   ObjectResult,
   PromptsResource,
   ProvidersResource,
-  ResourceReadOptions,
+  ResourceRequestOptions,
   ResponseObservation,
   SessionsResource,
   SkillsListOptions,

@@ -11,7 +11,7 @@ import {
   type CompletionInput,
   type KnownBlazingAgentsErrorCode,
   type ObjectInput,
-  type ResourceReadOptions,
+  type ResourceRequestOptions,
   type SkillCopyResults,
   type SkillDetail,
 } from "@blazingagents/sdk";
@@ -23,8 +23,8 @@ const options = {
 
 const client = new BlazingAgents(options);
 const readOptions = {
-  signal: new AbortController().signal,
-} satisfies ResourceReadOptions;
+  abortSignal: new AbortController().signal,
+} satisfies ResourceRequestOptions;
 export const nativeTransport = new BlazingAgentsDirectChatTransport({
   client,
   agentId: "ag_0123456789abcdef",
@@ -49,6 +49,7 @@ const publicError = new BlazingAgentsError(
 );
 
 const chatInput = {
+  ...readOptions,
   agentId: "ag_0123456789abcdef",
   message: {
     id: "consumer-message",
@@ -60,34 +61,43 @@ const chatInput = {
 const completionInput = {
   agentId: "ag_0123456789abcdef",
   prompt: "Hello",
+  ...readOptions,
 } satisfies CompletionInput;
 
 const objectInput = {
   agentId: "ag_0123456789abcdef",
   prompt: "Return an object",
   schema: { type: "object" },
+  ...readOptions,
 } satisfies ObjectInput;
 type HasTopLevelSkills = "skills" extends keyof BlazingAgents ? true : false;
 export const hasTopLevelSkills: HasTopLevelSkills = false;
-const skillsResource: AgentSkillsResource = client.agent(
-  "ag_0123456789abcdef"
-).skills;
+const skillsResource: AgentSkillsResource = client.agent({
+  agentId: "ag_0123456789abcdef",
+}).skills;
 
 export async function publicApiConsumer() {
   const agents = await client.agents.list(readOptions);
-  await client.sessions.list("ag_0123456789abcdef", readOptions);
-  await client.sessions.messages(
-    "ag_0123456789abcdef",
-    "ss_0123456789abcdef",
-    readOptions
-  );
+  await client.sessions.list({
+    agentId: "ag_0123456789abcdef",
+    ...readOptions,
+  });
+  await client.sessions.messages({
+    agentId: "ag_0123456789abcdef",
+    sessionId: "ss_0123456789abcdef",
+    ...readOptions,
+  });
   const implicitWorkspaceAgent = await client.agents.create({
     name: "Implicit Workspace Agent",
+    ...readOptions,
   });
   const implicitWorkspaceId: string = implicitWorkspaceAgent.workspaceId;
   const artifactDownload: ArtifactDownloadUrlResponse =
-    await client.artifacts.createDownloadUrl("at_0123456789abcdef");
-  await client.artifacts.get("at_0123456789abcdef");
+    await client.artifacts.createDownloadUrl({
+      artifactId: "at_0123456789abcdef",
+      ...readOptions,
+    });
+  await client.artifacts.get({ artifactId: "at_0123456789abcdef" });
   const chat = await client.chat(chatInput);
   const chatResponse: Response = chat.toResponse();
   const completion = await client.completion(completionInput);
@@ -100,11 +110,12 @@ export async function publicApiConsumer() {
     skillId: "skill_0123456789abcdef",
     to: { agentIds: ["ag_fedcba9876543210"] },
   });
-  const continuation = await client.sessions.joinToolApprovalContinuation(
-    "ag_0123456789abcdef",
-    "ss_0123456789abcdef",
-    "continuation-1"
-  );
+  const continuation = await client.sessions.joinToolApprovalContinuation({
+    agentId: "ag_0123456789abcdef",
+    sessionId: "ss_0123456789abcdef",
+    continuationId: "continuation-1",
+    ...readOptions,
+  });
   const message: BlazingAgentsUIMessage = {
     id: "assistant-message",
     role: "assistant",

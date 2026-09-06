@@ -34,7 +34,7 @@ export async function chat(
     json: body,
     method: "POST",
     clientRequestId: input.clientRequestId,
-    ...(input.signal ? { signal: input.signal } : {}),
+    ...(input.abortSignal ? { signal: input.abortSignal } : {}),
   });
   return buildChatResult(response, input.sessionId);
 }
@@ -344,7 +344,7 @@ export async function completion(
     json: body,
     method: "POST",
     clientRequestId: input.clientRequestId,
-    ...(input.signal ? { signal: input.signal } : {}),
+    ...(input.abortSignal ? { signal: input.abortSignal } : {}),
   });
   return buildCompletionResult(response);
 }
@@ -392,7 +392,7 @@ export async function objectGeneration(
     json: body,
     method: "POST",
     clientRequestId: input.clientRequestId,
-    ...(input.signal ? { signal: input.signal } : {}),
+    ...(input.abortSignal ? { signal: input.abortSignal } : {}),
   });
   return buildObjectResult(response);
 }

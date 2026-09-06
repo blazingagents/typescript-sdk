@@ -12,51 +12,54 @@ import type { HttpConfig, PromptsResource } from "../types.ts";
 
 export function createPromptsResource(config: HttpConfig): PromptsResource {
   return {
-    async create(body) {
+    async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/prompts",
         {
           json: body,
+          signal: abortSignal,
           method: "POST",
         },
         promptResponseSchema
       );
     },
-    async list(userId, options = {}) {
+    async list({ userId, abortSignal } = {}) {
       return await requestJson(
         config,
         "/v1/prompts",
         {
-          ...options,
+          signal: abortSignal,
           // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
           ...(userId === undefined ? {} : { query: { userId } }),
         },
         promptsResponseSchema
       );
     },
-    async get(promptId, options = {}) {
+    async get({ promptId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/prompts/${promptId}`,
-        options,
+        { signal: abortSignal },
         promptResponseSchema
       );
     },
-    async update(promptId, body) {
+    async update({ promptId, abortSignal, ...body }) {
       return await requestJson(
         config,
         `/v1/prompts/${promptId}`,
         {
           json: body,
+          signal: abortSignal,
           method: "PATCH",
         },
         promptResponseSchema
       );
     },
-    async delete(promptId) {
+    async delete({ promptId, abortSignal }) {
       await requestJson<void>(config, `/v1/prompts/${promptId}`, {
         method: "DELETE",
+        signal: abortSignal,
       });
     },
   };

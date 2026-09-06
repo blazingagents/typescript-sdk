@@ -30,9 +30,9 @@ describe("client.mcpConnections", () => {
     };
     const { fetch, calls } = createMockFetch({ body });
 
-    await expect(client(fetch).mcpConnections.connect(row.id)).resolves.toEqual(
-      body
-    );
+    await expect(
+      client(fetch).mcpConnections.connect({ mcpConnectionId: row.id })
+    ).resolves.toEqual(body);
     expect(calls[0].url).toBe(`${BASE}/v1/mcp-connections/${row.id}/connect`);
     expect(calls[0].init?.method).toBe("POST");
   });
@@ -94,7 +94,8 @@ describe("client.mcpConnections", () => {
     const reconnectFetch = createMockFetch({
       body: { status: "connected", connection: bearer },
     });
-    await client(reconnectFetch.fetch).mcpConnections.reconnect(row.id, {
+    await client(reconnectFetch.fetch).mcpConnections.reconnect({
+      mcpConnectionId: row.id,
       authType: "bearer",
       bearerToken: "secret-canary.token",
       url: row.url,
@@ -135,10 +136,10 @@ describe("client.mcpConnections", () => {
     const reconnectFetch = createMockFetch({
       body: { status: "connected", connection: oauth },
     });
-    const result = await client(reconnectFetch.fetch).mcpConnections.reconnect(
-      row.id,
-      body
-    );
+    const result = await client(reconnectFetch.fetch).mcpConnections.reconnect({
+      mcpConnectionId: row.id,
+      ...body,
+    });
     expect(JSON.parse(reconnectFetch.calls[0].init?.body as string)).toEqual(
       body
     );
@@ -156,13 +157,16 @@ describe("client.mcpConnections", () => {
 
   it("gets", async () => {
     const { fetch, calls } = createMockFetch({ body: row });
-    await client(fetch).mcpConnections.get(row.id);
+    await client(fetch).mcpConnections.get({ mcpConnectionId: row.id });
     expect(calls[0].url).toBe(`${BASE}/v1/mcp-connections/${row.id}`);
   });
 
   it("updates", async () => {
     const { fetch, calls } = createMockFetch({ body: row });
-    await client(fetch).mcpConnections.update(row.id, { name: "Renamed" });
+    await client(fetch).mcpConnections.update({
+      mcpConnectionId: row.id,
+      name: "Renamed",
+    });
     expect(calls[0].init?.method).toBe("PATCH");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       name: "Renamed",
@@ -171,7 +175,7 @@ describe("client.mcpConnections", () => {
 
   it("deletes", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
-    await client(fetch).mcpConnections.delete(row.id);
+    await client(fetch).mcpConnections.delete({ mcpConnectionId: row.id });
     expect(calls[0].init?.method).toBe("DELETE");
   });
 
@@ -184,9 +188,9 @@ describe("client.mcpConnections", () => {
       toolNames: ["search"],
     } as const;
     const { fetch, calls } = createMockFetch({ body });
-    await expect(client(fetch).mcpConnections.test(row.id)).resolves.toEqual(
-      body
-    );
+    await expect(
+      client(fetch).mcpConnections.test({ mcpConnectionId: row.id })
+    ).resolves.toEqual(body);
     expect(calls[0].url).toBe(`${BASE}/v1/mcp-connections/${row.id}/test`);
     expect(calls[0].init?.method).toBe("POST");
   });
@@ -197,7 +201,8 @@ describe("client.mcpConnections", () => {
       body: { status: "connected", connection: replacement },
     });
     await expect(
-      client(fetch).mcpConnections.reconnect(row.id, {
+      client(fetch).mcpConnections.reconnect({
+        mcpConnectionId: row.id,
         authType: "none",
         url: replacement.url,
       })

@@ -198,11 +198,11 @@ describe("generation transport errors", () => {
     ).rejects.toMatchObject(expected);
     const continuationResult = await clientWithLockedResponse({
       requestId: "request-already-claimed",
-    }).sessions.joinToolApprovalContinuation(
-      "ag_0123456789abcdef",
-      "ss_0123456789abcdef",
-      "tool-approval:ss:assistant"
-    );
+    }).sessions.joinToolApprovalContinuation({
+      agentId: "ag_0123456789abcdef",
+      sessionId: "ss_0123456789abcdef",
+      continuationId: "tool-approval:ss:assistant",
+    });
     expect(() => continuationResult.toResponse()).toThrowError(
       expect.objectContaining(expected)
     );
@@ -245,11 +245,11 @@ describe("generation transport errors", () => {
     );
 
     const continuationResult =
-      await clientWithNullResponse().sessions.joinToolApprovalContinuation(
-        "ag_0123456789abcdef",
-        "ss_0123456789abcdef",
-        "tool-approval:ss:assistant"
-      );
+      await clientWithNullResponse().sessions.joinToolApprovalContinuation({
+        agentId: "ag_0123456789abcdef",
+        sessionId: "ss_0123456789abcdef",
+        continuationId: "tool-approval:ss:assistant",
+      });
     expect(() => continuationResult.toResponse()).toThrowError(
       expect.objectContaining(expected)
     );

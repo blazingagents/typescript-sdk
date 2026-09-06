@@ -19,35 +19,41 @@ import type { AgentsResource, HttpConfig } from "../types.ts";
  */
 
 export function createAgentsResource(config: HttpConfig): AgentsResource {
-  const getVersion: AgentsResource["getVersion"] = async (
+  const getVersion: AgentsResource["getVersion"] = async ({
     agentId,
     version,
-    options = {}
-  ) =>
+    abortSignal,
+  }) =>
     requestJson(
       config,
       `/v1/agents/${agentId}/versions/${version}`,
-      options,
+      { signal: abortSignal },
       agentVersionSchema
     );
-  const update: AgentsResource["update"] = async (agentId, body) =>
+  const update: AgentsResource["update"] = async ({
+    agentId,
+    abortSignal,
+    ...body
+  }) =>
     requestJson(
       config,
       `/v1/agents/${agentId}`,
       {
         json: body,
+        signal: abortSignal,
         method: "PUT",
       },
       agentResponseSchema
     );
 
   return {
-    async create(body) {
+    async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/agents",
         {
           json: body,
+          signal: abortSignal,
           method: "POST",
         },
         agentResponseSchema
@@ -58,7 +64,7 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         config,
         "/v1/agents",
         {
-          signal: options.signal,
+          signal: options.abortSignal,
           query: {
             userId: options.userId,
             workspaceId: options.workspaceId,
@@ -67,53 +73,59 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentsResponseSchema
       );
     },
-    async get(agentId, options = {}) {
+    async get({ agentId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}`,
-        options,
+        { signal: abortSignal },
         agentResponseSchema
       );
     },
-    async disable(agentId) {
+    async disable({ agentId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/disable`,
-        { method: "POST" },
+        { method: "POST", signal: abortSignal },
         agentResponseSchema
       );
     },
-    async enable(agentId) {
+    async enable({ agentId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/enable`,
-        { method: "POST" },
+        { method: "POST", signal: abortSignal },
         agentResponseSchema
       );
     },
     getVersion,
-    async listVersions(agentId, options = {}) {
+    async listVersions({ agentId, ...options }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/versions`,
         {
-          signal: options.signal,
+          signal: options.abortSignal,
           query: { cursor: options.cursor, limit: options.limit },
         },
         agentVersionsResponseSchema
       );
     },
-    async listMcpAttachments(agentId, options = {}) {
+    async listMcpAttachments({ agentId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/mcp-attachments`,
-        options,
+        { signal: abortSignal },
         mcpAttachmentsResponseSchema
       );
     },
-    async restoreVersion(agentId, versionNumber) {
-      const version = await getVersion(agentId, versionNumber);
-      return update(agentId, {
+    async restoreVersion({ agentId, version: versionNumber, abortSignal }) {
+      const version = await getVersion({
+        agentId,
+        version: versionNumber,
+        abortSignal,
+      });
+      return update({
+        agentId,
+        abortSignal,
         name: version.name,
         model: version.model,
         thinkingLevel: version.thinkingLevel,
@@ -126,21 +138,27 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
       });
     },
     update,
-    async updateMcpAttachment(agentId, mcpConnectionId, body) {
+    async updateMcpAttachment({
+      agentId,
+      mcpConnectionId,
+      abortSignal,
+      ...body
+    }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/mcp-attachments/${mcpConnectionId}`,
-        { json: body, method: "PATCH" },
+        { json: body, method: "PATCH", signal: abortSignal },
         mcpAttachmentResponseSchema
       );
     },
-    async delete(agentId, includeArtifacts) {
+    async delete({ agentId, includeArtifacts, abortSignal }) {
       await requestJson<void>(config, `/v1/agents/${agentId}`, {
         method: "DELETE",
         query: { includeArtifacts },
+        signal: abortSignal,
       });
     },
-    async uploadAvatar(agentId, file) {
+    async uploadAvatar({ agentId, file, abortSignal }) {
       const form = new FormData();
       form.append("file", file);
       return await requestJson(
@@ -148,16 +166,17 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         `/v1/agents/${agentId}/avatar`,
         {
           body: form,
+          signal: abortSignal,
           method: "POST",
         },
         agentResponseSchema
       );
     },
-    async removeAvatar(agentId) {
+    async removeAvatar({ agentId, abortSignal }) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/avatar`,
-        { method: "DELETE" },
+        { method: "DELETE", signal: abortSignal },
         agentResponseSchema
       );
     },

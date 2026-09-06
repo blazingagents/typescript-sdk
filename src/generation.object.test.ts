@@ -266,7 +266,7 @@ describe("client.object", () => {
       agentId: "ag_0123456789abcdef",
       prompt: "x",
       schema: { type: "object" },
-      signal: controller.signal,
+      abortSignal: controller.signal,
     });
     expect(calls[0].init?.signal).toBe(controller.signal);
   });

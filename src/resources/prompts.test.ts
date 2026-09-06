@@ -64,21 +64,24 @@ describe("client.prompts", () => {
     ["end user/1", `${BASE}/v1/prompts?userId=end+user%2F1`],
   ])("serializes list attribution %#", async (userId, expectedUrl) => {
     const { fetch, calls } = createMockFetch({ body: { prompts: [] } });
-    await client(fetch).prompts.list(userId);
+    await client(fetch).prompts.list({ userId });
     expect(calls[0].url).toBe(expectedUrl);
   });
 
   it("get gets /v1/prompts/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: promptRow });
     const c = client(fetch);
-    await c.prompts.get("prompt_0123456789abcdef");
+    await c.prompts.get({ promptId: "prompt_0123456789abcdef" });
     expect(calls[0].url).toBe(`${BASE}/v1/prompts/prompt_0123456789abcdef`);
   });
 
   it("update PATCHes /v1/prompts/:id", async () => {
     const { fetch, calls } = createMockFetch({ body: promptRow });
     const c = client(fetch);
-    await c.prompts.update("prompt_0123456789abcdef", { name: "Renamed" });
+    await c.prompts.update({
+      promptId: "prompt_0123456789abcdef",
+      name: "Renamed",
+    });
     expect(calls[0].init?.method).toBe("PATCH");
     expect(calls[0].url).toBe(`${BASE}/v1/prompts/prompt_0123456789abcdef`);
   });
@@ -86,7 +89,7 @@ describe("client.prompts", () => {
   it("delete DELETEs /v1/prompts/:id", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
-    await c.prompts.delete("prompt_0123456789abcdef");
+    await c.prompts.delete({ promptId: "prompt_0123456789abcdef" });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(`${BASE}/v1/prompts/prompt_0123456789abcdef`);
   });

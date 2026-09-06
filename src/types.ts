@@ -310,6 +310,8 @@ export interface ObjectResult {
   toResponse: () => Response;
 }
 
+export type ResourceReadOptions = Pick<RequestOptions, "signal">;
+
 export interface AgentsResource {
   /** Omitting `workspaceId` attaches a default Workspace with a lazy runtime. */
   create(body: CreateAgentBody): Promise<Agent>;
@@ -317,10 +319,17 @@ export interface AgentsResource {
   delete(agentId: string, includeArtifacts: boolean): Promise<void>;
   disable(agentId: string): Promise<Agent>;
   enable(agentId: string): Promise<Agent>;
-  get(agentId: string): Promise<Agent>;
-  getVersion(agentId: string, version: number): Promise<AgentVersion>;
+  get(agentId: string, options?: ResourceReadOptions): Promise<Agent>;
+  getVersion(
+    agentId: string,
+    version: number,
+    options?: ResourceReadOptions
+  ): Promise<AgentVersion>;
   list(options?: AgentsListOptions): Promise<AgentsResponse>;
-  listMcpAttachments(agentId: string): Promise<McpAttachmentsResponse>;
+  listMcpAttachments(
+    agentId: string,
+    options?: ResourceReadOptions
+  ): Promise<McpAttachmentsResponse>;
   listVersions(
     agentId: string,
     options?: AgentVersionsListOptions
@@ -345,7 +354,7 @@ export interface AgentClient {
   readonly skills: AgentSkillsResource;
 }
 
-export interface AgentsListOptions {
+export interface AgentsListOptions extends ResourceReadOptions {
   userId?: string;
   workspaceId?: string;
 }
@@ -353,25 +362,28 @@ export interface AgentsListOptions {
 export interface WorkspacesResource {
   create(body?: CreateWorkspaceBody): Promise<Workspace>;
   delete(input: { workspaceId: string }): Promise<"completed" | "pending">;
-  get(input: { workspaceId: string }): Promise<Workspace>;
+  get(
+    input: { workspaceId: string },
+    options?: ResourceReadOptions
+  ): Promise<Workspace>;
   list(options?: WorkspacesListOptions): Promise<WorkspacesListResponse>;
   update(
     input: UpdateWorkspaceBody & { workspaceId: string }
   ): Promise<Workspace>;
 }
 
-export interface WorkspacesListOptions {
+export interface WorkspacesListOptions extends ResourceReadOptions {
   cursor?: string;
   limit?: number;
   userId?: string;
 }
 
-export interface AgentVersionsListOptions {
+export interface AgentVersionsListOptions extends ResourceReadOptions {
   cursor?: string;
   limit?: number;
 }
 
-export interface ArtifactsListOptions {
+export interface ArtifactsListOptions extends ResourceReadOptions {
   agentId?: string;
   cursor?: string;
   sessionId?: string;
@@ -380,14 +392,21 @@ export interface ArtifactsListOptions {
 export interface ArtifactsResource {
   createDownloadUrl(artifactId: string): Promise<ArtifactDownloadUrlResponse>;
   delete(artifactId: string): Promise<void>;
-  get(artifactId: string): Promise<ArtifactListItem>;
+  get(
+    artifactId: string,
+    options?: ResourceReadOptions
+  ): Promise<ArtifactListItem>;
   list(options?: ArtifactsListOptions): Promise<ArtifactsListResponse>;
 }
 
 export interface MemoriesResource {
   create(agentId: string, body: CreateMemoryBody): Promise<MemoryResponse>;
   delete(agentId: string, memoryId: string): Promise<void>;
-  get(agentId: string, memoryId: string): Promise<MemoryResponse>;
+  get(
+    agentId: string,
+    memoryId: string,
+    options?: ResourceReadOptions
+  ): Promise<MemoryResponse>;
   list(
     agentId: string,
     options?: MemoriesListOptions
@@ -399,7 +418,7 @@ export interface MemoriesResource {
   ): Promise<MemoryResponse>;
 }
 
-export interface MemoriesListOptions {
+export interface MemoriesListOptions extends ResourceReadOptions {
   cursor?: string;
   limit?: number;
   search?: string;
@@ -409,18 +428,28 @@ export interface MemoriesListOptions {
 export interface PromptsResource {
   create(body: CreatePromptBody): Promise<PromptResponse>;
   delete(promptId: string): Promise<void>;
-  get(promptId: string): Promise<PromptResponse>;
-  list(userId?: string): Promise<PromptsResponse>;
+  get(promptId: string, options?: ResourceReadOptions): Promise<PromptResponse>;
+  list(
+    userId?: string,
+    options?: ResourceReadOptions
+  ): Promise<PromptsResponse>;
   update(promptId: string, body: UpdatePromptBody): Promise<PromptResponse>;
 }
 
 export interface ProvidersResource {
   create(body: CreateProviderBody): Promise<ProviderResponse>;
   delete(id: string, options?: DeleteProviderOptions): Promise<void>;
-  get(id: string): Promise<ProviderResponse>;
-  getThinkingLevels(id: string, model: string): Promise<ThinkingLevelsResponse>;
-  list(): Promise<ProvidersResponse>;
-  listModels(id: string): Promise<ProviderModelsResponse>;
+  get(id: string, options?: ResourceReadOptions): Promise<ProviderResponse>;
+  getThinkingLevels(
+    id: string,
+    model: string,
+    options?: ResourceReadOptions
+  ): Promise<ThinkingLevelsResponse>;
+  list(options?: ResourceReadOptions): Promise<ProvidersResponse>;
+  listModels(
+    id: string,
+    options?: ResourceReadOptions
+  ): Promise<ProviderModelsResponse>;
   update(id: string, body: UpdateProviderBody): Promise<ProviderResponse>;
 }
 
@@ -428,8 +457,11 @@ export interface McpConnectionsResource {
   connect(id: string): Promise<McpConnectionOauthConnectResponse>;
   create(body: CreateMcpConnectionBody): Promise<McpConnectionResponse>;
   delete(id: string): Promise<void>;
-  get(id: string): Promise<McpConnectionResponse>;
-  list(): Promise<McpConnectionsResponse>;
+  get(
+    id: string,
+    options?: ResourceReadOptions
+  ): Promise<McpConnectionResponse>;
+  list(options?: ResourceReadOptions): Promise<McpConnectionsResponse>;
   reconnect(
     id: string,
     body: ReconnectMcpConnectionBody
@@ -441,13 +473,13 @@ export interface McpConnectionsResource {
   ): Promise<McpConnectionResponse>;
 }
 
-export interface SessionsListOptions {
+export interface SessionsListOptions extends ResourceReadOptions {
   cursor?: string;
   limit?: number;
   userId?: string;
 }
 
-export interface SessionMessagesOptions {
+export interface SessionMessagesOptions extends ResourceReadOptions {
   after?: string;
   cursor?: string;
   limit?: number;
@@ -483,7 +515,8 @@ export interface SessionsResource {
   ): Promise<SessionMessagesResponse>;
   toolApprovals(
     agentId: string,
-    sessionId: string
+    sessionId: string,
+    options?: ResourceReadOptions
   ): Promise<ToolApprovalsResponse>;
 }
 
@@ -495,8 +528,14 @@ export interface AgentSkillsResource {
   create(input: CreateSkillBody): Promise<SkillDetail>;
   delete(input: { skillId: string }): Promise<void>;
   deleteFile(input: { path: string; skillId: string }): Promise<SkillDetail>;
-  get(input: { skillId: string }): Promise<SkillDetail>;
-  getFile(input: { path: string; skillId: string }): Promise<Uint8Array>;
+  get(
+    input: { skillId: string },
+    options?: ResourceReadOptions
+  ): Promise<SkillDetail>;
+  getFile(
+    input: { path: string; skillId: string },
+    options?: ResourceReadOptions
+  ): Promise<Uint8Array>;
   list(options?: SkillsListOptions): Promise<SkillsListResponse>;
   putFile(input: {
     content: Blob | string | Uint8Array;
@@ -511,24 +550,24 @@ export interface AgentSkillsResource {
   }): Promise<SkillDetail>;
 }
 
-export interface SkillsListOptions {
+export interface SkillsListOptions extends ResourceReadOptions {
   cursor?: string;
   limit?: number;
 }
 
-export interface TasksListOptions {
+export interface TasksListOptions extends ResourceReadOptions {
   agentId?: string;
   cursor?: string;
   limit?: number;
   userId?: string;
 }
 
-export interface TaskRunsListOptions {
+export interface TaskRunsListOptions extends ResourceReadOptions {
   cursor?: string;
   limit?: number;
 }
 
-export interface TaskRunMessagesOptions {
+export interface TaskRunMessagesOptions extends ResourceReadOptions {
   after?: string;
   cursor?: string;
   limit?: number;
@@ -542,8 +581,12 @@ export interface TasksResource {
     body?: CreateTaskRunBody
   ): Promise<CreateTaskRunResponse>;
   delete(taskId: string): Promise<void>;
-  get(taskId: string): Promise<TaskResponse>;
-  getRun(taskId: string, runId: string): Promise<TaskRunResponse>;
+  get(taskId: string, options?: ResourceReadOptions): Promise<TaskResponse>;
+  getRun(
+    taskId: string,
+    runId: string,
+    options?: ResourceReadOptions
+  ): Promise<TaskRunResponse>;
   list(options?: TasksListOptions): Promise<TasksListResponse>;
   listRuns(
     taskId: string,
@@ -558,14 +601,16 @@ export interface TasksResource {
 }
 
 export interface TenantResource {
-  get(): Promise<TenantSettingsResponse>;
+  get(options?: ResourceReadOptions): Promise<TenantSettingsResponse>;
   patch(body: UpdateTenantSettingsBody): Promise<TenantSettingsResponse>;
 }
 
 export interface UsageResource {
-  get(query?: Partial<UsageQuery>): Promise<UsageResponse>;
+  get(
+    query?: Partial<UsageQuery> & ResourceReadOptions
+  ): Promise<UsageResponse>;
   getForAgent(
     agentId: string,
-    query?: Partial<UsageQuery>
+    query?: Partial<UsageQuery> & ResourceReadOptions
   ): Promise<UsageResponse>;
 }

@@ -91,10 +91,10 @@ describe("MCP connection schemas", () => {
     expect(mcpConnectionSchema.parse(baseConnection)).toEqual(baseConnection);
   });
 
-  it("rejects internal fields in public responses", () => {
-    expect(mcpConnectionResponseSchema.safeParse(baseConnection).success).toBe(
-      false
-    );
+  it("strips internal fields from public responses", () => {
+    expect(
+      mcpConnectionResponseSchema.parse(baseConnection)
+    ).not.toHaveProperty("vaultSecretId");
   });
 
   it("parses a public response and response envelope", () => {

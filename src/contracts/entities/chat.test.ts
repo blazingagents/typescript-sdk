@@ -63,12 +63,12 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects a usage carrying fields outside the contract", () => {
+  it("strips usage fields outside the contract", () => {
     expect(
-      blazingAgentsChatMessageMetadataSchema.safeParse({
+      blazingAgentsChatMessageMetadataSchema.parse({
         blazingAgents: { usage: { ...validUsage, removedField: 0 } },
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("blazingAgents.usage.removedField");
   });
 
   it("requires a positive int32 resolved Agent Version", () => {
@@ -494,13 +494,13 @@ describe("chatStreamErrorChunkSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects extra fields", () => {
+  it("strips extra fields", () => {
     expect(
-      chatStreamErrorChunkSchema.safeParse({
+      chatStreamErrorChunkSchema.parse({
         type: "error",
         errorText: "x",
         code: "session_not_found",
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("code");
   });
 });

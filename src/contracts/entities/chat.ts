@@ -49,20 +49,20 @@ export const usageSummarySchema = z
           outputTokens: z.number().int().min(0),
           stepNumber: z.number().int().min(0),
         })
-        .strict()
+        .strip()
     ),
     startedAt: z.iso.datetime({ offset: true }),
     status: z.enum(["succeeded", "cancelled", "failed"]),
     tenantId: tenantIdSchema,
     userId: z.string(),
   })
-  .strict();
+  .strip();
 
 export const blazingAgentsChatMessageMetadataSchema = z
   .object({
-    blazingAgents: z.object({ usage: usageSummarySchema }).strict(),
+    blazingAgents: z.object({ usage: usageSummarySchema }).strip(),
   })
-  .strict();
+  .strip();
 
 /**
  * `variables` for the prompt-invocation path — a flat map of string→string.
@@ -261,7 +261,7 @@ export const chatStreamErrorChunkSchema = z
     type: z.literal("error"),
     errorText: z.string(),
   })
-  .strict();
+  .strip();
 
 export type ChatMode = z.infer<typeof chatModeSchema>;
 export type ChatTrigger = z.infer<typeof chatTriggerSchema>;

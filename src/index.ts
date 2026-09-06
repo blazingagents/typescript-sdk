@@ -70,6 +70,10 @@ export type {
   WorkspaceNetworkPolicy,
   WorkspacesListResponse,
 } from "./contracts/entities/workspaces.ts";
+export {
+  BlazingAgentsDirectChatTransport,
+  type BlazingAgentsDirectChatTransportOptions,
+} from "./direct-chat-transport.ts";
 export { BlazingAgentsError } from "./errors.ts";
 export {
   createChatRelay,
@@ -109,6 +113,7 @@ export type {
   ObjectResult,
   PromptsResource,
   ProvidersResource,
+  ResourceReadOptions,
   ResponseObservation,
   SessionsResource,
   SkillsListOptions,

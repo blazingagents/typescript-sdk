@@ -105,9 +105,9 @@ describe("promptSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects extra fields", () => {
+  it("strips extra fields", () => {
     expect(
-      promptSchema.safeParse({
+      promptSchema.parse({
         id: "prompt_0123456789abcdef",
         tenantId,
         name: "X",
@@ -118,8 +118,8 @@ describe("promptSchema", () => {
         createdAt: iso,
         updatedAt: iso,
         extra: true,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("extra");
   });
 });
 

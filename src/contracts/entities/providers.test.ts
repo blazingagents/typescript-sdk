@@ -103,29 +103,28 @@ describe("providerResponseSchema", () => {
     );
   });
 
-  it("rejects the internal-only vaultSecretId field", () => {
+  it("strips the internal-only vaultSecretId field", () => {
     expect(
-      providerResponseSchema.safeParse({
+      providerResponseSchema.parse({
         ...baseProviderResponse,
         vaultSecretId: "vault_1",
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("vaultSecretId");
   });
 
-  it("rejects the internal-only tenantId field", () => {
+  it("strips the internal-only tenantId field", () => {
     expect(
-      providerResponseSchema.safeParse({
+      providerResponseSchema.parse({
         ...baseProviderResponse,
         tenantId,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("tenantId");
   });
 
-  it("rejects extra fields", () => {
+  it("strips extra fields", () => {
     expect(
-      providerResponseSchema.safeParse({ ...baseProviderResponse, extra: true })
-        .success
-    ).toBe(false);
+      providerResponseSchema.parse({ ...baseProviderResponse, extra: true })
+    ).not.toHaveProperty("extra");
   });
 });
 
@@ -136,10 +135,10 @@ describe("providersResponseSchema", () => {
     ).toStrictEqual({ providers: [baseProviderResponse] });
   });
 
-  it("rejects a stored row leaking vaultSecretId onto the wire", () => {
+  it("strips internal fields from stored rows", () => {
     expect(
-      providersResponseSchema.safeParse({ providers: [baseProvider] }).success
-    ).toBe(false);
+      providersResponseSchema.parse({ providers: [baseProvider] })
+    ).not.toHaveProperty("providers.0.vaultSecretId");
   });
 });
 

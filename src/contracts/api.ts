@@ -160,7 +160,7 @@ export function paginatedResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
       data: z.array(itemSchema),
       nextCursor: z.string().nullable(),
     })
-    .strict();
+    .strip();
 }
 
 /**

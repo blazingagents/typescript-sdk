@@ -64,11 +64,10 @@ describe("memorySchema", () => {
     );
   });
 
-  it("rejects searchVector (never leaves the database)", () => {
+  it("strips searchVector from the response", () => {
     expect(
-      memorySchema.safeParse({ ...baseMemory, searchVector: "'dark':2" })
-        .success
-    ).toBe(false);
+      memorySchema.parse({ ...baseMemory, searchVector: "'dark':2" })
+    ).not.toHaveProperty("searchVector");
   });
 
   it("rejects a record missing lifecycle timestamps", () => {
@@ -84,11 +83,10 @@ describe("memoryResponseSchema", () => {
     });
   });
 
-  it("rejects extra fields", () => {
+  it("strips extra fields", () => {
     expect(
-      memoryResponseSchema.safeParse({ memory: baseMemory, extra: true })
-        .success
-    ).toBe(false);
+      memoryResponseSchema.parse({ memory: baseMemory, extra: true })
+    ).not.toHaveProperty("extra");
   });
 });
 
@@ -120,13 +118,13 @@ describe("memory list contracts", () => {
     );
   });
 
-  it("rejects malformed paginated memory responses", () => {
+  it("strips unknown nested memory fields", () => {
     expect(
-      memoriesListResponseSchema.safeParse({
+      memoriesListResponseSchema.parse({
         data: [{ ...baseMemory, searchVector: "'dark':1" }],
         nextCursor: null,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("data.0.searchVector");
   });
 });
 

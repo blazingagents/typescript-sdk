@@ -26,7 +26,7 @@ export const sessionListItemSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const sessionsListResponseSchema = paginatedResponseSchema(
   sessionListItemSchema
@@ -69,7 +69,7 @@ export const sessionMessagesResponseSchema = z
     nextCursor: z.string().nullable(),
     latestCursor: z.string().nullable(),
   })
-  .strict();
+  .strip();
 
 // Query params for the messages endpoint.
 export const sessionMessagesQuerySchema = z
@@ -114,28 +114,28 @@ export const toolApprovalStateSchema = z
     toolCallId: z.string().min(1),
     toolName: z.string().min(1),
   })
-  .strict();
+  .strip();
 
 export const toolApprovalContinuationSchema = z
   .object({
     id: z.string().min(1),
     state: toolApprovalContinuationStateSchema,
   })
-  .strict();
+  .strip();
 
 export const toolApprovalsResponseSchema = z
   .object({
     data: z.array(toolApprovalStateSchema),
     continuation: toolApprovalContinuationSchema.nullable(),
   })
-  .strict();
+  .strip();
 
 export const toolApprovalDecisionResponseSchema = z
   .object({
     continuationId: z.string().min(1),
     state: toolApprovalContinuationStateSchema,
   })
-  .strict();
+  .strip();
 
 export type SessionListItem = z.infer<typeof sessionListItemSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;

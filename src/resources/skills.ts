@@ -3,7 +3,12 @@ import {
   skillDetailSchema,
   skillsListResponseSchema,
 } from "../contracts/entities/skills.ts";
-import { requestJson, requestStream } from "../http.ts";
+import {
+  isRequestAborted,
+  requestAbortedError,
+  requestJson,
+  requestStream,
+} from "../http.ts";
 import type { AgentSkillsResource, HttpConfig } from "../types.ts";
 
 function fileUrl(
@@ -52,23 +57,34 @@ export function createAgentSkillsResource(
         skillDetailSchema
       );
     },
-    async get({ skillId }) {
+    async get({ skillId }, options = {}) {
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`,
-        {},
+        options,
         skillDetailSchema
       );
     },
-    async getFile(input) {
-      const response = await requestStream(config, fileUrl(agentId, input));
-      return new Uint8Array(await response.arrayBuffer());
+    async getFile(input, options = {}) {
+      const response = await requestStream(
+        config,
+        fileUrl(agentId, input),
+        options
+      );
+      try {
+        return new Uint8Array(await response.arrayBuffer());
+      } catch (cause) {
+        if (isRequestAborted(cause, options.signal)) {
+          throw requestAbortedError(cause);
+        }
+        throw cause;
+      }
     },
-    async list({ cursor, limit } = {}) {
+    async list({ cursor, limit, signal } = {}) {
       return await requestJson(
         config,
         `/v1/agents/${encodeURIComponent(agentId)}/skills`,
-        { query: { cursor, limit } },
+        { signal, query: { cursor, limit } },
         skillsListResponseSchema
       );
     },

@@ -34,6 +34,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         config,
         "/v1/tasks",
         {
+          signal: options.signal,
           query: {
             agentId: options.agentId,
             cursor: options.cursor,
@@ -45,11 +46,11 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         tasksListResponseSchema
       );
     },
-    async get(taskId) {
+    async get(taskId, options = {}) {
       return await requestJson(
         config,
         `/v1/tasks/${taskId}`,
-        {},
+        options,
         taskResponseSchema
       );
     },
@@ -81,15 +82,18 @@ export function createTasksResource(config: HttpConfig): TasksResource {
       return await requestJson(
         config,
         `/v1/tasks/${taskId}/runs`,
-        { query: { cursor: options.cursor, limit: options.limit } },
+        {
+          signal: options.signal,
+          query: { cursor: options.cursor, limit: options.limit },
+        },
         taskRunsListResponseSchema
       );
     },
-    async getRun(taskId, runId) {
+    async getRun(taskId, runId, options = {}) {
       return await requestJson(
         config,
         `/v1/tasks/${taskId}/runs/${runId}`,
-        {},
+        options,
         taskRunResponseSchema
       );
     },
@@ -98,6 +102,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         config,
         `/v1/tasks/${taskId}/runs/${runId}/messages`,
         {
+          signal: options.signal,
           query: {
             cursor: options.cursor,
             after: options.after,

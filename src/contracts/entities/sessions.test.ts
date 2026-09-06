@@ -76,22 +76,22 @@ describe("sessionListItemSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects extra fields (agentId/tenantId are not on the wire)", () => {
+  it("strips fields outside the public Session projection", () => {
     expect(
-      sessionListItemSchema.safeParse({
+      sessionListItemSchema.parse({
         ...baseSession,
         agentId: "ag_xxxxxxxxxxxxxxxx",
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("agentId");
     expect(
-      sessionListItemSchema.safeParse({
+      sessionListItemSchema.parse({
         ...baseSession,
         tenantId: "ten_xxxxxxxxxxxxxxxx",
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("tenantId");
     expect(
-      sessionListItemSchema.safeParse({ ...baseSession, extra: true }).success
-    ).toBe(false);
+      sessionListItemSchema.parse({ ...baseSession, extra: true })
+    ).not.toHaveProperty("extra");
   });
 });
 
@@ -229,11 +229,11 @@ describe("Tool approval contracts", () => {
     };
     expect(toolApprovalsResponseSchema.parse(response)).toStrictEqual(response);
     expect(
-      toolApprovalsResponseSchema.safeParse({
+      toolApprovalsResponseSchema.parse({
         ...response,
         data: [{ ...response.data[0], signature: "secret-binding" }],
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("data.0.signature");
   });
 
   it("returns the stable continuation after every accepted decision", () => {

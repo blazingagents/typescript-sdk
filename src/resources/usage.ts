@@ -10,21 +10,22 @@ import type { HttpConfig, UsageResource } from "../types.ts";
 
 export function createUsageResource(config: HttpConfig): UsageResource {
   return {
-    async get(query = {}) {
+    async get({ signal, ...query } = {}) {
       return await requestJson(
         config,
         "/v1/usage",
         {
           query,
+          signal,
         },
         usageResponseSchema
       );
     },
-    async getForAgent(agentId, query = {}) {
+    async getForAgent(agentId, { signal, ...query } = {}) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/usage`,
-        { query },
+        { query, signal },
         usageResponseSchema
       );
     },

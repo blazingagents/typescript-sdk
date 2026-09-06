@@ -3,6 +3,7 @@ import {
   agentSchema,
   agentStatusSchema,
   agentsListQuerySchema,
+  agentsResponseSchema,
   agentVersionNumberSchema,
   agentVersionSchema,
   agentVersionsListQuerySchema,
@@ -92,13 +93,13 @@ describe("Agent current and Version contracts", () => {
     expect(agentSchema.safeParse(withoutWorkspace).success).toBe(false);
   });
 
-  it.each(["sandboxId", "skills"])("rejects retired field %s", (field) => {
+  it.each(["sandboxId", "skills"])("strips retired field %s", (field) => {
     expect(
-      agentSchema.safeParse({
+      agentSchema.parse({
         ...baseAgent,
         [field]: field === "skills" ? [] : null,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty(field);
   });
 
   it("keeps Workspace and Skills outside immutable Versions", () => {
@@ -106,11 +107,11 @@ describe("Agent current and Version contracts", () => {
       baseAgentVersion
     );
     expect(
-      agentVersionSchema.safeParse({ ...baseAgentVersion, workspaceId }).success
-    ).toBe(false);
+      agentVersionSchema.parse({ ...baseAgentVersion, workspaceId })
+    ).not.toHaveProperty("workspaceId");
     expect(
-      agentVersionSchema.safeParse({ ...baseAgentVersion, skills: [] }).success
-    ).toBe(false);
+      agentVersionSchema.parse({ ...baseAgentVersion, skills: [] })
+    ).not.toHaveProperty("skills");
   });
 
   it("validates Versioned provider, tools, and MCP attachments", () => {
@@ -319,6 +320,39 @@ describe("Agent mutation contracts", () => {
         name: "Builder",
         mcpConnectionIds: [mcpConnectionId, mcpConnectionId],
       }).success
+    ).toBe(false);
+  });
+});
+
+describe("additive Agent response fields", () => {
+  it("strips new envelope and Agent fields while retaining known configuration", () => {
+    expect(
+      agentsResponseSchema.parse({
+        agents: [{ ...baseAgent, thinkingLevel: "high", futureSetting: true }],
+        revision: 2,
+      })
+    ).toEqual({ agents: [{ ...baseAgent, thinkingLevel: "high" }] });
+  });
+
+  it("still rejects missing required fields and malformed known fields", () => {
+    expect(
+      agentsResponseSchema.safeParse({
+        agents: [{ ...baseAgent, name: undefined }],
+      }).success
+    ).toBe(false);
+    expect(
+      agentsResponseSchema.safeParse({
+        agents: [{ ...baseAgent, thinkingLevel: 42 }],
+      }).success
+    ).toBe(false);
+    expect(
+      agentsResponseSchema.safeParse({
+        agents: [{ ...baseAgent, tools: ["future-tool"] }],
+      }).success
+    ).toBe(false);
+    expect(
+      createAgentBodySchema.safeParse({ name: "Builder", futureSetting: true })
+        .success
     ).toBe(false);
   });
 });

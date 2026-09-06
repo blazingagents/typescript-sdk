@@ -41,13 +41,15 @@ describe("Agent-owned Skill resources", () => {
     });
   });
 
-  it("permits omitted indexed metadata and rejects legacy ownership fields", () => {
+  it("permits omitted indexed metadata and strips legacy ownership fields", () => {
     const { metadata: _metadata, ...withoutMetadata } = skill;
     expect(skillSchema.parse(withoutMetadata)).toEqual(withoutMetadata);
     expect(
-      skillSchema.safeParse({ ...skill, ownerKind: "tenant" }).success
-    ).toBe(false);
-    expect(skillSchema.safeParse({ ...skill, userId: "" }).success).toBe(false);
+      skillSchema.parse({ ...skill, ownerKind: "tenant" })
+    ).not.toHaveProperty("ownerKind");
+    expect(skillSchema.parse({ ...skill, userId: "" })).not.toHaveProperty(
+      "userId"
+    );
   });
 
   it("defines the accepted cursor page", () => {
@@ -142,7 +144,7 @@ describe("Skill creation, upload, file, and copy contracts", () => {
       })
     ).toMatchObject({ status: "failed" });
     expect(
-      skillCopyResultSchema.safeParse({
+      skillCopyResultSchema.parse({
         agentId: skill.agentId,
         status: "failed",
         error: {
@@ -150,8 +152,8 @@ describe("Skill creation, upload, file, and copy contracts", () => {
           message: "Name already exists.",
           param: "name",
         },
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("error.param");
   });
 });
 

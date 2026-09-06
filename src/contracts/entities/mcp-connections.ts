@@ -321,13 +321,13 @@ export const mcpConnectionResponseSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const mcpConnectionsResponseSchema = z
   .object({
     mcpConnections: z.array(mcpConnectionResponseSchema),
   })
-  .strict();
+  .strip();
 
 export const forwardedMetadataKeysSchema = z
   .array(z.string().min(1).max(MAX_MCP_ATTACHMENT_METADATA_KEY_LENGTH))
@@ -344,13 +344,13 @@ export const mcpAttachmentResponseSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const mcpAttachmentsResponseSchema = z
   .object({
     mcpAttachments: z.array(mcpAttachmentResponseSchema),
   })
-  .strict();
+  .strip();
 
 export const updateMcpAttachmentBodySchema = z
   .object({
@@ -488,7 +488,7 @@ export const mcpConnectionOauthConnectResponseSchema = z
         );
       }),
   })
-  .strict();
+  .strip();
 
 export const mcpOauthAuthorizationLaunchResponseSchema = z
   .object({
@@ -509,7 +509,7 @@ export const mcpOauthAuthorizationLaunchResponseSchema = z
         );
       }),
   })
-  .strict();
+  .strip();
 
 export const approveMcpOauthAuthorizationBodySchema = z
   .object({ setupToken: z.string().regex(OPAQUE_MCP_OAUTH_TOKEN_PATTERN) })
@@ -522,12 +522,12 @@ export const mcpConnectionLiveDetailsSchema = z
         name: z.string().trim().min(1).max(MAX_MCP_SERVER_NAME_LENGTH),
         version: z.string().trim().min(1).max(MAX_MCP_SERVER_VERSION_LENGTH),
       })
-      .strict(),
+      .strip(),
     toolNames: z
       .array(z.string().trim().min(1).max(MAX_MCP_TOOL_NAME_LENGTH))
       .max(MAX_MCP_TOOLS_PER_CONNECTION),
   })
-  .strict();
+  .strip();
 
 const mcpConnectionTestOkResponseSchema = mcpConnectionLiveDetailsSchema
   .extend({
@@ -539,7 +539,7 @@ const mcpConnectionTestOkResponseSchema = mcpConnectionLiveDetailsSchema
       .max(MAX_MCP_CONNECTION_TEST_LATENCY_MS),
     toolCount: z.number().int().nonnegative().max(MAX_MCP_TOOLS_PER_CONNECTION),
   })
-  .strict()
+  .strip()
   .refine((result) => result.toolCount === result.toolNames.length, {
     message: "toolCount must match toolNames length",
   });
@@ -552,9 +552,9 @@ const mcpConnectionTestFailResponseSchema = z
         code: mcpConnectionTestErrorCodeSchema,
         message: z.string().trim().min(1).max(200),
       })
-      .strict(),
+      .strip(),
   })
-  .strict();
+  .strip();
 
 export const mcpConnectionTestResponseSchema = z.discriminatedUnion("ok", [
   mcpConnectionTestOkResponseSchema,
@@ -569,13 +569,13 @@ export const mcpConnectionReconnectResultSchema = z.discriminatedUnion(
         status: z.literal("connected"),
         connection: mcpConnectionResponseSchema,
       })
-      .strict(),
+      .strip(),
     z
       .object({
         status: z.literal("needs_auth"),
         connection: mcpConnectionResponseSchema,
       })
-      .strict(),
+      .strip(),
   ]
 );
 

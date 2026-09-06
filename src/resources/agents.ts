@@ -19,11 +19,15 @@ import type { AgentsResource, HttpConfig } from "../types.ts";
  */
 
 export function createAgentsResource(config: HttpConfig): AgentsResource {
-  const getVersion: AgentsResource["getVersion"] = async (agentId, version) =>
+  const getVersion: AgentsResource["getVersion"] = async (
+    agentId,
+    version,
+    options = {}
+  ) =>
     requestJson(
       config,
       `/v1/agents/${agentId}/versions/${version}`,
-      {},
+      options,
       agentVersionSchema
     );
   const update: AgentsResource["update"] = async (agentId, body) =>
@@ -54,6 +58,7 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         config,
         "/v1/agents",
         {
+          signal: options.signal,
           query: {
             userId: options.userId,
             workspaceId: options.workspaceId,
@@ -62,11 +67,11 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentsResponseSchema
       );
     },
-    async get(agentId) {
+    async get(agentId, options = {}) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}`,
-        {},
+        options,
         agentResponseSchema
       );
     },
@@ -91,15 +96,18 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/versions`,
-        { query: { cursor: options.cursor, limit: options.limit } },
+        {
+          signal: options.signal,
+          query: { cursor: options.cursor, limit: options.limit },
+        },
         agentVersionsResponseSchema
       );
     },
-    async listMcpAttachments(agentId) {
+    async listMcpAttachments(agentId, options = {}) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/mcp-attachments`,
-        {},
+        options,
         mcpAttachmentsResponseSchema
       );
     },

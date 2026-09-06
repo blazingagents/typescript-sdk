@@ -23,22 +23,23 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptResponseSchema
       );
     },
-    async list(userId) {
+    async list(userId, options = {}) {
       return await requestJson(
         config,
         "/v1/prompts",
         {
+          ...options,
           // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
           ...(userId === undefined ? {} : { query: { userId } }),
         },
         promptsResponseSchema
       );
     },
-    async get(promptId) {
+    async get(promptId, options = {}) {
       return await requestJson(
         config,
         `/v1/prompts/${promptId}`,
-        {},
+        options,
         promptResponseSchema
       );
     },

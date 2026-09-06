@@ -197,6 +197,16 @@ export const taskRunStatusSchema = z.enum([
   "canceled",
 ]);
 
+/** Response schedules accept additive fields without relaxing schedule writes. */
+const taskScheduleResponseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("once"), config: taskOnceConfigSchema.strip() }),
+  z.object({
+    kind: z.literal("interval"),
+    config: taskIntervalConfigSchema.strip(),
+  }),
+  z.object({ kind: z.literal("cron"), config: taskCronConfigSchema.strip() }),
+]);
+
 // The task record — pure definition; state lives in its runs.
 export const taskSchema = z
   .object({
@@ -206,7 +216,7 @@ export const taskSchema = z
     agentVersion: agentVersionNumberSchema.nullable(),
     name: taskNameSchema,
     prompt: taskPromptSchema,
-    schedule: taskScheduleInputSchema.nullable(),
+    schedule: taskScheduleResponseSchema.nullable(),
     enabled: z.boolean(),
     activeRunId: taskRunIdSchema.nullable(),
     latestRunId: taskRunIdSchema.nullable(),
@@ -216,7 +226,7 @@ export const taskSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 // Compact run embed for list items — kills N+1 status polling.
 export const taskLatestRunSchema = z
@@ -225,7 +235,7 @@ export const taskLatestRunSchema = z
     status: taskRunStatusSchema,
     finishedAt: z.iso.datetime({ offset: true }).nullable(),
   })
-  .strict();
+  .strip();
 
 export const taskListItemSchema = taskSchema.extend({
   latestRun: taskLatestRunSchema.nullable(),
@@ -267,7 +277,7 @@ export const taskRunSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const taskRunResponseSchema = taskRunSchema;
 
@@ -280,14 +290,14 @@ export const createTaskResponseSchema = z
     task: taskSchema,
     runId: taskRunIdSchema.nullable(),
   })
-  .strict();
+  .strip();
 
 // `POST /v1/tasks/{taskId}/runs` response — the queued run id.
 export const createTaskRunResponseSchema = z
   .object({
     runId: taskRunIdSchema,
   })
-  .strict();
+  .strip();
 
 // `GET .../runs/{runId}/messages` — task-run session transcript, paginated,
 // plus `status`, `error`, and `finishedAt` for a single client poll loop.
@@ -298,7 +308,7 @@ export const taskRunMessagesResponseSchema = sessionMessagesResponseSchema
     finishedAt: z.iso.datetime({ offset: true }).nullable(),
     status: taskRunStatusSchema,
   })
-  .strict();
+  .strip();
 
 export type Task = z.infer<typeof taskSchema>;
 export type TaskListItem = z.infer<typeof taskListItemSchema>;

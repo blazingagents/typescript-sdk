@@ -40,6 +40,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         config,
         `/v1/agents/${agentId}/sessions`,
         {
+          signal: options.signal,
           query: {
             cursor: options.cursor,
             limit: options.limit,
@@ -55,6 +56,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}/messages`,
         {
+          signal: options.signal,
           query: {
             cursor: options.cursor,
             after: options.after,
@@ -77,11 +79,11 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
       );
       return buildTerminalStreamResult(response, "continuation");
     },
-    async toolApprovals(agentId, sessionId) {
+    async toolApprovals(agentId, sessionId, options = {}) {
       return await requestJson(
         config,
         `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`,
-        {},
+        options,
         toolApprovalsResponseSchema
       );
     },

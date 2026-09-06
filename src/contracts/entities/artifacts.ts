@@ -36,7 +36,7 @@ export const artifactListItemSchema = z
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export const artifactsListResponseSchema = paginatedResponseSchema(
   artifactListItemSchema
@@ -65,28 +65,28 @@ export const publishArtifactResultSchema = z.union([
       artifactId: artifactIdSchema,
       path: z.string().trim().min(1),
     })
-    .strict(),
+    .strip(),
   z
     .object({
       error: z.literal(true),
       message: z.string().trim().min(1),
       path: z.string().trim().min(1),
     })
-    .strict(),
+    .strip(),
 ]);
 
 export const publishArtifactsOutputSchema = z
   .object({
     results: z.array(publishArtifactResultSchema).min(1),
   })
-  .strict();
+  .strip();
 
 export const artifactDownloadUrlResponseSchema = z
   .object({
     url: z.url(),
     expiresAt: z.iso.datetime({ offset: true }),
   })
-  .strict();
+  .strip();
 
 export type ArtifactListItem = z.infer<typeof artifactListItemSchema>;
 export type ArtifactsListResponse = z.infer<typeof artifactsListResponseSchema>;

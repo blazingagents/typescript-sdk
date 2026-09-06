@@ -325,14 +325,14 @@ describe("paginatedResponseSchema", () => {
     });
   });
 
-  it("rejects extra fields and missing cursor", () => {
+  it("strips extra fields and missing cursor", () => {
     expect(
-      schema.safeParse({
+      schema.parse({
         data: [],
         nextCursor: null,
         extra: true,
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("extra");
     expect(schema.safeParse({ data: [] }).success).toBe(false);
   });
 });

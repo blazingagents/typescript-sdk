@@ -20,11 +20,11 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactDownloadUrlResponseSchema
       );
     },
-    async get(artifactId) {
+    async get(artifactId, options = {}) {
       return await requestJson(
         config,
         `/v1/artifacts/${artifactId}`,
-        {},
+        options,
         artifactListItemSchema
       );
     },
@@ -33,6 +33,7 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         config,
         "/v1/artifacts",
         {
+          signal: options.signal,
           query: {
             agentId: options.agentId,
             sessionId: options.sessionId,

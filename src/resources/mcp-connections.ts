@@ -35,19 +35,19 @@ export function createMcpConnectionsResource(
       );
     },
     create,
-    async list() {
+    async list(options = {}) {
       return await requestJson(
         config,
         "/v1/mcp-connections",
-        {},
+        options,
         mcpConnectionsResponseSchema
       );
     },
-    async get(id) {
+    async get(id, options = {}) {
       return await requestJson(
         config,
         `/v1/mcp-connections/${id}`,
-        {},
+        options,
         mcpConnectionResponseSchema
       );
     },

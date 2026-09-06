@@ -9,11 +9,11 @@ import type { HttpConfig, TenantResource } from "../types.ts";
 
 export function createTenantResource(config: HttpConfig): TenantResource {
   return {
-    async get() {
+    async get(options = {}) {
       return await requestJson(
         config,
         "/v1/tenant",
-        {},
+        options,
         tenantSettingsResponseSchema
       );
     },

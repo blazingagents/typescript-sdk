@@ -79,7 +79,9 @@ describe("client.artifacts", () => {
   });
 
   it("rejects malformed detail and download URL responses", async () => {
-    const invalidDetail = createMockFetch({ body: { ...artifact, key: "r2" } });
+    const invalidDetail = createMockFetch({
+      body: { ...artifact, sizeBytes: "large" },
+    });
     const invalidUrl = createMockFetch({
       body: { expiresAt: "later", url: "/relative" },
     });

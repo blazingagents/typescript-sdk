@@ -49,10 +49,10 @@ describe("active Artifact responses", () => {
     expect(artifactListItemSchema.parse(artifact)).toStrictEqual(artifact);
   });
 
-  it("rejects tombstone fields", () => {
+  it("strips tombstone fields", () => {
     expect(
-      artifactListItemSchema.safeParse({ ...artifact, deletedAt: null }).success
-    ).toBe(false);
+      artifactListItemSchema.parse({ ...artifact, deletedAt: null })
+    ).not.toHaveProperty("deletedAt");
   });
 
   it("uses a paginated list envelope", () => {
@@ -129,12 +129,12 @@ describe("Artifact publication contracts", () => {
       ],
     });
     expect(
-      publishArtifactResultSchema.safeParse({
+      publishArtifactResultSchema.parse({
         artifactId,
         path: "/report.txt",
         filename: "report.txt",
-      }).success
-    ).toBe(false);
+      })
+    ).not.toHaveProperty("filename");
   });
 });
 

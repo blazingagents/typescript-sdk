@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
+import { BlazingAgentsError } from "../errors.ts";
 import { createMockFetch } from "../test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
@@ -149,6 +150,51 @@ describe("client.agent(agentId).skills", () => {
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/skills/${skillId}/files/assets/icon%20one.bin`
     );
+  });
+
+  it("normalizes cancellation while reading file bytes after headers", async () => {
+    const abort = new AbortController();
+    const reading = Promise.withResolvers<void>();
+    const { fetch } = createMockFetch({
+      stream: new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            reading.resolve();
+            abort.signal.addEventListener(
+              "abort",
+              () => controller.error(abort.signal.reason),
+              { once: true }
+            );
+          },
+        },
+        { highWaterMark: 0 }
+      ),
+    });
+    const result = client(fetch)
+      .agent(agentId)
+      .skills.getFile({ path: "SKILL.md", skillId }, { signal: abort.signal });
+    await reading.promise;
+    abort.abort();
+
+    await expect(result).rejects.toBeInstanceOf(BlazingAgentsError);
+    await expect(result).rejects.toMatchObject({
+      code: "request_aborted",
+      cause: abort.signal.reason,
+    });
+  });
+
+  it("preserves non-abort failures while reading file bytes", async () => {
+    const cause = new Error("connection reset");
+    const { fetch } = createMockFetch({
+      stream: new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(cause);
+        },
+      }),
+    });
+    await expect(
+      client(fetch).agent(agentId).skills.getFile({ path: "SKILL.md", skillId })
+    ).rejects.toBe(cause);
   });
 
   it("puts raw binary file content and parses the updated Skill", async () => {

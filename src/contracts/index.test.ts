@@ -36,6 +36,8 @@ const publicContractNames = [
   "generationRequestBodySchema",
   "isAdminAgentId",
   "jsonSchemaShapeSchema",
+  "latestSessionListItemSchema",
+  "latestSessionsListResponseSchema",
   "mcpAttachmentResponseSchema",
   "mcpAttachmentsResponseSchema",
   "mcpConnectionAuthTypeSchema",

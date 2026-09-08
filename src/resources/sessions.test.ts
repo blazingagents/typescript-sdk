@@ -258,7 +258,13 @@ describe("client.sessions", () => {
   });
 
   it("listLatest returns one latest Session per Agent with its agentId", async () => {
-    const item = { ...sessionListItem, agentId: "ag_0123456789abcdef" };
+    const item = {
+      ...sessionListItem,
+      agentId: "ag_0123456789abcdef",
+      model: "test-model",
+      thinkingLevel: "high",
+      status: "disabled",
+    };
     const { fetch, calls } = createMockFetch({
       body: { data: [item], nextCursor: "next" },
     });

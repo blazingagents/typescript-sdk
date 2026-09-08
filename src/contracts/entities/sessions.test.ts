@@ -99,11 +99,16 @@ describe("sessionListItemSchema", () => {
 
 describe("latestSessionListItemSchema", () => {
   const agentId = "ag_xxxxxxxxxxxxxxxx";
+  const agentFields = { model: null, thinkingLevel: null, status: "active" };
 
   it("is a session list item that also names its Agent", () => {
     expect(
-      latestSessionListItemSchema.parse({ ...baseSession, agentId })
-    ).toStrictEqual({ ...baseSession, agentId });
+      latestSessionListItemSchema.parse({
+        ...baseSession,
+        agentId,
+        ...agentFields,
+      })
+    ).toStrictEqual({ ...baseSession, agentId, ...agentFields });
   });
 
   it.each(["", "ss_xxxxxxxxxxxxxxxx", "ag_short"])(
@@ -113,6 +118,7 @@ describe("latestSessionListItemSchema", () => {
         latestSessionListItemSchema.safeParse({
           ...baseSession,
           agentId: value,
+          ...agentFields,
         }).success
       ).toBe(false);
     }
@@ -127,10 +133,13 @@ describe("latestSessionListItemSchema", () => {
   it("paginates like the per-Agent list", () => {
     expect(
       latestSessionsListResponseSchema.parse({
-        data: [{ ...baseSession, agentId }],
+        data: [{ ...baseSession, agentId, ...agentFields }],
         nextCursor: null,
       })
-    ).toStrictEqual({ data: [{ ...baseSession, agentId }], nextCursor: null });
+    ).toStrictEqual({
+      data: [{ ...baseSession, agentId, ...agentFields }],
+      nextCursor: null,
+    });
   });
 });
 

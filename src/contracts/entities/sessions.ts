@@ -5,7 +5,7 @@ import {
   DEFAULT_SESSION_MESSAGES_LIMIT,
   MAX_SESSION_MESSAGES_LIMIT,
 } from "../limitations.ts";
-import { agentVersionNumberSchema } from "./agents.ts";
+import { agentSchema, agentVersionNumberSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
 /**
@@ -35,10 +35,16 @@ export const sessionsListResponseSchema = paginatedResponseSchema(
 /**
  * `GET /v1/sessions/latest` list item — one per Agent: the Agent's most
  * recently updated Session (optionally among one end user's Sessions).
- * Carries `agentId` because the list spans the whole Tenant.
+ * Carries `agentId` and the Agent's current model, Thinking level, and status,
+ * independently of the Session's pinned Version.
  */
 export const latestSessionListItemSchema = sessionListItemSchema
-  .extend({ agentId: agentIdSchema })
+  .extend({
+    agentId: agentIdSchema,
+    model: agentSchema.shape.model,
+    thinkingLevel: agentSchema.shape.thinkingLevel,
+    status: agentSchema.shape.status,
+  })
   .strip();
 
 export const latestSessionsListResponseSchema = paginatedResponseSchema(

@@ -78,6 +78,7 @@ describe("promptSchema", () => {
       promptSchema.safeParse({
         id: "prompt_0123456789abcdef",
         tenantId,
+        agentId: null,
         name: "Daily summary",
         template: "Summarize {{ topic }}",
         variables: ["topic"],
@@ -94,6 +95,7 @@ describe("promptSchema", () => {
       promptSchema.safeParse({
         id: "nope",
         tenantId,
+        agentId: null,
         name: "X",
         template: "Hi",
         variables: [],
@@ -110,6 +112,7 @@ describe("promptSchema", () => {
       promptSchema.parse({
         id: "prompt_0123456789abcdef",
         tenantId,
+        agentId: null,
         name: "X",
         template: "Hi",
         variables: [],
@@ -128,6 +131,7 @@ describe("promptsResponseSchema", () => {
     const prompt = {
       id: "prompt_0123456789abcdef",
       tenantId,
+      agentId: null,
       name: "X",
       template: "Hi",
       variables: [],

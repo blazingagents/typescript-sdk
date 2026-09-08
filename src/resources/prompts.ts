@@ -24,14 +24,13 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptResponseSchema
       );
     },
-    async list({ userId, abortSignal } = {}) {
+    async list({ userId, agentId, abortSignal } = {}) {
       return await requestJson(
         config,
         "/v1/prompts",
         {
           signal: abortSignal,
-          // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
-          ...(userId === undefined ? {} : { query: { userId } }),
+          query: { userId, agentId },
         },
         promptsResponseSchema
       );

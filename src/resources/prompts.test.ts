@@ -6,6 +6,7 @@ const BASE = "http://localhost:8787";
 const promptRow = {
   id: "prompt_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
+  agentId: null,
   name: "Greeting",
   template: "Hello {{name}}",
   variables: ["name"],
@@ -66,6 +67,42 @@ describe("client.prompts", () => {
     const { fetch, calls } = createMockFetch({ body: { prompts: [] } });
     await client(fetch).prompts.list({ userId });
     expect(calls[0].url).toBe(expectedUrl);
+  });
+
+  it("creates and lists prompts by Agent and End-user", async () => {
+    const agentId = "ag_0123456789abcdef";
+    const created = createMockFetch({ body: { ...promptRow, agentId } });
+    const prompt = await client(created.fetch).prompts.create({
+      name: "Linked",
+      template: "Hello",
+      agentId,
+    });
+    expect(prompt.agentId).toBe(agentId);
+    expect(JSON.parse(created.calls[0].init?.body as string).agentId).toBe(
+      agentId
+    );
+    const listed = createMockFetch({
+      body: { prompts: [{ ...promptRow, agentId }] },
+    });
+    expect(
+      (await client(listed.fetch).prompts.list({ agentId, userId: "user-42" }))
+        .prompts[0].agentId
+    ).toBe(agentId);
+    const url = new URL(listed.calls[0].url);
+    expect(url.searchParams.get("agentId")).toBe(agentId);
+    expect(url.searchParams.get("userId")).toBe("user-42");
+    const updated = createMockFetch({ body: { ...promptRow, agentId: null } });
+    expect(
+      (
+        await client(updated.fetch).prompts.update({
+          promptId: promptRow.id,
+          agentId: null,
+        })
+      ).agentId
+    ).toBeNull();
+    expect(JSON.parse(updated.calls[0].init?.body as string)).toEqual({
+      agentId: null,
+    });
   });
 
   it("get gets /v1/prompts/:id", async () => {

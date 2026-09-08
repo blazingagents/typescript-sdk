@@ -452,7 +452,7 @@ export interface PromptsResource {
     input: { promptId: string } & ResourceRequestOptions
   ): Promise<PromptResponse>;
   list(
-    input?: { userId?: string } & ResourceRequestOptions
+    input?: { userId?: string; agentId?: string } & ResourceRequestOptions
   ): Promise<PromptsResponse>;
   update(
     input: UpdatePromptBody & { promptId: string } & ResourceRequestOptions

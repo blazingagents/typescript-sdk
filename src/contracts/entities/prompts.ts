@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { promptIdSchema, tenantIdSchema } from "../ids.ts";
+import { agentIdSchema, promptIdSchema, tenantIdSchema } from "../ids.ts";
 import {
   MAX_PROMPT_NAME_LENGTH,
   MAX_PROMPT_TEMPLATE_BYTES,
@@ -71,6 +71,7 @@ export const promptSchema = z
   .object({
     id: promptIdSchema,
     tenantId: tenantIdSchema,
+    agentId: agentIdSchema.nullable(),
     name: promptNameSchema,
     template: promptTemplateSchema,
     variables: z.array(z.string().min(1)),
@@ -93,6 +94,7 @@ export const createPromptBodySchema = z
   .object({
     name: promptNameSchema,
     template: promptTemplateSchema,
+    agentId: agentIdSchema.nullable().optional(),
     userId: userIdSchema.default(""),
     metadata: metadataSchema.default({}),
   })
@@ -100,6 +102,7 @@ export const createPromptBodySchema = z
 
 export const updatePromptBodySchema = z
   .object({
+    agentId: agentIdSchema.nullable().optional(),
     name: promptNameSchema.optional(),
     template: promptTemplateSchema.optional(),
     metadata: metadataSchema.optional(),

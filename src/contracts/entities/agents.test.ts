@@ -27,6 +27,8 @@ const baseAgent = {
   name: "Builder",
   providerId,
   thinkingLevel: null,
+  autoCompaction: true,
+  compactionReserveTokens: 16_384,
   workspaceId,
   memoryInjectionEnabled: false,
   tools: [],
@@ -48,6 +50,8 @@ const baseAgentVersion = {
   model: "openrouter/test-model",
   providerId,
   thinkingLevel: null,
+  autoCompaction: true,
+  compactionReserveTokens: 16_384,
   memoryInjectionEnabled: false,
   tools: [],
   instructions: "Build carefully.",
@@ -205,6 +209,8 @@ describe("Agent mutation contracts", () => {
       model: null,
       providerId: null,
       thinkingLevel: null,
+      autoCompaction: true,
+      compactionReserveTokens: 16_384,
       memoryInjectionEnabled: false,
       tools: [],
       instructions: "",
@@ -354,5 +360,34 @@ describe("additive Agent response fields", () => {
       createAgentBodySchema.safeParse({ name: "Builder", futureSetting: true })
         .success
     ).toBe(false);
+  });
+});
+
+describe("Agent automatic compaction", () => {
+  it("enables compaction by default and accepts an explicit reserve", () => {
+    expect(
+      createAgentBodySchema.parse({ name: "Long conversation" })
+    ).toMatchObject({
+      autoCompaction: true,
+      compactionReserveTokens: 16_384,
+    });
+    expect(
+      updateAgentBodySchema.parse({
+        autoCompaction: false,
+        compactionReserveTokens: 32_000,
+      })
+    ).toEqual({
+      autoCompaction: false,
+      compactionReserveTokens: 32_000,
+    });
+    for (const compactionReserveTokens of [
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
+      expect(
+        updateAgentBodySchema.safeParse({ compactionReserveTokens }).success
+      ).toBe(false);
+    }
   });
 });

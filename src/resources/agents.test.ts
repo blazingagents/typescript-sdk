@@ -17,6 +17,8 @@ const agentVersion = {
   name: "Historical Builder",
   model: "anthropic/claude-sonnet-4.5",
   providerId: "prv_0123456789abcdef",
+  autoCompaction: false,
+  compactionReserveTokens: 32_000,
   memoryInjectionEnabled: true,
   tools: ["workspace", "write_todos"],
   instructions: "Historical instructions.",
@@ -107,6 +109,8 @@ describe("client.agents", () => {
     await expect(
       client(created.fetch).agents.create({
         name: "Memory agent",
+        autoCompaction: false,
+        compactionReserveTokens: 32_000,
         memoryInjectionEnabled: true,
       })
     ).resolves.toMatchObject({ memoryInjectionEnabled: true });
@@ -118,6 +122,8 @@ describe("client.agents", () => {
     ).resolves.toMatchObject({ memoryInjectionEnabled: false });
 
     expect(JSON.parse(created.calls[0].init?.body as string)).toMatchObject({
+      autoCompaction: false,
+      compactionReserveTokens: 32_000,
       memoryInjectionEnabled: true,
     });
     expect(JSON.parse(updated.calls[0].init?.body as string)).toEqual({
@@ -207,6 +213,8 @@ describe("client.agents", () => {
         Response.json(
           agentRow({
             name: agentVersion.name,
+            autoCompaction: false,
+            compactionReserveTokens: 32_000,
             memoryInjectionEnabled: true,
             version: 4,
           })
@@ -239,6 +247,8 @@ describe("client.agents", () => {
       model: agentVersion.model,
       providerId: agentVersion.providerId,
       thinkingLevel: agentVersion.thinkingLevel,
+      autoCompaction: agentVersion.autoCompaction,
+      compactionReserveTokens: agentVersion.compactionReserveTokens,
       memoryInjectionEnabled: agentVersion.memoryInjectionEnabled,
       tools: agentVersion.tools,
       instructions: agentVersion.instructions,

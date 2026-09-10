@@ -13,6 +13,8 @@ const agent = {
   id: "ag_0123456789abcdef",
   instructions: "Be helpful.",
   mcpConnectionIds: [],
+  autoCompaction: true,
+  compactionReserveTokens: 16_384,
   memoryInjectionEnabled: false,
   metadata: {},
   model: null,

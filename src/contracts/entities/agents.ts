@@ -70,6 +70,12 @@ export const agentSchema = z
     thinkingLevel: z.string().min(1).nullable(),
     providerId: providerIdSchema.nullable(),
     workspaceId: workspaceIdSchema,
+    autoCompaction: z.boolean(),
+    compactionReserveTokens: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(Number.MAX_SAFE_INTEGER),
     memoryInjectionEnabled: z.boolean(),
     tools: agentToolsSchema,
     instructions: agentInstructionsSchema,
@@ -113,6 +119,8 @@ export const agentVersionSchema = z
     model: agentSchema.shape.model,
     thinkingLevel: agentSchema.shape.thinkingLevel,
     providerId: agentSchema.shape.providerId,
+    autoCompaction: agentSchema.shape.autoCompaction,
+    compactionReserveTokens: agentSchema.shape.compactionReserveTokens,
     memoryInjectionEnabled: agentSchema.shape.memoryInjectionEnabled,
     tools: agentSchema.shape.tools,
     instructions: agentSchema.shape.instructions,
@@ -148,6 +156,13 @@ export const createAgentBodySchema = z
     thinkingLevel: z.string().min(1).nullable().default(null),
     providerId: providerIdSchema.nullable().default(null),
     workspaceId: workspaceIdSchema.optional(),
+    autoCompaction: z.boolean().default(true),
+    compactionReserveTokens: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(Number.MAX_SAFE_INTEGER)
+      .default(16_384),
     memoryInjectionEnabled: z.boolean().default(false),
     tools: agentToolsSchema.default([]),
     instructions: agentInstructionsSchema.default(""),
@@ -168,6 +183,13 @@ export const updateAgentBodySchema = z
     thinkingLevel: z.string().min(1).nullable().optional(),
     providerId: providerIdSchema.nullable().optional(),
     workspaceId: workspaceIdSchema.optional(),
+    autoCompaction: z.boolean().optional(),
+    compactionReserveTokens: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(Number.MAX_SAFE_INTEGER)
+      .optional(),
     memoryInjectionEnabled: z.boolean().optional(),
     tools: agentToolsSchema.optional(),
     instructions: agentInstructionsSchema.optional(),

@@ -129,6 +129,8 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         name: version.name,
         model: version.model,
         thinkingLevel: version.thinkingLevel,
+        autoCompaction: version.autoCompaction,
+        compactionReserveTokens: version.compactionReserveTokens,
         providerId: version.providerId,
         memoryInjectionEnabled: version.memoryInjectionEnabled,
         tools: version.tools,

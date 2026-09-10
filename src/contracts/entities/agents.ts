@@ -157,12 +157,8 @@ export const createAgentBodySchema = z
     providerId: providerIdSchema.nullable().default(null),
     workspaceId: workspaceIdSchema.optional(),
     autoCompaction: z.boolean().default(true),
-    compactionReserveTokens: z
-      .number()
-      .int()
-      .nonnegative()
-      .max(Number.MAX_SAFE_INTEGER)
-      .default(16_384),
+    compactionReserveTokens:
+      agentSchema.shape.compactionReserveTokens.default(16_384),
     memoryInjectionEnabled: z.boolean().default(false),
     tools: agentToolsSchema.default([]),
     instructions: agentInstructionsSchema.default(""),
@@ -184,12 +180,8 @@ export const updateAgentBodySchema = z
     providerId: providerIdSchema.nullable().optional(),
     workspaceId: workspaceIdSchema.optional(),
     autoCompaction: z.boolean().optional(),
-    compactionReserveTokens: z
-      .number()
-      .int()
-      .nonnegative()
-      .max(Number.MAX_SAFE_INTEGER)
-      .optional(),
+    compactionReserveTokens:
+      agentSchema.shape.compactionReserveTokens.optional(),
     memoryInjectionEnabled: z.boolean().optional(),
     tools: agentToolsSchema.optional(),
     instructions: agentInstructionsSchema.optional(),

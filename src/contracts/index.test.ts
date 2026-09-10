@@ -58,6 +58,7 @@ const publicContractNames = [
   "promptSchema",
   "promptVariablesSchema",
   "promptsResponseSchema",
+  "providerListItemSchema",
   "providerModelsResponseSchema",
   "providerResponseSchema",
   "providerTypeSchema",

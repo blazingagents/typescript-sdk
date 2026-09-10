@@ -132,7 +132,17 @@ describe("providersResponseSchema", () => {
   it("wraps wire-shape rows under providers", () => {
     expect(
       providersResponseSchema.parse({ providers: [baseProviderResponse] })
-    ).toStrictEqual({ providers: [baseProviderResponse] });
+    ).toStrictEqual({
+      providers: [
+        {
+          id: providerId,
+          name: "OpenRouter",
+          providerType: "openrouter",
+          createdAt: iso,
+          updatedAt: iso,
+        },
+      ],
+    });
   });
 
   it("strips internal fields from stored rows", () => {

@@ -53,7 +53,7 @@ export const providerSchema = z
   .strict();
 
 /**
- * Wire response — `GET /v1/providers` and `GET /v1/providers/{id}` shape per
+ * Wire response — `GET /v1/providers/{id}` shape per
  * ticket 12: `{ id, name, providerType, baseUrl, keyFragment, createdAt,
  * updatedAt }`. The Vault pointer and tenant id are write-only/internal.
  */
@@ -69,9 +69,16 @@ export const providerResponseSchema = z
   })
   .strip();
 
+export const providerListItemSchema = providerResponseSchema.omit({
+  baseUrl: true,
+  keyFragment: true,
+});
+
+export type ProviderListItem = z.infer<typeof providerListItemSchema>;
+
 export const providersResponseSchema = z
   .object({
-    providers: z.array(providerResponseSchema),
+    providers: z.array(providerListItemSchema),
   })
   .strip();
 

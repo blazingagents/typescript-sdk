@@ -45,6 +45,7 @@ export type {
 } from "./contracts/entities/mcp-connections.ts";
 export type {
   CreateProviderBody,
+  ProviderListItem,
   ProviderModel,
   ProviderModelsResponse,
   ProviderResponse,

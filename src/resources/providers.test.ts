@@ -88,7 +88,15 @@ describe("client.providers", () => {
     });
     const c = client(fetch);
     const result = await c.providers.list();
-    expect(result.providers).toHaveLength(1);
+    expect(result.providers).toEqual([
+      {
+        id: providerRow.id,
+        name: providerRow.name,
+        providerType: providerRow.providerType,
+        createdAt: providerRow.createdAt,
+        updatedAt: providerRow.updatedAt,
+      },
+    ]);
     expect(calls[0].url).toBe(`${BASE}/v1/providers`);
   });
 

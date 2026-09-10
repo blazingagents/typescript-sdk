@@ -66,6 +66,7 @@ export {
 } from "./entities/prompts.ts";
 export {
   createProviderBodySchema,
+  providerListItemSchema,
   providerModelsResponseSchema,
   providerResponseSchema,
   providersResponseSchema,

@@ -13,6 +13,20 @@ const agentVersion = {
   agentId: "ag_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
   version: 3,
+  approvalInChat: {
+    default: "manual",
+    overrides: [
+      {
+        tool: {
+          type: "mcp",
+          connectionId: "mcp_0123456789abcdef",
+          name: "send_mail",
+        },
+        decision: "auto",
+      },
+    ],
+  },
+  approvalInTasks: { default: "deny", overrides: [] },
   thinkingLevel: "high",
   name: "Historical Builder",
   model: "anthropic/claude-sonnet-4.5",
@@ -28,6 +42,65 @@ const agentVersion = {
 };
 
 describe("client.agents", () => {
+  it("serializes policies, preserves omitted updates, and parses read responses", async () => {
+    const policies = {
+      approvalInChat: {
+        default: "auto",
+        overrides: [
+          {
+            tool: {
+              type: "mcp",
+              connectionId: "mcp_0123456789abcdef",
+              name: "send_mail",
+            },
+            decision: "manual",
+          },
+        ],
+      },
+      approvalInTasks: { default: "deny", overrides: [] },
+    } as const;
+    const body = agentRow(policies);
+    const { fetch, calls } = createMockFetch({ body });
+    const c = client(fetch);
+    // Input arrays are mutable; use a fresh policy for requests.
+    const input = {
+      approvalInChat: {
+        default: "auto" as const,
+        overrides: [...policies.approvalInChat.overrides],
+      },
+      approvalInTasks: { default: "deny" as const },
+    };
+    await expect(
+      c.agents.create({ name: "Review", ...input })
+    ).resolves.toMatchObject(policies);
+    await expect(
+      c.agents.update({ agentId: "ag_0123456789abcdef", ...input })
+    ).resolves.toMatchObject(policies);
+    await expect(
+      c.agents.get({ agentId: "ag_0123456789abcdef" })
+    ).resolves.toMatchObject(policies);
+    await c.agents.update({
+      agentId: "ag_0123456789abcdef",
+      approvalInChat: { default: "full", overrides: [] },
+    });
+    await c.agents.update({ agentId: "ag_0123456789abcdef", name: "Renamed" });
+    expect(JSON.parse(calls[0].init?.body as string)).toEqual({
+      name: "Review",
+      ...input,
+    });
+    expect(JSON.parse(calls[1].init?.body as string)).toEqual(input);
+    expect(JSON.parse(calls[3].init?.body as string)).toEqual({
+      approvalInChat: { default: "full", overrides: [] },
+    });
+    expect(JSON.parse(calls[4].init?.body as string)).toEqual({
+      name: "Renamed",
+    });
+    const listed = createMockFetch({ body: { agents: [body] } });
+    await expect(client(listed.fetch).agents.list()).resolves.toMatchObject({
+      agents: [policies],
+    });
+  });
+
   it.each([null, "off", "max", "custom-level"])(
     "round-trips thinking %s and preserves omission",
     async (thinkingLevel) => {
@@ -243,6 +316,8 @@ describe("client.agents", () => {
     );
     expect(fetch.mock.calls[1][1]?.method).toBe("PUT");
     expect(JSON.parse(fetch.mock.calls[1][1]?.body as string)).toEqual({
+      approvalInChat: agentVersion.approvalInChat,
+      approvalInTasks: agentVersion.approvalInTasks,
       name: agentVersion.name,
       model: agentVersion.model,
       providerId: agentVersion.providerId,

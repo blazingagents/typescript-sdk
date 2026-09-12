@@ -29,6 +29,14 @@ describe("client.sessions", () => {
       continuation: { id: "tool-approval:ss:assistant", state: "waiting" },
       data: [
         {
+          tool: {
+            type: "mcp",
+            connectionId: "mcp_0123456789abcdef",
+            name: "send_mail",
+          },
+          assistantMessageId: "assistant-1",
+          createdAt: "2026-09-12T00:00:00Z",
+          decidedAt: null,
           approvalId: "approval-1",
           decision: "pending",
           input: { action: "deleteById", agentId: "ag_target" },

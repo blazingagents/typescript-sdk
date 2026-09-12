@@ -126,6 +126,8 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
       return update({
         agentId,
         abortSignal,
+        approvalInChat: version.approvalInChat,
+        approvalInTasks: version.approvalInTasks,
         name: version.name,
         model: version.model,
         thinkingLevel: version.thinkingLevel,

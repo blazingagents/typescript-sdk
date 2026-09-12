@@ -2,6 +2,16 @@
 
 // biome-ignore lint/performance/noBarrelFile: public contract entry point
 export { receivedApiErrorResponseSchema } from "./api.ts";
+export type {
+  ApprovalDecision,
+  ApprovalPolicy,
+  ToolReference,
+} from "./entities/agent-approval.ts";
+export {
+  approvalDecisionSchema,
+  approvalPolicySchema,
+  toolReferenceSchema,
+} from "./entities/agent-approval.ts";
 export {
   agentResponseSchema,
   agentSchema,

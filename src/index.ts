@@ -15,6 +15,11 @@ export {
 } from "./chat-transport.ts";
 export { BlazingAgents } from "./client.ts";
 export type {
+  ApprovalDecision,
+  ApprovalPolicy,
+  ToolReference,
+} from "./contracts/entities/agent-approval.ts";
+export type {
   Agent,
   AgentResponse,
   AgentsResponse,
@@ -54,6 +59,11 @@ export type {
   ThinkingLevelsResponse,
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
+export type {
+  ToolApprovalDecisionResponse,
+  ToolApprovalState,
+  ToolApprovalsResponse,
+} from "./contracts/entities/sessions.ts";
 export type {
   CreateSkillBody,
   Skill,

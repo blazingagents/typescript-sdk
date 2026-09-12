@@ -9,8 +9,9 @@ BA hosts the Chat SDK runtime and handles incoming messages and approvals.
 Use an existing configured Agent. Set `BLAZING_AGENTS_BASE_URL` to the API origin
 (without `/v1`), `BLAZING_AGENTS_API_KEY`, `BA_AGENT_ID`, `TELEGRAM_BOT_ID`,
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, and `CHAT_WEBHOOK_URL`.
-See [setup and the callback URL limitation](https://docs.blazingagents.com/platform/chat-integrations) before
-choosing `CHAT_WEBHOOK_URL`. Run this once on a trusted backend.
+See [callback setup](https://docs.blazingagents.com/platform/chat-integrations) for the create-and-update sequence. Use an initial HTTPS URL for
+`CHAT_WEBHOOK_URL`; the example saves the final callback after creation.
+Run this once on a trusted backend.
 
 ```typescript
 const response = await fetch(
@@ -38,10 +39,23 @@ const response = await fetch(
 );
 if (!response.ok) throw new Error(`Connection creation failed: ${response.status}`);
 const connection = await response.json();
-console.log(connection.id);
+const webhookUrl = `${process.env.BLAZING_AGENTS_BASE_URL}/v1/chat/webhooks/telegram/${connection.id}`;
+const updated = await fetch(
+  `${process.env.BLAZING_AGENTS_BASE_URL}/v1/chat-connections/${connection.id}`,
+  {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${process.env.BLAZING_AGENTS_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ webhookUrl }),
+  },
+);
+if (!updated.ok) throw new Error(`Callback update failed: ${updated.status}`);
+console.log(webhookUrl);
 ```
 
-Register the returned ID's webhook URL with Telegram, then start a DM with the
+Register the printed webhook URL with Telegram, run a fresh health check, then DM the
 bot. See [Slack and Telegram setup](https://docs.blazingagents.com/platform/chat-integrations) for registration,
 permissions, health checks, and conversation behavior.
 

@@ -20,6 +20,8 @@ const agent = {
   model: null,
   name: "Consumer Agent",
   providerId: null,
+  approvalInChat: { default: "full", overrides: [] },
+  approvalInTasks: { default: "full", overrides: [] },
   thinkingLevel: null,
   workspaceId: "ws_0123456789abcdef",
   status: "active",

@@ -5,6 +5,7 @@ import {
   DEFAULT_SESSION_MESSAGES_LIMIT,
   MAX_SESSION_MESSAGES_LIMIT,
 } from "../limitations.ts";
+import { toolReferenceSchema } from "./agent-approval.ts";
 import { agentSchema, agentVersionNumberSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
@@ -126,6 +127,10 @@ export const toolApprovalContinuationStateSchema = z.enum([
 
 export const toolApprovalStateSchema = z
   .object({
+    tool: toolReferenceSchema.nullable().optional(),
+    assistantMessageId: z.string().min(1).optional(),
+    createdAt: z.iso.datetime({ offset: true }).optional(),
+    decidedAt: z.iso.datetime({ offset: true }).nullable().optional(),
     approvalId: z.string().min(1),
     decision: z.enum(["pending", "approved", "denied"]),
     input: z.json(),

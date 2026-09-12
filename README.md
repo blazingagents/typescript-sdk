@@ -184,3 +184,51 @@ await client.agents.update({
   compactionReserveTokens: 32768,
 });
 ```
+
+### Tool approval policies (0.8.0)
+
+Agents and immutable Agent Versions expose separate `approvalInChat` and
+`approvalInTasks` policies. Create and update them through the ordinary Agent API:
+
+```ts
+await client.agents.update({
+  agentId,
+  approvalInChat: {
+    default: "full",
+    overrides: [
+      { tool: { type: "builtin", name: "bash" }, decision: "manual" },
+      {
+        tool: { type: "mcp", connectionId: "mcp_0123456789abcdef", name: "send_mail" },
+        decision: "auto",
+      },
+    ],
+  },
+  approvalInTasks: { default: "deny", overrides: [] },
+});
+```
+
+An exact tool override wins over the default. Both policies default to `full`
+with no overrides. `full` allows available tools, `deny` blocks execution,
+`manual` requires human review, and `auto` uses backend LLM review. Review errors
+block execution; escalation without an available human also blocks execution.
+Policies do not grant tool access. MCP references use the original remote tool
+name and connection ID; the backend validates attachment and discovery.
+
+Omitting a policy from an update preserves it. Supplying one replaces that whole
+policy; omitted or empty `overrides` clears its overrides. `restoreVersion`
+restores both policies alongside the other versioned fields.
+
+Interactive Sessions reuse `client.sessions.toolApprovals`,
+`client.sessions.decideToolApproval`, and
+`client.sessions.joinToolApprovalContinuation`. A configured backend human
+reviewer path is required. Tasks and stateless generations have no human
+continuation path and block manual or escalated calls; stateless generation uses
+`approvalInChat`. The SDK does not run an approval reviewer.
+
+Approval rows retain optional `tool`, `assistantMessageId`, `createdAt`, and
+`decidedAt` metadata. `tool` and `decidedAt` may be null (admin tools have no
+ordinary-policy reference). Persisted approval decisions remain
+`pending | approved | denied`; policy modes are `full | deny | manual | auto`.
+The root package exports `ApprovalDecision`, `ApprovalPolicy`, `ToolReference`,
+and `ToolApprovalState`; runtime policy schemas are exported from
+`@blazingagents/sdk/contracts`.

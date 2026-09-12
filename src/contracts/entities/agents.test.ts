@@ -28,6 +28,8 @@ const baseAgent = {
   providerId,
   thinkingLevel: null,
   autoCompaction: true,
+  approvalInChat: { default: "full", overrides: [] },
+  approvalInTasks: { default: "full", overrides: [] },
   compactionReserveTokens: 16_384,
   workspaceId,
   memoryInjectionEnabled: false,
@@ -51,6 +53,8 @@ const baseAgentVersion = {
   providerId,
   thinkingLevel: null,
   autoCompaction: true,
+  approvalInChat: { default: "full", overrides: [] },
+  approvalInTasks: { default: "full", overrides: [] },
   compactionReserveTokens: 16_384,
   memoryInjectionEnabled: false,
   tools: [],
@@ -210,6 +214,8 @@ describe("Agent mutation contracts", () => {
       providerId: null,
       thinkingLevel: null,
       autoCompaction: true,
+      approvalInChat: { default: "full", overrides: [] },
+      approvalInTasks: { default: "full", overrides: [] },
       compactionReserveTokens: 16_384,
       memoryInjectionEnabled: false,
       tools: [],
@@ -369,6 +375,8 @@ describe("Agent automatic compaction", () => {
       createAgentBodySchema.parse({ name: "Long conversation" })
     ).toMatchObject({
       autoCompaction: true,
+      approvalInChat: { default: "full", overrides: [] },
+      approvalInTasks: { default: "full", overrides: [] },
       compactionReserveTokens: 16_384,
     });
     expect(

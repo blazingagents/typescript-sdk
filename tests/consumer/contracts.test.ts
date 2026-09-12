@@ -1,5 +1,14 @@
+import type {
+  ApprovalDecision,
+  ApprovalPolicy,
+  CreateAgentBody,
+  ToolApprovalState,
+  ToolReference,
+  UpdateAgentBody,
+} from "@blazingagents/sdk";
 import {
   apiKeyTokenSchema,
+  approvalPolicySchema,
   isAdminAgentId,
   jsonSchemaShapeSchema,
   metadataSchema,
@@ -8,11 +17,42 @@ import {
   sessionIdSchema,
   type ToolApprovalDecisionResponse,
   type ToolApprovalsResponse,
+  toolReferenceSchema,
   type UsageSummary,
 } from "@blazingagents/sdk/contracts";
 import { describe, expect, it } from "vitest";
 
 describe("installed SDK contracts", () => {
+  it("exports approval schemas and distinguishes input policies from parsed output", () => {
+    const decision: ApprovalDecision = "manual";
+    const tool: ToolReference = {
+      type: "mcp",
+      connectionId: "mcp_0123456789abcdef",
+      name: "send_mail",
+    };
+    const create: CreateAgentBody = {
+      name: "Agent",
+      approvalInChat: { default: decision },
+    };
+    const update: UpdateAgentBody = { approvalInTasks: { default: "deny" } };
+    const policy: ApprovalPolicy = approvalPolicySchema.parse(
+      create.approvalInChat
+    );
+    const approval: ToolApprovalState = {
+      approvalId: "approval-1",
+      tool,
+      toolCallId: "call-1",
+      toolName: "runtime_mail",
+      decision: "pending",
+      reason: null,
+      input: {},
+      decidedAt: null,
+    };
+    expect(policy).toEqual({ default: "manual", overrides: [] });
+    expect(update.approvalInTasks).toEqual({ default: "deny" });
+    expect(toolReferenceSchema.parse(approval.tool)).toEqual(tool);
+  });
+
   it("exports the curated runtime contract entry point", () => {
     expect(sessionIdSchema.parse("ss_0123456789abcdef")).toBe(
       "ss_0123456789abcdef"

@@ -19,8 +19,20 @@ import {
   hasObjectKeys,
   hasUniqueValues,
 } from "../utils.ts";
+import { approvalPolicySchema } from "./agent-approval.ts";
 import { agentToolGroupIds } from "./agent-tools.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
+
+const approvalFields = {
+  approvalInChat: approvalPolicySchema.default({
+    default: "full",
+    overrides: [],
+  }),
+  approvalInTasks: approvalPolicySchema.default({
+    default: "full",
+    overrides: [],
+  }),
+};
 
 const agentNameSchema = z.string().trim().min(1).max(MAX_AGENT_NAME_LENGTH);
 export const agentInstructionsSchema = z
@@ -63,6 +75,7 @@ function hasProviderModelPair(input: {
 
 export const agentSchema = z
   .object({
+    ...approvalFields,
     id: agentIdSchema,
     tenantId: tenantIdSchema,
     name: agentNameSchema,
@@ -112,6 +125,7 @@ export const agentsListQuerySchema = z
 
 export const agentVersionSchema = z
   .object({
+    ...approvalFields,
     agentId: agentIdSchema,
     tenantId: tenantIdSchema,
     version: agentVersionNumberSchema,
@@ -151,6 +165,7 @@ export const agentVersionsResponseSchema =
 
 export const createAgentBodySchema = z
   .object({
+    ...approvalFields,
     name: agentNameSchema,
     model: agentModelIdSchema.nullable().default(null),
     thinkingLevel: z.string().min(1).nullable().default(null),
@@ -174,6 +189,8 @@ export const createAgentBodySchema = z
 
 export const updateAgentBodySchema = z
   .object({
+    approvalInChat: approvalPolicySchema.optional(),
+    approvalInTasks: approvalPolicySchema.optional(),
     name: agentNameSchema.optional(),
     model: agentModelIdSchema.nullable().optional(),
     thinkingLevel: z.string().min(1).nullable().optional(),
@@ -222,4 +239,4 @@ export type AgentVersionsListQuery = z.infer<
 >;
 export type AgentVersionsResponse = z.infer<typeof agentVersionsResponseSchema>;
 export type CreateAgentBody = z.input<typeof createAgentBodySchema>;
-export type UpdateAgentBody = z.infer<typeof updateAgentBodySchema>;
+export type UpdateAgentBody = z.input<typeof updateAgentBodySchema>;

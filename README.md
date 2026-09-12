@@ -232,3 +232,9 @@ ordinary-policy reference). Persisted approval decisions remain
 The root package exports `ApprovalDecision`, `ApprovalPolicy`, `ToolReference`,
 and `ToolApprovalState`; runtime policy schemas are exported from
 `@blazingagents/sdk/contracts`.
+
+## Slack and Telegram
+
+Use the [connection example](https://github.com/blazingagents/typescript-sdk/blob/main/examples/chat-integrations.md) to connect an existing
+Agent through REST. BA hosts the Chat SDK runtime, conversation history, and
+approval cards; no additional SDK resource is required.

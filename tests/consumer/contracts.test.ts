@@ -2,6 +2,7 @@ import type {
   ApprovalDecision,
   ApprovalPolicy,
   CreateAgentBody,
+  CreateChatConnectionBody,
   ToolApprovalState,
   ToolReference,
   UpdateAgentBody,
@@ -9,6 +10,7 @@ import type {
 import {
   apiKeyTokenSchema,
   approvalPolicySchema,
+  createChatConnectionBodySchema,
   isAdminAgentId,
   jsonSchemaShapeSchema,
   metadataSchema,
@@ -88,5 +90,22 @@ describe("installed SDK contracts", () => {
     expect(approvals.data).toEqual([]);
     expect(decision.state).toBe("queued");
     expect(hasUsageAgentId).toBe(true);
+  });
+});
+
+it("exports Chat Connection input types and runtime contracts", () => {
+  const body: CreateChatConnectionBody = {
+    agentId: "ag_0123456789abcdef",
+    name: "Support",
+    platform: "telegram",
+    configuration: {
+      botId: "123",
+      webhookUrl: "https://api.example.com/callback",
+    },
+    credentials: { botToken: "123:token", webhookSecret: "secret" },
+  };
+  expect(createChatConnectionBodySchema.parse(body)).toMatchObject({
+    enabled: true,
+    configuration: { chatIds: [] },
   });
 });

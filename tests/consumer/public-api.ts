@@ -150,3 +150,42 @@ export async function publicApiConsumer() {
     skillCopies,
   };
 }
+
+export async function manageChatConnections() {
+  const telegram = await client.chatConnections.create({
+    agentId: "ag_0123456789abcdef",
+    name: "Support",
+    platform: "telegram",
+    configuration: {
+      botId: "123",
+      webhookUrl: "https://api.example.com/callback",
+    },
+    credentials: { botToken: "123:token", webhookSecret: "secret" },
+  });
+  await client.chatConnections.create({
+    agentId: "ag_0123456789abcdef",
+    name: "Support",
+    platform: "slack",
+    configuration: {
+      teamId: "T123",
+      appId: "A123",
+      webhookUrl: "https://api.example.com/callback",
+    },
+    credentials: { botToken: "xoxb-token", signingSecret: "a".repeat(32) },
+  });
+  const chatConnectionId = telegram.id;
+  await client.chatConnections.rotateCredentials({
+    chatConnectionId,
+    platform: "telegram",
+    botToken: "123:new",
+    webhookSecret: "new",
+  });
+  await client.chatConnections.update({ chatConnectionId, name: "Renamed" });
+  await client.chatConnections.checkHealth({ chatConnectionId });
+  await client.chatConnections.enable({ chatConnectionId });
+  await client.chatConnections.disable({ chatConnectionId });
+  await client.chatConnections.get({ chatConnectionId });
+  await client.chatConnections.list();
+  await client.chatConnections.delete({ chatConnectionId });
+  return telegram;
+}

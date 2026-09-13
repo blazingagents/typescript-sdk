@@ -1,6 +1,7 @@
 import { chat, completion, objectGeneration } from "./generation.ts";
 import { createAgentsResource } from "./resources/agents.ts";
 import { createArtifactsResource } from "./resources/artifacts.ts";
+import { createChatConnectionsResource } from "./resources/chat-connections.ts";
 import { createMcpConnectionsResource } from "./resources/mcp-connections.ts";
 import { createMemoriesResource } from "./resources/memories.ts";
 import { createPromptsResource } from "./resources/prompts.ts";
@@ -17,6 +18,7 @@ import type {
   ArtifactsResource,
   BlazingAgentsOptions,
   BlazingAgentsRequestOptions,
+  ChatConnectionsResource,
   ChatInput,
   ChatResult,
   CompletionInput,
@@ -42,6 +44,7 @@ const TRAILING_SLASH_RE = /\/+$/;
 export class BlazingAgents {
   private readonly config: HttpConfig;
 
+  readonly chatConnections: ChatConnectionsResource;
   readonly agents: AgentsResource;
   readonly sessions: SessionsResource;
   readonly providers: ProvidersResource;
@@ -67,6 +70,7 @@ export class BlazingAgents {
         : { clientRequestId: options.clientRequestId }),
       onResponse: options.onResponse,
     };
+    this.chatConnections = createChatConnectionsResource(this.config);
     this.agents = createAgentsResource(this.config);
     this.sessions = createSessionsResource(this.config);
     this.providers = createProvidersResource(this.config);

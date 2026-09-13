@@ -15,6 +15,13 @@ import type {
 } from "./contracts/entities/artifacts.ts";
 import type { BlazingAgentsChatMessageMetadata } from "./contracts/entities/chat.ts";
 import type {
+  ChatConnection,
+  ChatConnectionsResponse,
+  CreateChatConnectionBody,
+  RotateChatConnectionBody,
+  UpdateChatConnectionBody,
+} from "./contracts/entities/chat-connections.ts";
+import type {
   CreateMcpConnectionBody,
   McpAttachmentResponse,
   McpAttachmentsResponse,
@@ -670,4 +677,36 @@ export interface UsageResource {
   getForAgent(
     input: Partial<UsageQuery> & { agentId: string } & ResourceRequestOptions
   ): Promise<UsageResponse>;
+}
+
+export interface ChatConnectionsResource {
+  checkHealth(
+    input: { chatConnectionId: string } & ResourceRequestOptions
+  ): Promise<ChatConnection>;
+  create(
+    input: CreateChatConnectionBody & ResourceRequestOptions
+  ): Promise<ChatConnection>;
+  delete(
+    input: { chatConnectionId: string } & ResourceRequestOptions
+  ): Promise<void>;
+  disable(
+    input: { chatConnectionId: string } & ResourceRequestOptions
+  ): Promise<ChatConnection>;
+  enable(
+    input: { chatConnectionId: string } & ResourceRequestOptions
+  ): Promise<ChatConnection>;
+  get(
+    input: { chatConnectionId: string } & ResourceRequestOptions
+  ): Promise<ChatConnection>;
+  list(input?: ResourceRequestOptions): Promise<ChatConnectionsResponse>;
+  rotateCredentials(
+    input: RotateChatConnectionBody & {
+      chatConnectionId: string;
+    } & ResourceRequestOptions
+  ): Promise<ChatConnection>;
+  update(
+    input: UpdateChatConnectionBody & {
+      chatConnectionId: string;
+    } & ResourceRequestOptions
+  ): Promise<ChatConnection>;
 }

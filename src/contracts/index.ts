@@ -43,6 +43,18 @@ export {
   usageSummarySchema,
 } from "./entities/chat.ts";
 export {
+  chatConfigurationSchema,
+  chatConnectionSchema,
+  chatConnectionsResponseSchema,
+  chatCredentialsSchema,
+  chatHealthCheckSchema,
+  chatHealthSchema,
+  chatIdentitySchema,
+  createChatConnectionBodySchema,
+  rotateChatConnectionBodySchema,
+  updateChatConnectionBodySchema,
+} from "./entities/chat-connections.ts";
+export {
   approveMcpOauthAuthorizationBodySchema,
   createMcpConnectionBodySchema,
   mcpAttachmentResponseSchema,

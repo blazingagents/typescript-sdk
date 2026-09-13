@@ -1,8 +1,8 @@
 
 # Chat integrations
 
-The existing SDK manages your Agent. Use REST to connect it to Slack or Telegram;
-BA hosts the Chat SDK runtime and handles incoming messages and approvals.
+Use `client.chatConnections` to connect an Agent to Slack or Telegram.
+BA handles incoming messages, replies, and approvals.
 
 ## Create a Telegram connection
 
@@ -14,54 +14,50 @@ See [callback setup](https://docs.blazingagents.com/platform/chat-integrations) 
 Run this once on a trusted backend.
 
 ```typescript
-const response = await fetch(
-  `${process.env.BLAZING_AGENTS_BASE_URL}/v1/chat-connections`,
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.BLAZING_AGENTS_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Support on Telegram",
-      agentId: process.env.BA_AGENT_ID,
-      platform: "telegram",
-      configuration: {
-        botId: process.env.TELEGRAM_BOT_ID,
-        webhookUrl: process.env.CHAT_WEBHOOK_URL,
-      },
-      credentials: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
-      },
-    }),
+import { BlazingAgents } from "@blazingagents/sdk";
+
+function env(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Set ${name}`);
+  return value;
+}
+
+const baseUrl = env("BLAZING_AGENTS_BASE_URL").replace(/\/+$/, "");
+const client = new BlazingAgents({
+  apiKey: env("BLAZING_AGENTS_API_KEY"),
+  baseUrl,
+});
+const connection = await client.chatConnections.create({
+  name: "Support on Telegram",
+  agentId: env("BA_AGENT_ID"),
+  platform: "telegram",
+  enabled: false,
+  configuration: {
+    botId: env("TELEGRAM_BOT_ID"),
+    webhookUrl: env("CHAT_WEBHOOK_URL"),
   },
-);
-if (!response.ok) throw new Error(`Connection creation failed: ${response.status}`);
-const connection = await response.json();
-const webhookUrl = `${process.env.BLAZING_AGENTS_BASE_URL}/v1/chat/webhooks/telegram/${connection.id}`;
-const updated = await fetch(
-  `${process.env.BLAZING_AGENTS_BASE_URL}/v1/chat-connections/${connection.id}`,
-  {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${process.env.BLAZING_AGENTS_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ webhookUrl }),
+  credentials: {
+    botToken: env("TELEGRAM_BOT_TOKEN"),
+    webhookSecret: env("TELEGRAM_WEBHOOK_SECRET"),
   },
-);
-if (!updated.ok) throw new Error(`Callback update failed: ${updated.status}`);
-console.log(webhookUrl);
+});
+const webhookUrl = `${baseUrl}/v1/chat/webhooks/telegram/${connection.id}`;
+await client.chatConnections.update({
+  chatConnectionId: connection.id,
+  webhookUrl,
+});
+console.log({ chatConnectionId: connection.id, webhookUrl });
 ```
 
-Register the printed webhook URL with Telegram, run a fresh health check, then DM the
-bot. See [Slack and Telegram setup](https://docs.blazingagents.com/platform/chat-integrations) for registration,
-permissions, health checks, and conversation behavior.
+Register the printed URL with Telegram using the matching webhook secret, then
+call `client.chatConnections.checkHealth({ chatConnectionId })` and
+`client.chatConnections.enable({ chatConnectionId })`. See
+[Slack and Telegram setup](https://docs.blazingagents.com/platform/chat-integrations)
+for registration and permissions.
 
-If creation times out, list your connections and reconcile before retrying.
-Connection management has no dedicated SDK methods; use the
-[REST reference](https://docs.blazingagents.com/api-reference/rest-api/chat-connections) for lifecycle and repair.
+If creation times out, use `list()` to reconcile before retrying. If the callback
+update fails, retry `update()` on the existing connection. Use `get()`,
+`rotateCredentials()`, `disable()`, and `delete()` to manage it later.
 
 ## Use BA inside an existing Vercel Chat SDK bot
 

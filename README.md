@@ -16,7 +16,7 @@ requires Node.js 24 or newer.
 ## Features
 
 - Typed clients for Agents, Workspaces, Skills, Providers, Prompts, Tasks,
-  Sessions, Artifacts, usage, and Tenant settings.
+  Sessions, Artifacts, Slack and Telegram Chat Connections, usage, and Tenant settings.
 - Stateful chat and stateless text or structured-object generation.
 - Public Zod contracts for validating API requests and responses.
 - Cursor pagination and binary transfers.

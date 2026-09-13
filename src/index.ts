@@ -35,6 +35,17 @@ export type {
   ArtifactsListResponse,
 } from "./contracts/entities/artifacts.ts";
 export type {
+  ChatConfiguration,
+  ChatConnection,
+  ChatConnectionsResponse,
+  ChatCredentials,
+  ChatHealth,
+  ChatIdentity,
+  CreateChatConnectionBody,
+  RotateChatConnectionBody,
+  UpdateChatConnectionBody,
+} from "./contracts/entities/chat-connections.ts";
+export type {
   CreateMcpConnectionBody,
   McpAttachmentResponse,
   McpAttachmentsResponse,
@@ -105,6 +116,7 @@ export type {
   BlazingAgentsRequestOptions,
   BlazingAgentsUIMessage,
   BlazingAgentsUIMessageChunk,
+  ChatConnectionsResource,
   ChatInput,
   ChatMessageInput,
   ChatPromptInput,

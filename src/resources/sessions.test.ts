@@ -252,10 +252,12 @@ describe("client.sessions", () => {
     [{}, ""],
     [{ cursor: "next page" }, "?cursor=next+page"],
     [{ limit: 20 }, "?limit=20"],
+    [{ byAgent: false }, "?byAgent=false"],
+    [{ byAgent: true }, "?byAgent=true"],
     [{ userId: "" }, "?userId="],
     [
-      { cursor: "next", limit: 20, userId: "end-user" },
-      "?cursor=next&limit=20&userId=end-user",
+      { byAgent: true, cursor: "next", limit: 20, userId: "end-user" },
+      "?cursor=next&limit=20&userId=end-user&byAgent=true",
     ],
   ])("listLatest serializes options %#", async (options, suffix) => {
     const { fetch, calls } = createMockFetch({
@@ -265,7 +267,7 @@ describe("client.sessions", () => {
     expect(calls[0].url).toBe(`${BASE}/v1/sessions/latest${suffix}`);
   });
 
-  it("listLatest returns one latest Session per Agent with its agentId", async () => {
+  it("listLatest returns latest Sessions with their agentId", async () => {
     const item = {
       ...sessionListItem,
       agentId: "ag_0123456789abcdef",

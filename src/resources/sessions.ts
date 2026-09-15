@@ -63,6 +63,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
             limit: options.limit,
             // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
             ...(options.userId === undefined ? {} : { userId: options.userId }),
+            ...(options.byAgent === undefined
+              ? {}
+              : { byAgent: options.byAgent }),
           },
         },
         latestSessionsListResponseSchema

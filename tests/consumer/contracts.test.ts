@@ -20,6 +20,7 @@ import {
   type ToolApprovalDecisionResponse,
   type ToolApprovalsResponse,
   toolReferenceSchema,
+  type UsageOverviewResponse,
   type UsageSummary,
 } from "@blazingagents/sdk/contracts";
 import { describe, expect, it } from "vitest";
@@ -90,6 +91,24 @@ describe("installed SDK contracts", () => {
     expect(approvals.data).toEqual([]);
     expect(decision.state).toBe("queued");
     expect(hasUsageAgentId).toBe(true);
+  });
+
+  it("exports the usage overview contract", () => {
+    const overview = {
+      totals: {
+        inputTokens: 0,
+        outputTokens: 0,
+        requestCount: 0,
+        durationMs: 0,
+      },
+      daily: [],
+      byAgent: [],
+      byUser: [],
+      byModel: [],
+      activeAgentCount: 0,
+    } satisfies UsageOverviewResponse;
+
+    expect(overview.activeAgentCount).toBe(0);
   });
 });
 

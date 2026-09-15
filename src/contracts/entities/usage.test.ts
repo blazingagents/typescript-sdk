@@ -3,11 +3,30 @@ import { describe, expect, it } from "vitest";
 import {
   usageBucketSchema,
   usageGroupBySchema,
+  usageOverviewQuerySchema,
+  usageOverviewResponseSchema,
   usageQuerySchema,
   usageResponseSchema,
   usageSessionFilterSchema,
   usageTotalsSchema,
 } from "./usage.ts";
+
+const totals = {
+  inputTokens: 10,
+  outputTokens: 5,
+  requestCount: 1,
+  durationMs: 100,
+};
+
+const bucket = {
+  day: null,
+  agentId: null,
+  sessionId: null,
+  userId: null,
+  provider: null,
+  model: null,
+  ...totals,
+};
 
 const agentId = "ag_xxxxxxxxxxxxxxxx";
 const sessionId = "ss_xxxxxxxxxxxxxxxx";
@@ -22,6 +41,93 @@ describe("usageGroupBySchema", () => {
 
   it("rejects unknown groupBy", () => {
     expect(usageGroupBySchema.safeParse("hour").success).toBe(false);
+  });
+});
+
+describe("usageOverviewQuerySchema", () => {
+  it("defaults the ranking limit to five", () => {
+    expect(usageOverviewQuerySchema.parse({}).limit).toBe(5);
+  });
+
+  it("accepts the maximum ranking limit", () => {
+    expect(usageOverviewQuerySchema.parse({ limit: 20 }).limit).toBe(20);
+  });
+
+  it("rejects an oversized ranking limit", () => {
+    expect(usageOverviewQuerySchema.safeParse({ limit: 21 }).success).toBe(
+      false
+    );
+  });
+
+  it("requires a complete, ordered range of at most 31 days", () => {
+    expect(
+      usageOverviewQuerySchema.safeParse({
+        from: "2026-07-01",
+        to: "2026-08-01",
+      }).success
+    ).toBe(true);
+    expect(
+      usageOverviewQuerySchema.safeParse({ from: "2026-07-01" }).success
+    ).toBe(false);
+    expect(
+      usageOverviewQuerySchema.safeParse({
+        from: "2026-08-01",
+        to: "2026-07-01",
+      }).success
+    ).toBe(false);
+    expect(
+      usageOverviewQuerySchema.safeParse({
+        from: "2026-07-01",
+        to: "2026-08-02",
+      }).success
+    ).toBe(false);
+  });
+});
+
+describe("usageOverviewResponseSchema", () => {
+  it("accepts bounded rankings and an optional model remainder", () => {
+    const parsed = usageOverviewResponseSchema.parse({
+      totals,
+      daily: [{ ...bucket, day: "2026-07-01" }],
+      byAgent: [{ ...bucket, agentId: "ag_0123456789abcdef" }],
+      byUser: [{ ...bucket, userId: "user-1" }],
+      byModel: [{ ...bucket, provider: "openai", model: "gpt-5" }, bucket],
+      activeAgentCount: 1,
+    });
+
+    expect(parsed.byModel.at(-1)?.model).toBeNull();
+    expect(parsed.activeAgentCount).toBe(1);
+  });
+
+  it("rejects more than 20 normal model buckets", () => {
+    const byModel = Array.from({ length: 21 }, (_, index) => ({
+      ...bucket,
+      provider: "provider",
+      model: `model-${index}`,
+    }));
+    expect(
+      usageOverviewResponseSchema.safeParse({
+        totals,
+        daily: [],
+        byAgent: [],
+        byUser: [],
+        byModel,
+        activeAgentCount: 0,
+      }).success
+    ).toBe(false);
+  });
+
+  it("rejects multiple model remainder buckets", () => {
+    expect(
+      usageOverviewResponseSchema.safeParse({
+        totals,
+        daily: [],
+        byAgent: [],
+        byUser: [],
+        byModel: [bucket, bucket],
+        activeAgentCount: 0,
+      }).success
+    ).toBe(false);
   });
 });
 

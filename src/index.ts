@@ -86,6 +86,12 @@ export type {
   SkillsListResponse,
 } from "./contracts/entities/skills.ts";
 export type {
+  UsageBucket,
+  UsageOverviewQuery,
+  UsageOverviewResponse,
+  UsageTotals,
+} from "./contracts/entities/usage.ts";
+export type {
   CreateWorkspaceBody,
   UpdateWorkspaceBody,
   Workspace,

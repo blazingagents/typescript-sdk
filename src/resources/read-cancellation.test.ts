@@ -105,6 +105,7 @@ const requests: [
   ],
   ["tenant.get", (c, o) => c.tenant.get(o)],
   ["usage.get", (c, o) => c.usage.get({ userId: "user", ...o })],
+  ["usage.overview", (c, o) => c.usage.overview(o)],
   [
     "usage.getForAgent",
     (c, o) => c.usage.getForAgent({ agentId: "agent", ...o }),

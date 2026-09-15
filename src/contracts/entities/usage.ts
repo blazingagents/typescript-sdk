@@ -167,13 +167,13 @@ export const usageOverviewResponseSchema = z
       ({ model, provider }) => model === null && provider === null
     ).length;
     const normalCount = value.byModel.length - remainderCount;
-    const hasIncompleteModel = value.byModel.some(
-      ({ model, provider }) => (model === null) !== (provider === null)
+    const hasProviderWithoutModel = value.byModel.some(
+      ({ model, provider }) => model === null && provider !== null
     );
     if (
       remainderCount > 1 ||
       normalCount > MAX_USAGE_OVERVIEW_TOP_N ||
-      hasIncompleteModel
+      hasProviderWithoutModel
     ) {
       ctx.addIssue({
         code: "custom",

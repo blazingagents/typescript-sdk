@@ -99,6 +99,32 @@ describe("usageOverviewResponseSchema", () => {
     expect(parsed.activeAgentCount).toBe(1);
   });
 
+  it("accepts model usage whose Provider was deleted", () => {
+    expect(
+      usageOverviewResponseSchema.safeParse({
+        totals,
+        daily: [],
+        byAgent: [],
+        byUser: [],
+        byModel: [{ ...bucket, model: "historical-model" }],
+        activeAgentCount: 0,
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects a Provider without a model", () => {
+    expect(
+      usageOverviewResponseSchema.safeParse({
+        totals,
+        daily: [],
+        byAgent: [],
+        byUser: [],
+        byModel: [{ ...bucket, provider: "openai" }],
+        activeAgentCount: 0,
+      }).success
+    ).toBe(false);
+  });
+
   it("rejects more than 20 normal model buckets", () => {
     const byModel = Array.from({ length: 21 }, (_, index) => ({
       ...bucket,

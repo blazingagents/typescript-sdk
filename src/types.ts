@@ -86,7 +86,12 @@ import type {
   TenantSettingsResponse,
   UpdateTenantSettingsBody,
 } from "./contracts/entities/tenants.ts";
-import type { UsageQuery, UsageResponse } from "./contracts/entities/usage.ts";
+import type {
+  UsageOverviewQuery,
+  UsageOverviewResponse,
+  UsageQuery,
+  UsageResponse,
+} from "./contracts/entities/usage.ts";
 import type {
   CreateWorkspaceBody,
   UpdateWorkspaceBody,
@@ -526,6 +531,7 @@ export interface SessionsListOptions extends ResourceRequestOptions {
 }
 
 export interface LatestSessionsListOptions extends ResourceRequestOptions {
+  byAgent?: boolean;
   cursor?: string;
   limit?: number;
   userId?: string;
@@ -563,9 +569,9 @@ export interface SessionsResource {
     input: { agentId: string } & SessionsListOptions
   ): Promise<SessionsListResponse>;
   /**
-   * `GET /v1/sessions/latest` — each Agent's most recently updated Session
-   * across the Tenant, one item per Agent, newest first. `userId` narrows
-   * the candidate Sessions to one end user's before picking the latest.
+   * `GET /v1/sessions/latest` — the Tenant's most recently updated Sessions,
+   * newest first. Set `byAgent` to return at most one Session per Agent.
+   * `userId` narrows the candidate Sessions to one end user's.
    */
   listLatest(
     input?: LatestSessionsListOptions
@@ -677,6 +683,10 @@ export interface UsageResource {
   getForAgent(
     input: Partial<UsageQuery> & { agentId: string } & ResourceRequestOptions
   ): Promise<UsageResponse>;
+  /** Returns totals, daily usage, and bounded Agent, user, and model rankings. */
+  overview(
+    input?: Partial<UsageOverviewQuery> & ResourceRequestOptions
+  ): Promise<UsageOverviewResponse>;
 }
 
 export interface ChatConnectionsResource {

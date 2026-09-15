@@ -115,6 +115,8 @@ const publicContractNames = [
   "updateTaskBodySchema",
   "updateTenantSettingsBodySchema",
   "updateWorkspaceBodySchema",
+  "usageOverviewQuerySchema",
+  "usageOverviewResponseSchema",
   "usageResponseSchema",
   "usageSummarySchema",
   "workspaceSchema",

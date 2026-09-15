@@ -265,6 +265,18 @@ sdk.sessions.messages({
   sessionId: "ss_0123456789abcdef",
   abortSignal,
 });
+sdk.sessions.listLatest({ byAgent: true, abortSignal });
+sdk.usage
+  .overview({
+    from: "2026-09-01",
+    to: "2026-09-07",
+    limit: 5,
+    abortSignal,
+  })
+  .then((overview) => {
+    overview.activeAgentCount.toFixed(0);
+    overview.byModel.at(-1)?.model?.toUpperCase();
+  });
 sdk.chat({
   agentId: "ag_0123456789abcdef",
   promptId: "prompt_0123456789abcdef",

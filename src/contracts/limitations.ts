@@ -137,6 +137,8 @@ export const MAX_USAGE_RANGE_DAYS = 31;
 export const DEFAULT_USAGE_RANGE_DAYS = 30;
 export const DEFAULT_USAGE_SESSION_TOP_N = 50;
 export const MAX_USAGE_SESSION_TOP_N = 200;
+export const DEFAULT_USAGE_OVERVIEW_TOP_N = 5;
+export const MAX_USAGE_OVERVIEW_TOP_N = 20;
 
 // Quota — reset day between 1 and 28.
 export const MIN_QUOTA_RESET_DAY = 1;

@@ -145,7 +145,18 @@ export {
   tenantSettingsResponseSchema,
   updateTenantSettingsBodySchema,
 } from "./entities/tenants.ts";
-export { usageResponseSchema } from "./entities/usage.ts";
+export type {
+  UsageBucket,
+  UsageOverviewQuery,
+  UsageOverviewResponse,
+  UsageResponse,
+  UsageTotals,
+} from "./entities/usage.ts";
+export {
+  usageOverviewQuerySchema,
+  usageOverviewResponseSchema,
+  usageResponseSchema,
+} from "./entities/usage.ts";
 export {
   createWorkspaceBodySchema,
   updateWorkspaceBodySchema,

@@ -215,7 +215,7 @@ describe("installed SDK consumer contract", () => {
       if (
         request.method === "DELETE" &&
         request.url ===
-          `/v1/agents/${agent.id}/skills/${skill.id}/files/assets/icon%20one.bin`
+          `/v1/agents/${agent.id}/skills/${skill.id}/files?path=assets%2Ficon%20one.bin`
       ) {
         response.writeHead(200, { "content-type": "application/json" });
         response.end(JSON.stringify(skill));
@@ -255,7 +255,7 @@ describe("installed SDK consumer contract", () => {
       if (
         request.method === "GET" &&
         request.url ===
-          `/v1/agents/${agent.id}/skills/${skill.id}/files/assets/icon%20one.bin`
+          `/v1/agents/${agent.id}/skills/${skill.id}/files?path=assets%2Ficon%20one.bin`
       ) {
         response.writeHead(200, {
           "content-type": "application/octet-stream",
@@ -267,7 +267,7 @@ describe("installed SDK consumer contract", () => {
       if (
         request.method === "PUT" &&
         request.url ===
-          `/v1/agents/${agent.id}/skills/${skill.id}/files/assets/upload.bin`
+          `/v1/agents/${agent.id}/skills/${skill.id}/files?path=assets%2Fupload.bin`
       ) {
         const chunks: Uint8Array[] = [];
         request.on("data", (chunk: Uint8Array) => chunks.push(chunk));

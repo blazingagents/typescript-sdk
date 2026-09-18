@@ -151,7 +151,7 @@ describe("client.agent(agentId).skills", () => {
     expect(responseBytes).toBeInstanceOf(Uint8Array);
     expect(responseBytes).toEqual(bytes);
     expect(calls[0].url).toBe(
-      `${BASE}/v1/agents/${agentId}/skills/${skillId}/files/assets/icon%20one.bin`
+      `${BASE}/v1/agents/${agentId}/skills/${skillId}/files?path=assets%2Ficon%20one.bin`
     );
   });
 
@@ -214,7 +214,7 @@ describe("client.agent(agentId).skills", () => {
       })
     ).resolves.toEqual(skill);
     expect(calls[0].url).toBe(
-      `${BASE}/v1/agents/${agentId}/skills/${skillId}/files/assets/icon.bin`
+      `${BASE}/v1/agents/${agentId}/skills/${skillId}/files?path=assets%2Ficon.bin`
     );
     expect(calls[0].init?.method).toBe("PUT");
     expect(calls[0].init?.body).toBe(bytes);
@@ -230,7 +230,7 @@ describe("client.agent(agentId).skills", () => {
       })
     ).resolves.toEqual(skill);
     expect(calls[0].url).toBe(
-      `${BASE}/v1/agents/${agentId}/skills/${skillId}/files/notes.txt`
+      `${BASE}/v1/agents/${agentId}/skills/${skillId}/files?path=notes.txt`
     );
     expect(calls[0].init?.method).toBe("DELETE");
   });

@@ -15,8 +15,7 @@ function fileUrl(
   agentId: string,
   input: { path: string; skillId: string }
 ): string {
-  const path = input.path.split("/").map(encodeURIComponent).join("/");
-  return `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(input.skillId)}/files/${path}`;
+  return `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(input.skillId)}/files?path=${encodeURIComponent(input.path)}`;
 }
 
 export function createAgentSkillsResource(

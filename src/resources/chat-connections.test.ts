@@ -15,10 +15,11 @@ const connection = {
   enabled: false,
   configuration: {
     platform: "telegram" as const,
-    botId: "123",
-    webhookUrl: "https://api.example.com/callback",
+    businessMode: false,
     chatIds: [],
   },
+  webhookUrl:
+    "https://api.example.com/v1/chat/webhooks/telegram/cc_0123456789abcdef",
   identity: { botId: "123", botUserId: "123", teamId: null, appId: null },
   health: {
     checkedAt: "2026-09-13T00:00:00Z",
@@ -58,17 +59,14 @@ describe("chatConnections", () => {
     {
       platform: "telegram" as const,
       configuration: {
-        botId: "123",
-        webhookUrl: "https://api.example.com/callback",
+        businessMode: false,
       },
-      credentials: { botToken: "123:abc", webhookSecret: "secret" },
+      credentials: { botToken: "123:abc" },
     },
     {
       platform: "slack" as const,
       configuration: {
-        teamId: "T123",
-        appId: "A123",
-        webhookUrl: "https://api.example.com/callback",
+        channelIds: [],
       },
       credentials: { botToken: "xoxb-token", signingSecret: "a".repeat(32) },
     },
@@ -128,12 +126,12 @@ describe("chatConnections", () => {
     await client.chatConnections.update({
       chatConnectionId: connection.id,
       name: "New name",
-      webhookUrl: "https://api.example.com/final",
+      configuration: { businessMode: true },
     });
     expect(calls[0].init?.method).toBe("PATCH");
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
       name: "New name",
-      webhookUrl: "https://api.example.com/final",
+      configuration: { businessMode: true },
     });
   });
   it.each([
@@ -145,7 +143,6 @@ describe("chatConnections", () => {
     {
       platform: "telegram" as const,
       botToken: "123:abc",
-      webhookSecret: "secret",
     },
   ])(
     "replaces the complete $platform credential bundle",
@@ -169,24 +166,14 @@ describe("chatConnections", () => {
     ).resolves.toBeUndefined();
     expect(calls[0].init?.method).toBe("DELETE");
   });
-  it("rejects empty updates and unsafe callback URLs in the public contracts", () => {
+  it("rejects empty updates and accepts supported configuration changes", () => {
     expect(updateChatConnectionBodySchema.safeParse({}).success).toBe(false);
     expect(
       updateChatConnectionBodySchema.safeParse({ name: "Support" }).success
     ).toBe(true);
-    for (const webhookUrl of [
-      "http://example.com/callback",
-      "https://user:pass@example.com/callback",
-      "https://example.com/callback?secret=1",
-      "https://example.com/callback#fragment",
-    ]) {
-      expect(
-        updateChatConnectionBodySchema.safeParse({ webhookUrl }).success
-      ).toBe(false);
-    }
     expect(
       updateChatConnectionBodySchema.safeParse({
-        webhookUrl: "https://example.com/callback",
+        configuration: { businessMode: true },
       }).success
     ).toBe(true);
   });

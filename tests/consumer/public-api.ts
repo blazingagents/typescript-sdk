@@ -157,19 +157,16 @@ export async function manageChatConnections() {
     name: "Support",
     platform: "telegram",
     configuration: {
-      botId: "123",
-      webhookUrl: "https://api.example.com/callback",
+      businessMode: false,
     },
-    credentials: { botToken: "123:token", webhookSecret: "secret" },
+    credentials: { botToken: "123:token" },
   });
   await client.chatConnections.create({
     agentId: "ag_0123456789abcdef",
     name: "Support",
     platform: "slack",
     configuration: {
-      teamId: "T123",
-      appId: "A123",
-      webhookUrl: "https://api.example.com/callback",
+      channelIds: [],
     },
     credentials: { botToken: "xoxb-token", signingSecret: "a".repeat(32) },
   });
@@ -178,7 +175,6 @@ export async function manageChatConnections() {
     chatConnectionId,
     platform: "telegram",
     botToken: "123:new",
-    webhookSecret: "new",
   });
   await client.chatConnections.update({ chatConnectionId, name: "Renamed" });
   await client.chatConnections.checkHealth({ chatConnectionId });

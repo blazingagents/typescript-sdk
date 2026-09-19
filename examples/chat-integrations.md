@@ -7,10 +7,9 @@ BA handles incoming messages, replies, and approvals.
 ## Create a Telegram connection
 
 Use an existing configured Agent. Set `BLAZING_AGENTS_BASE_URL` to the API origin
-(without `/v1`), `BLAZING_AGENTS_API_KEY`, `BA_AGENT_ID`, `TELEGRAM_BOT_ID`,
-`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, and `CHAT_WEBHOOK_URL`.
-See [callback setup](https://docs.blazingagents.com/platform/chat-integrations) for the create-and-update sequence. Use an initial HTTPS URL for
-`CHAT_WEBHOOK_URL`; the example saves the final callback after creation.
+(without `/v1`), `BLAZING_AGENTS_API_KEY`, `BA_AGENT_ID`, and
+`TELEGRAM_BOT_TOKEN`. BA derives the bot identity, generates the webhook secret,
+and registers its computed callback URL with Telegram.
 Run this once on a trusted backend.
 
 ```typescript
@@ -31,33 +30,28 @@ const connection = await client.chatConnections.create({
   name: "Support on Telegram",
   agentId: env("BA_AGENT_ID"),
   platform: "telegram",
-  enabled: false,
   configuration: {
-    botId: env("TELEGRAM_BOT_ID"),
-    webhookUrl: env("CHAT_WEBHOOK_URL"),
+    businessMode: false,
   },
   credentials: {
     botToken: env("TELEGRAM_BOT_TOKEN"),
-    webhookSecret: env("TELEGRAM_WEBHOOK_SECRET"),
   },
 });
-const webhookUrl = `${baseUrl}/v1/chat/webhooks/telegram/${connection.id}`;
-await client.chatConnections.update({
+console.log({
   chatConnectionId: connection.id,
-  webhookUrl,
+  webhookUrl: connection.webhookUrl,
 });
-console.log({ chatConnectionId: connection.id, webhookUrl });
 ```
 
-Register the printed URL with Telegram using the matching webhook secret, then
-call `client.chatConnections.checkHealth({ chatConnectionId })` and
-`client.chatConnections.enable({ chatConnectionId })`. See
+Call `client.chatConnections.checkHealth({ chatConnectionId })` to refresh
+provider health. See
 [Slack and Telegram setup](https://docs.blazingagents.com/platform/chat-integrations)
 for registration and permissions.
 
-If creation times out, use `list()` to reconcile before retrying. If the callback
-update fails, retry `update()` on the existing connection. Use `get()`,
-`rotateCredentials()`, `disable()`, and `delete()` to manage it later.
+If creation times out, use `list()` to reconcile before retrying. Use `get()`,
+`rotateCredentials()`, `disable()`, and `delete()` to manage it later. Telegram
+registration conflicts return `chat_webhook_conflict`; upstream registration
+failures return `chat_webhook_registration_failed`.
 
 ## Use BA inside an existing Vercel Chat SDK bot
 

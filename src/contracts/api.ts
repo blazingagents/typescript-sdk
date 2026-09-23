@@ -95,7 +95,9 @@ export const apiErrorCodeSchema = z.enum([
   "merchant_balance_required",
   "merchant_eligibility_unavailable",
   "tenant_deleting",
+  "tenant_deletion_in_progress",
   "tenant_deletion_not_ready",
+  "tenant_not_deleting",
 ]);
 
 export const apiErrorSchema = z

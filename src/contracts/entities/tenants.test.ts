@@ -194,6 +194,7 @@ describe("tenantSettingsResponseSchema", () => {
           resetDay: 1,
         },
         deletion: null,
+        monetizationEnabled: false,
       })
     ).toStrictEqual({
       name: "Acme",
@@ -203,6 +204,7 @@ describe("tenantSettingsResponseSchema", () => {
         resetDay: 1,
       },
       deletion: null,
+      monetizationEnabled: false,
     });
   });
 
@@ -212,8 +214,14 @@ describe("tenantSettingsResponseSchema", () => {
         name: "Acme",
         quota: null,
         deletion: null,
+        monetizationEnabled: false,
       })
-    ).toStrictEqual({ name: "Acme", quota: null, deletion: null });
+    ).toStrictEqual({
+      name: "Acme",
+      quota: null,
+      deletion: null,
+      monetizationEnabled: false,
+    });
   });
 
   it("trims a padded name (uniform with the update body schema)", () => {
@@ -222,26 +230,27 @@ describe("tenantSettingsResponseSchema", () => {
         name: "  Acme  ",
         quota: null,
         deletion: null,
+        monetizationEnabled: false,
       })
-    ).toStrictEqual({ name: "Acme", quota: null, deletion: null });
+    ).toStrictEqual({
+      name: "Acme",
+      quota: null,
+      deletion: null,
+      monetizationEnabled: false,
+    });
   });
 
   it("parses a tenant deletion state", () => {
     const deletion = {
       requestedAt: "2026-09-01T00:00:00.000Z",
-      mode: "forced",
-      ready: true,
-      blockers: {
-        activeTaskRuns: 0,
-        activeTurns: 0,
-        unresolvedMerchantEvents: 0,
-      },
+      deletesAt: "2026-09-02T00:00:00.000Z",
     };
     expect(
       tenantSettingsResponseSchema.parse({
         name: "Acme",
         quota: null,
         deletion,
+        monetizationEnabled: false,
       }).deletion
     ).toStrictEqual(deletion);
   });
@@ -319,8 +328,14 @@ it("strips nested quota response additions but rejects them in writes", () => {
       name: "Tenant",
       quota: expanded,
       deletion: null,
+      monetizationEnabled: false,
     })
-  ).toEqual({ name: "Tenant", quota, deletion: null });
+  ).toEqual({
+    name: "Tenant",
+    quota,
+    deletion: null,
+    monetizationEnabled: false,
+  });
   expect(
     updateTenantSettingsBodySchema.safeParse({ quota: expanded }).success
   ).toBe(false);
@@ -329,6 +344,7 @@ it("strips nested quota response additions but rejects them in writes", () => {
       name: "Tenant",
       quota: { ...expanded, monthlyTokenLimit: null },
       deletion: null,
+      monetizationEnabled: false,
     }).success
   ).toBe(false);
 });

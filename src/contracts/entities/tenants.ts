@@ -29,24 +29,15 @@ export const tenantResponseSchema = tenantSchema
   .strip();
 
 /**
- * Tenant deletion lifecycle — `requestedAt`/`mode` mark the tenant deleting;
- * `blockers` counts the work that must drain before cleanup in `normal` mode
- * (`forced` reports `ready: true` immediately).
+ * Tenant deletion lifecycle — `requestedAt` marks the tenant deleting and
+ * `deletesAt` is the scheduled permanent-deletion time (24 hours after
+ * confirmation, cancellable until then). Deletion is dashboard-only; the
+ * shape rides `GET /v1/tenant` settings so the dashboard can render it.
  */
-export const tenantDeletionModeSchema = z.enum(["normal", "forced"]);
-
 export const tenantDeletionSchema = z
   .object({
+    deletesAt: z.iso.datetime({ offset: true }),
     requestedAt: z.iso.datetime({ offset: true }),
-    mode: tenantDeletionModeSchema,
-    ready: z.boolean(),
-    blockers: z
-      .object({
-        activeTaskRuns: z.number().int().nonnegative(),
-        activeTurns: z.number().int().nonnegative(),
-        unresolvedMerchantEvents: z.number().int().nonnegative(),
-      })
-      .strict(),
   })
   .strict();
 export type TenantDeletion = z.infer<typeof tenantDeletionSchema>;
@@ -80,11 +71,15 @@ export const tenantSettingsSchema = z
   .strip();
 
 export const tenantSettingsResponseSchema = tenantSettingsSchema
-  .extend({ deletion: tenantDeletionSchema.nullable() })
+  .extend({
+    deletion: tenantDeletionSchema.nullable(),
+    monetizationEnabled: z.boolean(),
+  })
   .strip();
 
 export const updateTenantSettingsBodySchema = z
   .object({
+    monetizationEnabled: z.boolean().optional(),
     name: z.string().trim().min(1).max(MAX_TENANT_NAME_LENGTH).optional(),
     quota: quotaSchema.nullable().optional(),
   })

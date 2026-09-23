@@ -115,7 +115,6 @@ const publicContractNames = [
   "taskScheduleKindSchema",
   "taskSchema",
   "tasksListResponseSchema",
-  "tenantDeletionModeSchema",
   "tenantDeletionSchema",
   "tenantResponseSchema",
   "tenantSchema",

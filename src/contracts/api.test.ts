@@ -133,7 +133,9 @@ describe("apiErrorCodeSchema", () => {
       "merchant_balance_required",
       "merchant_eligibility_unavailable",
       "tenant_deleting",
+      "tenant_deletion_in_progress",
       "tenant_deletion_not_ready",
+      "tenant_not_deleting",
     ] as const;
     expect(apiErrorCodeSchema.options).toStrictEqual(codes);
     for (const code of codes) {

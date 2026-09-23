@@ -163,7 +163,6 @@ export {
 export {
   quotaSchema,
   subscriptionStatusSchema,
-  tenantDeletionModeSchema,
   tenantDeletionSchema,
   tenantResponseSchema,
   tenantSchema,

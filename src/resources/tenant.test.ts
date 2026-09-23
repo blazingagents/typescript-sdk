@@ -10,6 +10,7 @@ const tenantSettings = {
     monthlyRequestLimit: 1000,
     resetDay: 1,
   },
+  deletion: null,
 };
 
 function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
@@ -23,12 +24,31 @@ describe("client.tenant", () => {
     const settings = await c.tenant.get();
     expect(settings.name).toBe("My Workspace");
     expect(settings.quota?.monthlyTokenLimit).toBe(1_000_000);
+    expect(settings.deletion).toBeNull();
     expect(calls[0].url).toBe(`${BASE}/v1/tenant`);
+  });
+
+  it("get parses the deletion state when the tenant is deleting", async () => {
+    const deletion = {
+      requestedAt: "2026-09-01T00:00:00.000Z",
+      mode: "normal",
+      ready: false,
+      blockers: {
+        activeTaskRuns: 1,
+        activeTurns: 0,
+        unresolvedMerchantEvents: 2,
+      },
+    };
+    const { fetch } = createMockFetch({
+      body: { ...tenantSettings, deletion },
+    });
+    const settings = await client(fetch).tenant.get();
+    expect(settings.deletion).toStrictEqual(deletion);
   });
 
   it("patch PATCHes /v1/tenant", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { name: "My Workspace", quota: null },
+      body: { name: "My Workspace", quota: null, deletion: null },
     });
     const c = client(fetch);
     const settings = await c.tenant.patch({ quota: null });

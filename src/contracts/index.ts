@@ -80,6 +80,29 @@ export {
   updateMemoryBodySchema,
 } from "./entities/memories.ts";
 export {
+  createMerchantConnectionBodySchema,
+  merchantBindingResponseSchema,
+  merchantBindingsResponseSchema,
+  merchantConnectionResponseSchema,
+  merchantConnectionSchema,
+  merchantConnectionStatusSchema,
+  merchantCustomerBindingSchema,
+  merchantEnvironmentSchema,
+  merchantGuardSchema,
+  merchantProviderSchema,
+  merchantUsageEventNextAction,
+  merchantUsageEventNextActionSchema,
+  merchantUsageEventSchema,
+  merchantUsageEventStatusSchema,
+  merchantUsageEventsResponseSchema,
+  merchantUsageSummaryQuerySchema,
+  merchantUsageSummaryResponseSchema,
+  merchantUsageSummarySchema,
+  merchantWorkflowIssueSchema,
+  updateMerchantConnectionBodySchema,
+  upsertMerchantBindingBodySchema,
+} from "./entities/merchant.ts";
+export {
   createPromptBodySchema,
   promptResponseSchema,
   promptSchema,
@@ -140,6 +163,8 @@ export {
 export {
   quotaSchema,
   subscriptionStatusSchema,
+  tenantDeletionModeSchema,
+  tenantDeletionSchema,
   tenantResponseSchema,
   tenantSchema,
   tenantSettingsResponseSchema,

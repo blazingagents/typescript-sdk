@@ -89,6 +89,7 @@ const assistantMessage: BlazingAgentsUIMessage = {
         durationMs: 1000,
         errorMessage: null,
         inputTokens: 4,
+        measurementComplete: true,
         modelDurationMs: 250,
         metadata: {},
         modelId: "openrouter/test-model",

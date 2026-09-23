@@ -41,6 +41,18 @@ import type {
   UpdateMemoryBody,
 } from "./contracts/entities/memories.ts";
 import type {
+  CreateMerchantConnectionBody,
+  MerchantBindingResponse,
+  MerchantBindingsResponse,
+  MerchantConnectionResponse,
+  MerchantUsageEventResponse,
+  MerchantUsageEventStatus,
+  MerchantUsageEventsResponse,
+  MerchantUsageSummaryResponse,
+  UpdateMerchantConnectionBody,
+  UpsertMerchantBindingBody,
+} from "./contracts/entities/merchant.ts";
+import type {
   CreatePromptBody,
   PromptResponse,
   PromptsResponse,
@@ -687,6 +699,76 @@ export interface UsageResource {
   overview(
     input?: Partial<UsageOverviewQuery> & ResourceRequestOptions
   ): Promise<UsageOverviewResponse>;
+}
+
+/**
+ * `client.merchantConnection` — the tenant's own Polar/Dodo merchant
+ * connection (ADR-0048). `credential` is write-only: responses expose only
+ * `keyFragment`.
+ */
+export interface MerchantConnectionResource {
+  create(
+    input: CreateMerchantConnectionBody & ResourceRequestOptions
+  ): Promise<MerchantConnectionResponse>;
+  get(input?: ResourceRequestOptions): Promise<MerchantConnectionResponse>;
+  /** Retires the connection; deliveries stop (`DELETE` → 204). */
+  retire(input?: ResourceRequestOptions): Promise<void>;
+  update(
+    input: UpdateMerchantConnectionBody & ResourceRequestOptions
+  ): Promise<MerchantConnectionResponse>;
+}
+
+export interface MerchantBindingsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  userId?: string;
+}
+
+/**
+ * `client.merchantBindings` — end-user → provider customer bindings behind
+ * `/v1/merchant-connection/bindings`. `put` validates the customer against
+ * the provider.
+ */
+export interface MerchantBindingsResource {
+  delete(input: { userId: string } & ResourceRequestOptions): Promise<void>;
+  list(input?: MerchantBindingsListOptions): Promise<MerchantBindingsResponse>;
+  put(
+    input: UpsertMerchantBindingBody & {
+      userId: string;
+    } & ResourceRequestOptions
+  ): Promise<MerchantBindingResponse>;
+}
+
+export interface MerchantUsageEventsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  status?: MerchantUsageEventStatus;
+}
+
+/**
+ * `client.merchantUsageEvents` — the immutable delivery ledger behind
+ * `/v1/merchant-usage-events`. `retry`, `release`, and `discard` are the
+ * operator actions on unresolved events.
+ */
+export interface MerchantUsageEventsResource {
+  discard(
+    input: { eventId: string } & ResourceRequestOptions
+  ): Promise<MerchantUsageEventResponse>;
+  get(
+    input: { eventId: string } & ResourceRequestOptions
+  ): Promise<MerchantUsageEventResponse>;
+  list(
+    input?: MerchantUsageEventsListOptions
+  ): Promise<MerchantUsageEventsResponse>;
+  release(
+    input: { eventId: string } & ResourceRequestOptions
+  ): Promise<MerchantUsageEventResponse>;
+  retry(
+    input: { eventId: string } & ResourceRequestOptions
+  ): Promise<MerchantUsageEventResponse>;
+  summary(
+    input?: { days?: number } & ResourceRequestOptions
+  ): Promise<MerchantUsageSummaryResponse>;
 }
 
 export interface ChatConnectionsResource {

@@ -16,7 +16,7 @@ requires Node.js 24 or newer.
 ## Features
 
 - Typed clients for Agents, Workspaces, Skills, Providers, Prompts, Tasks,
-  Sessions, Artifacts, Slack and Telegram Chat Connections, usage, and Tenant settings.
+  Sessions, Artifacts, Slack and Telegram Chat Connections, usage, Tenant settings, and merchant monetization.
 - Stateful chat and stateless text or structured-object generation.
 - Public Zod contracts for validating API requests and responses.
 - Cursor pagination and binary transfers.
@@ -238,3 +238,33 @@ and `ToolApprovalState`; runtime policy schemas are exported from
 Use the [connection example](https://github.com/blazingagents/typescript-sdk/blob/main/examples/chat-integrations.md) to connect an existing
 Agent through REST. BA hosts the Chat SDK runtime, conversation history, and
 approval cards; no additional SDK resource is required.
+
+## Merchant monetization
+
+Bill your own customers for model-token usage through your Polar or Dodo
+merchant account. Blazing Agents records usage per Turn and delivers it to
+your provider; your provider owns billing.
+
+```ts
+const client = new BlazingAgents({ apiKey: "ba_..." });
+
+// One-time: connect your merchant account (dashboard or API).
+await client.merchantConnection.create({
+  provider: "polar",
+  environment: "sandbox",
+  credential: "polar_oat_...", // organization access token
+});
+
+// On user onboarding in your backend: bind your user id to the
+// provider-side customer so usage is attributed correctly.
+await client.merchantBindings.put({
+  userId: "user_123",
+  customerId: "cust_polar_...",
+});
+```
+
+`client.merchantUsageEvents` exposes the delivery ledger (`list`, `get`,
+`summary`) and the operator actions `retry`, `release`, and `discard`. The
+optional eligibility guard (`guard` on the connection) refuses new
+executions when the bound customer lacks the required subscription or
+balance; it is a provider-reported check, not a spending lock.

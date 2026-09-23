@@ -157,3 +157,13 @@ export const TENANT_CREATION_BURST_LIMIT = 60;
 export const TENANT_CREATION_BURST_WINDOW_MS = 60_000;
 export const TENANT_CREATION_SUSTAINED_LIMIT = 1000;
 export const TENANT_CREATION_SUSTAINED_WINDOW_MS = 86_400_000;
+
+/**
+ * Merchant monetization (ADR-0048) — bindings/usage-event list paging, guard
+ * rule bounds, and the delivery-health summary window.
+ */
+export const DEFAULT_MERCHANT_LIST_LIMIT = 50;
+export const MAX_MERCHANT_LIST_LIMIT = 200;
+export const MAX_MERCHANT_PRODUCT_IDS = 100;
+export const DEFAULT_MERCHANT_USAGE_SUMMARY_DAYS = 14;
+export const MAX_MERCHANT_USAGE_SUMMARY_DAYS = 90;

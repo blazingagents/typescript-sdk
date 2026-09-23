@@ -36,6 +36,12 @@ export const usageSummarySchema = z
     durationMs: z.number().int().min(0),
     errorMessage: z.string().nullable(),
     inputTokens: z.number().int().min(0),
+    /**
+     * True only when every measured inference for this Turn reported
+     * input/output totals. Provider omissions stay unknown — a zero is never
+     * substituted for a missing measurement (ADR-0048).
+     */
+    measurementComplete: z.boolean(),
     modelDurationMs: z.number().int().min(0),
     metadata: z.record(z.string(), z.unknown()),
     modelId: agentModelIdSchema,

@@ -4,6 +4,9 @@ import { createArtifactsResource } from "./resources/artifacts.ts";
 import { createChatConnectionsResource } from "./resources/chat-connections.ts";
 import { createMcpConnectionsResource } from "./resources/mcp-connections.ts";
 import { createMemoriesResource } from "./resources/memories.ts";
+import { createMerchantBindingsResource } from "./resources/merchant-bindings.ts";
+import { createMerchantConnectionResource } from "./resources/merchant-connection.ts";
+import { createMerchantUsageEventsResource } from "./resources/merchant-usage-events.ts";
 import { createPromptsResource } from "./resources/prompts.ts";
 import { createProvidersResource } from "./resources/providers.ts";
 import { createSessionsResource } from "./resources/sessions.ts";
@@ -26,6 +29,9 @@ import type {
   HttpConfig,
   McpConnectionsResource,
   MemoriesResource,
+  MerchantBindingsResource,
+  MerchantConnectionResource,
+  MerchantUsageEventsResource,
   ObjectInput,
   ObjectResult,
   PromptsResource,
@@ -56,6 +62,9 @@ export class BlazingAgents {
   readonly tasks: TasksResource;
   readonly tenant: TenantResource;
   readonly workspaces: WorkspacesResource;
+  readonly merchantConnection: MerchantConnectionResource;
+  readonly merchantBindings: MerchantBindingsResource;
+  readonly merchantUsageEvents: MerchantUsageEventsResource;
 
   constructor(options: BlazingAgentsOptions) {
     this.config = {
@@ -82,6 +91,9 @@ export class BlazingAgents {
     this.tasks = createTasksResource(this.config);
     this.tenant = createTenantResource(this.config);
     this.workspaces = createWorkspacesResource(this.config);
+    this.merchantConnection = createMerchantConnectionResource(this.config);
+    this.merchantBindings = createMerchantBindingsResource(this.config);
+    this.merchantUsageEvents = createMerchantUsageEventsResource(this.config);
   }
 
   agent({ agentId }: { agentId: string }): AgentClient {

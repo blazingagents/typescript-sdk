@@ -79,6 +79,23 @@ export const apiErrorCodeSchema = z.enum([
   "skill_too_many_files",
   "skill_uncompressed_too_large",
   "task_active_run_exists",
+  "chat_webhook_conflict",
+  "chat_webhook_registration_failed",
+  "merchant_connection_not_found",
+  "merchant_credential_invalid",
+  "merchant_provider_unavailable",
+  "merchant_customer_not_found",
+  "merchant_binding_not_found",
+  "merchant_binding_required",
+  "merchant_account_mismatch",
+  "merchant_event_not_found",
+  "merchant_event_state_conflict",
+  "merchant_customer_unmapped",
+  "merchant_subscription_required",
+  "merchant_balance_required",
+  "merchant_eligibility_unavailable",
+  "tenant_deleting",
+  "tenant_deletion_not_ready",
 ]);
 
 export const apiErrorSchema = z

@@ -184,7 +184,7 @@ describe("quotaSchema", () => {
 });
 
 describe("tenantSettingsResponseSchema", () => {
-  it("accepts name + quota", () => {
+  it("accepts name + quota + deletion", () => {
     expect(
       tenantSettingsResponseSchema.parse({
         name: "Acme",
@@ -193,6 +193,7 @@ describe("tenantSettingsResponseSchema", () => {
           monthlyRequestLimit: 10,
           resetDay: 1,
         },
+        deletion: null,
       })
     ).toStrictEqual({
       name: "Acme",
@@ -201,19 +202,48 @@ describe("tenantSettingsResponseSchema", () => {
         monthlyRequestLimit: 10,
         resetDay: 1,
       },
+      deletion: null,
     });
   });
 
   it("accepts name + null quota", () => {
     expect(
-      tenantSettingsResponseSchema.parse({ name: "Acme", quota: null })
-    ).toStrictEqual({ name: "Acme", quota: null });
+      tenantSettingsResponseSchema.parse({
+        name: "Acme",
+        quota: null,
+        deletion: null,
+      })
+    ).toStrictEqual({ name: "Acme", quota: null, deletion: null });
   });
 
   it("trims a padded name (uniform with the update body schema)", () => {
     expect(
-      tenantSettingsResponseSchema.parse({ name: "  Acme  ", quota: null })
-    ).toStrictEqual({ name: "Acme", quota: null });
+      tenantSettingsResponseSchema.parse({
+        name: "  Acme  ",
+        quota: null,
+        deletion: null,
+      })
+    ).toStrictEqual({ name: "Acme", quota: null, deletion: null });
+  });
+
+  it("parses a tenant deletion state", () => {
+    const deletion = {
+      requestedAt: "2026-09-01T00:00:00.000Z",
+      mode: "forced",
+      ready: true,
+      blockers: {
+        activeTaskRuns: 0,
+        activeTurns: 0,
+        unresolvedMerchantEvents: 0,
+      },
+    };
+    expect(
+      tenantSettingsResponseSchema.parse({
+        name: "Acme",
+        quota: null,
+        deletion,
+      }).deletion
+    ).toStrictEqual(deletion);
   });
 
   it("rejects a missing name", () => {
@@ -285,8 +315,12 @@ it("strips nested quota response additions but rejects them in writes", () => {
   };
   const expanded = { ...quota, futureLimit: 1 };
   expect(
-    tenantSettingsResponseSchema.parse({ name: "Tenant", quota: expanded })
-  ).toEqual({ name: "Tenant", quota });
+    tenantSettingsResponseSchema.parse({
+      name: "Tenant",
+      quota: expanded,
+      deletion: null,
+    })
+  ).toEqual({ name: "Tenant", quota, deletion: null });
   expect(
     updateTenantSettingsBodySchema.safeParse({ quota: expanded }).success
   ).toBe(false);
@@ -294,6 +328,7 @@ it("strips nested quota response additions but rejects them in writes", () => {
     tenantSettingsResponseSchema.safeParse({
       name: "Tenant",
       quota: { ...expanded, monthlyTokenLimit: null },
+      deletion: null,
     }).success
   ).toBe(false);
 });

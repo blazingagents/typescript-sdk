@@ -69,6 +69,12 @@ export const sessionIdSchema = z.string().regex(/^ss_[0-9A-Za-z]{16}$/);
 export const apiKeyIdSchema = z.string().regex(/^ak_[0-9A-Za-z]{16}$/);
 export const providerIdSchema = z.string().regex(/^prv_[0-9A-Za-z]{16}$/);
 export const mcpConnectionIdSchema = z.string().regex(/^mcp_[0-9A-Za-z]{16}$/);
+export const merchantConnectionIdSchema = z
+  .string()
+  .regex(/^mch_[0-9A-Za-z]{16}$/);
+export const merchantUsageEventIdSchema = z
+  .string()
+  .regex(/^mev_[0-9A-Za-z]{16}$/);
 export const workspaceIdSchema = z.string().regex(/^ws_[0-9A-Za-z]{16}$/);
 export const artifactIdSchema = z.string().regex(/^at_[0-9A-Za-z]{16}$/);
 export const taskIdSchema = z.string().regex(/^tk_[0-9A-Za-z]{16}$/);

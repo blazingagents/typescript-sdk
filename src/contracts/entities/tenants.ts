@@ -29,6 +29,29 @@ export const tenantResponseSchema = tenantSchema
   .strip();
 
 /**
+ * Tenant deletion lifecycle — `requestedAt`/`mode` mark the tenant deleting;
+ * `blockers` counts the work that must drain before cleanup in `normal` mode
+ * (`forced` reports `ready: true` immediately).
+ */
+export const tenantDeletionModeSchema = z.enum(["normal", "forced"]);
+
+export const tenantDeletionSchema = z
+  .object({
+    requestedAt: z.iso.datetime({ offset: true }),
+    mode: tenantDeletionModeSchema,
+    ready: z.boolean(),
+    blockers: z
+      .object({
+        activeTaskRuns: z.number().int().nonnegative(),
+        activeTurns: z.number().int().nonnegative(),
+        unresolvedMerchantEvents: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
+export type TenantDeletion = z.infer<typeof tenantDeletionSchema>;
+
+/**
  * Quota — `GET/PATCH /v1/tenant` carries the tenant's self-set quota.
  * `null` means unlimited (no quota row).
  */
@@ -56,7 +79,9 @@ export const tenantSettingsSchema = z
   })
   .strip();
 
-export const tenantSettingsResponseSchema = tenantSettingsSchema;
+export const tenantSettingsResponseSchema = tenantSettingsSchema
+  .extend({ deletion: tenantDeletionSchema.nullable() })
+  .strip();
 
 export const updateTenantSettingsBodySchema = z
   .object({

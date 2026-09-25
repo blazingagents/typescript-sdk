@@ -5,19 +5,6 @@ import {
   tenantIdSchema,
 } from "../ids.ts";
 
-const webhookUrl = z
-  .url()
-  .max(2048)
-  .refine((value) => {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      !url.search &&
-      !url.hash
-    );
-  }, "Use an HTTPS callback URL without credentials, query or fragment");
 const secret = z
   .string()
   .min(8)
@@ -35,19 +22,11 @@ export const chatCredentialsSchema = z.discriminatedUnion("platform", [
     .object({
       platform: z.literal("telegram"),
       botToken: z.string().regex(/^\d+:[A-Za-z0-9_-]+$/),
-      webhookSecret: z
-        .string()
-        .min(1)
-        .max(256)
-        .regex(/^[A-Za-z0-9_-]+$/),
     })
     .strict(),
 ]);
 const slackConfiguration = z
   .object({
-    teamId: z.string().regex(/^T[A-Z0-9]+$/),
-    appId: z.string().regex(/^A[A-Z0-9]+$/),
-    webhookUrl,
     channelIds: z
       .array(z.string().regex(/^[CG][A-Z0-9]+$/))
       .max(20)
@@ -56,8 +35,7 @@ const slackConfiguration = z
   .strict();
 const telegramConfiguration = z
   .object({
-    botId: z.string().regex(/^\d+$/),
-    webhookUrl,
+    businessMode: z.boolean().default(false),
     chatIds: z
       .array(z.string().regex(/^-?\d+$/))
       .max(20)
@@ -78,7 +56,7 @@ export const createChatConnectionBodySchema = z.discriminatedUnion("platform", [
     .object({
       ...common,
       platform: z.literal("slack"),
-      configuration: slackConfiguration,
+      configuration: slackConfiguration.prefault({}),
       credentials: chatCredentialsSchema.options[0].omit({ platform: true }),
     })
     .strict(),
@@ -86,18 +64,41 @@ export const createChatConnectionBodySchema = z.discriminatedUnion("platform", [
     .object({
       ...common,
       platform: z.literal("telegram"),
-      configuration: telegramConfiguration,
+      configuration: telegramConfiguration.prefault({}),
       credentials: chatCredentialsSchema.options[1].omit({ platform: true }),
     })
     .strict(),
 ]);
-export const rotateChatConnectionBodySchema = chatCredentialsSchema;
+export const rotateChatConnectionBodySchema = z.discriminatedUnion("platform", [
+  chatCredentialsSchema.options[0],
+  chatCredentialsSchema.options[1],
+]);
 export const updateChatConnectionBodySchema = z
-  .object({ name: common.name.optional(), webhookUrl: webhookUrl.optional() })
+  .object({
+    name: common.name.optional(),
+    configuration: z
+      .object({
+        businessMode: z.boolean().optional(),
+        chatIds: z
+          .array(z.string().regex(/^-?\d+$/))
+          .max(20)
+          .optional(),
+        channelIds: z
+          .array(z.string().regex(/^[CG][A-Z0-9]+$/))
+          .max(20)
+          .optional(),
+      })
+      .strict()
+      .optional(),
+  })
   .strict()
-  .refine((body) => body.name !== undefined || body.webhookUrl !== undefined, {
-    message: "Provide a name or webhook URL",
-  });
+  .refine(
+    (body) =>
+      body.name !== undefined ||
+      (body.configuration !== undefined &&
+        Object.keys(body.configuration).length > 0),
+    { message: "Provide a name or a configuration change" }
+  );
 export const chatConnectionParamsSchema = z.object({
   id: chatConnectionIdSchema,
 });
@@ -136,6 +137,7 @@ export const chatConnectionSchema = z
       chatConfigurationSchema.options[0].strip(),
       chatConfigurationSchema.options[1].strip(),
     ]),
+    webhookUrl: z.url(),
     identity: chatIdentitySchema,
     health: chatHealthSchema,
     credentialFragment: z.string().max(4),

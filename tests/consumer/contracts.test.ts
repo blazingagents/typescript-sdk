@@ -118,10 +118,9 @@ it("exports Chat Connection input types and runtime contracts", () => {
     name: "Support",
     platform: "telegram",
     configuration: {
-      botId: "123",
-      webhookUrl: "https://api.example.com/callback",
+      businessMode: false,
     },
-    credentials: { botToken: "123:token", webhookSecret: "secret" },
+    credentials: { botToken: "123:token" },
   };
   expect(createChatConnectionBodySchema.parse(body)).toMatchObject({
     enabled: true,

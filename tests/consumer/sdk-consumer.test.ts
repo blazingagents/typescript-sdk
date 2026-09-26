@@ -490,7 +490,7 @@ describe("installed SDK consumer contract", () => {
     expect(error).toMatchObject({
       code: "future_server_outcome",
       details: { recovery: "refresh" },
-      message: "A newer server outcome.",
+      message: "[future_server_outcome] A newer server outcome.",
       param: "/version",
       requestId: "request-future-error",
       status: 409,

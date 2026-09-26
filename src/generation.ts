@@ -13,8 +13,6 @@ import type {
   TerminalStreamResult,
 } from "./types.ts";
 
-// --- chat ---
-
 export async function chat(
   config: HttpConfig,
   input: ChatInput
@@ -332,8 +330,6 @@ function buildStatelessGenerationBody(
   return body;
 }
 
-// --- completion ---
-
 export async function completion(
   config: HttpConfig,
   input: CompletionInput
@@ -360,11 +356,6 @@ function buildCompletionResult(response: Response): CompletionResult {
     }
     return text;
   })();
-  /**
-   * Attach a no-op rejection handler so the promise doesn't trigger an
-   * unhandled-rejection warning if the caller only uses `textStream` or
-   * `toResponse()` without awaiting `text`.
-   */
   textPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
   });
@@ -376,8 +367,6 @@ function buildCompletionResult(response: Response): CompletionResult {
     toResponse,
   };
 }
-
-// --- object ---
 
 export async function objectGeneration(
   config: HttpConfig,
@@ -457,8 +446,6 @@ function buildObjectResult(response: Response): ObjectResult {
     toResponse,
   };
 }
-
-// --- helpers ---
 
 function buildStatelessGenerationStreams(
   response: Response,

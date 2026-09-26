@@ -9,16 +9,11 @@
 export const MAX_API_KEYS_PER_TENANT = 5;
 export const MAX_API_KEY_NAME_LENGTH = 80;
 
-/**
- * API key token shape — `ba_` + 40 base62 chars (~230 bits entropy).
- * The prefix and body/fragment lengths live in `ids.ts` alongside the
- * generators and schemas.
- */
+/** API key token shape — `ba_` + 40 base62 chars (~230 bits entropy). */
 export const API_KEY_BODY_LENGTH = 40;
 // Display fragment — `ba_` + first 2 chars of the random body.
 export const API_KEY_FRAGMENT_BODY_LENGTH = 2;
 
-/** Workspaces. */
 export const MAX_WORKSPACE_NAME_LENGTH = 80;
 export const MAX_WORKSPACE_ARCHIVE_ENTRIES = 16_384;
 export const DEFAULT_WORKSPACES_LIST_LIMIT = 50;

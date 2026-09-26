@@ -78,10 +78,7 @@ describe("BlazingAgentsError", () => {
   });
 
   it("isInstance survives across realms (Symbol.for marker)", () => {
-    /**
-     * Simulate a duplicated package copy: a fresh object carrying the
-     * same `Symbol.for` marker is recognized as a `BlazingAgentsError`.
-     */
+    // Simulates a duplicated package copy.
     const marker = Symbol.for("blazing-agents.error.BlazingAgentsError");
     const fake = Object.create(BlazingAgentsError.prototype);
     Object.defineProperty(fake, marker, { value: true, writable: true });

@@ -260,11 +260,6 @@ describe("client.chat failures", () => {
   });
 
   it("create with a malformed Location id rejects result.sessionId with stream_error", async () => {
-    /**
-     * The Location header's trailing segment is not a valid `ss_` id —
-     * `sessionIdSchema` rejects it so the bad value does not flow into a
-     * resume call as an untyped string.
-     */
     const fetch = vi.fn(
       async () =>
         new Response(sseStream(chatChunks), {

@@ -2,9 +2,6 @@
  * `@blazingagents/sdk` — the resource-style client SDK for the
  * Blazing Agents `/v1` API. `ai` is a peer dependency (`^7`);
  * `UIMessage` is re-exported from `ai`, never redeclared.
- *
- * This is the package's entry point — a barrel file that re-exports the
- * public surface from the internal modules.
  */
 
 export type { UIMessage } from "ai";

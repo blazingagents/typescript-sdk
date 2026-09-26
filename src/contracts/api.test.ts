@@ -371,10 +371,7 @@ describe("encodeCursor / decodeCursor", () => {
   });
 
   it("produces URL-safe base64 (no +, /, or =)", () => {
-    /**
-     * A payload whose JSON contains bytes that map to +, /, and padding
-     * in standard base64 — e.g. 0xfb, 0xff, 0x3f.
-     */
+    // These bytes map to +, /, and padding in standard base64.
     const payload = { id: "\u00fb\u00ff?" };
     const encoded = encodeCursor(payload);
     expect(encoded).not.toMatch(STANDARD_BASE64_CHARS);
@@ -383,7 +380,6 @@ describe("encodeCursor / decodeCursor", () => {
   it("accepts URL-safe base64 with - and _ on decode", () => {
     const payload = { id: "\u00fb\u00ff?" };
     const encoded = encodeCursor(payload);
-    // The encoded form uses - and _ (URL-safe); decode must handle them.
     expect(encoded).toMatch(URL_SAFE_CHARS);
     expect(decodeCursor(encoded)).toStrictEqual(payload);
   });
@@ -400,10 +396,7 @@ describe("decodeCursor error cases", () => {
   });
 
   it("throws CursorDecodeError when the payload is not an object", () => {
-    /**
-     * encodeCursor always produces an object, but a hand-crafted cursor
-     * could encode a primitive — decode must reject it.
-     */
+    // Only a hand-crafted cursor can encode a primitive.
     const json = JSON.stringify("a string");
     const encoded = btoa(json);
     expect(() => decodeCursor(encoded)).toThrow(CursorDecodeError);

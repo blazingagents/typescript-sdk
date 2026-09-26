@@ -53,9 +53,8 @@ export const providerSchema = z
   .strict();
 
 /**
- * Wire response — `GET /v1/providers/{id}` shape per
- * ticket 12: `{ id, name, providerType, baseUrl, keyFragment, createdAt,
- * updatedAt }`. The Vault pointer and tenant id are write-only/internal.
+ * `GET /v1/providers/{id}` wire response. The Vault pointer and tenant id
+ * stay internal.
  */
 export const providerResponseSchema = z
   .object({

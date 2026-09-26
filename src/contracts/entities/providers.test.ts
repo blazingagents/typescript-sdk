@@ -38,7 +38,6 @@ const baseProvider = {
   updatedAt: iso,
 };
 
-// Wire response shape per ticket 12 — no `vaultSecretId`, no `tenantId`.
 const baseProviderResponse = {
   id: providerId,
   name: "OpenRouter",

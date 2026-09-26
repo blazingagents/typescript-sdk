@@ -36,8 +36,7 @@ describe("schedule config schemas", () => {
       "Europe/London",
       "Asia/Kolkata",
       "Pacific/Auckland",
-      // Zones with hyphens/digits/signs in location segments — the regex
-      // must not reject these valid canonical IANA zones.
+      // Valid zones with hyphens, digits, or signs in location segments.
       "America/Port-au-Prince",
       "Asia/Ust-Nera",
       "Etc/GMT+8",

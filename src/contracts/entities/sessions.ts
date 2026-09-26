@@ -10,11 +10,8 @@ import { agentSchema, agentVersionNumberSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
 /**
- * `GET /v1/agents/{agentId}/sessions` list item — the public wire shape:
- * `{ id, agentVersion, createdAt, updatedAt, messageCount,
- * lastMessagePreview, userId, metadata }`. `agentId`/`tenantId` are internal
- * (used for filtering) and never leak to the wire. `userId`/`metadata` are
- * stamped at lazy materialization (the first successful turn's attribution).
+ * `GET /v1/agents/{agentId}/sessions` list item. `agentId`/`tenantId` never
+ * leak to the wire; `userId`/`metadata` come from the first successful Turn.
  */
 export const sessionListItemSchema = z
   .object({
@@ -91,7 +88,6 @@ export const sessionMessagesResponseSchema = z
   })
   .strip();
 
-// Query params for the messages endpoint.
 export const sessionMessagesQuerySchema = z
   .object({
     limit: z

@@ -128,11 +128,7 @@ export type BlazingAgentsFetch = (
 ) => Promise<Response>;
 
 export interface BlazingAgentsRequestInit extends RequestInit {
-  /**
-   * The SDK never sends multipart bodies via the global `FormData`; the
-   * skill upload path passes a `FormData` instance directly. This slot
-   * exists only so the type carries the union cleanly.
-   */
+  /** Widened so multipart uploads can pass a `FormData` body. */
   body?: BodyInit | FormData | null;
 }
 
@@ -146,11 +142,7 @@ export interface RequestOptions {
    * automatically by `fetch` when given a `FormData` body).
    */
   headers?: Record<string, string>;
-  /**
-   * JSON body (object — serialized by the helper) or `undefined` for
-   * GET/DELETE. Multipart uploads bypass this and pass `FormData` via
-   * `extra.body`.
-   */
+  // Multipart uploads bypass this and pass `FormData` via `body`.
   json?: unknown;
   // The HTTP method (default `GET`).
   method?: string;
@@ -160,7 +152,6 @@ export interface RequestOptions {
    * endpoint accepts repeated keys, so array values are not supported.
    */
   query?: Record<string, string | number | boolean | null | undefined>;
-  // Pass-through `signal` for abort/timeout.
   signal?: AbortSignal;
 }
 

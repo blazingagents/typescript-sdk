@@ -1,10 +1,6 @@
 import type { BlazingAgentsFetch } from "../types.ts";
 
-/**
- * Reusable mocked-fetch fixtures for the SDK unit tests. The SDK takes a
- * `fetch` override in its constructor options, so tests inject a
- * `vi.fn`-backed stub here instead of patching `globalThis.fetch`.
- */
+// Tests inject these through the `fetch` option instead of patching `globalThis.fetch`.
 
 export interface FetchCall {
   init?: RequestInit;
@@ -12,18 +8,11 @@ export interface FetchCall {
 }
 
 export interface MockFetchOptions {
-  // The JSON body to return for non-streaming responses.
   body?: unknown;
-  // The response headers.
   headers?: Record<string, string>;
-  // The status code to return for non-streaming responses.
   status?: number;
-  /**
-   * A streaming body (ReadableStream<Uint8Array>) — used by the
-   * generation endpoints.
-   */
   stream?: ReadableStream<Uint8Array>;
-  // The raw text body (overrides `body` if set).
+  // Overrides `body` when set.
   text?: string;
 }
 
@@ -45,10 +34,7 @@ export function createMockFetch(options: MockFetchOptions = {}): {
       if (!headers.has("content-type")) {
         headers.set("content-type", "text/plain");
       }
-      /**
-       * 204 No Content must not carry a body — the Response constructor
-       * throws otherwise. Drop the body for 204 regardless of `text`.
-       */
+      // The Response constructor throws when a 204 carries a body.
       return new Response(status === 204 ? null : options.text, {
         status,
         headers,
@@ -86,7 +72,6 @@ export function sseStream(chunks: unknown[]): ReadableStream<Uint8Array> {
   });
 }
 
-// Builds a plain-text byte stream (for stateless generation).
 export function textStream(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({
@@ -99,7 +84,6 @@ export function textStream(chunks: string[]): ReadableStream<Uint8Array> {
   });
 }
 
-// The wire error envelope shape.
 export function errorEnvelope(
   code: string,
   message: string,

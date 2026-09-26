@@ -208,12 +208,6 @@ describe("client.completion", () => {
   });
 
   it("does not trigger an unhandled rejection when the stream errors and .text is never awaited", async () => {
-    /**
-     * A stream that errors mid-flight. The caller only consumes
-     * `textStream` (which throws) and never awaits `.text` — the
-     * textPromise must have a no-op catch handler attached so it does
-     * not surface as an unhandled rejection.
-     */
     const erroringStream = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.error(new Error("stream broke"));
@@ -230,7 +224,6 @@ describe("client.completion", () => {
         agentId: "ag_0123456789abcdef",
         prompt: "hi",
       });
-      // Drain the textStream so the stream error is observed.
       await expect(
         (async () => {
           for await (const _delta of result.textStream) {

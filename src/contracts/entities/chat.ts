@@ -91,19 +91,10 @@ type ExclusivePromptInput<Literal extends object> =
 /**
  * `POST /v1/agents/{agentId}/sessions` (create) and
  * `POST /v1/agents/{agentId}/sessions/{sessionId}` (resume) request body.
- * The platform mints the `ss_` session id on the create path and returns
- * it via the `Location` header; the URL presence (no id → create, id
- * present → resume) is the mode — there is no `id` or `mode` field here.
- * `message` is the literal input; the prompt-invocation alternative
- * (`promptId` + `variables`) is mutually exclusive with `message` — both
- * present or neither → 400 invalid_request. `variables` is only allowed
- * on the prompt-invocation path: a request carrying both `message` and
- * `variables` (without `promptId`) is a mixed shape and is rejected
- * (strict both ways). The route layer resolves the prompt template,
- * renders, and substitutes a server-constructed user `UIMessage` with a
- * single text part carrying the rendered string. `trigger` /
- * `messageId` are turn-level concerns (regenerate rides on the resume
- * route only — enforced by the route layer, not the schema).
+ * The URL selects the mode; on create the platform mints the `ss_` id and
+ * returns it in `Location`. Exactly one of `message` or `promptId` is
+ * required, and `variables` requires `promptId`. Regenerate is resume-only,
+ * enforced by the route layer rather than this schema.
  */
 export const chatRequestBodySchema = z
   .object({
@@ -119,11 +110,8 @@ export const chatRequestBodySchema = z
     messageId: z.string().min(1).optional(),
     version: agentVersionNumberSchema.optional(),
     /**
-     * End-user attribution for the session + this turn's usage
-     * (ADR-0001). `userId` is opaque text (`''` = tenant-level); it stamps
-     * the session row at lazy materialization (create path) and every
-     * `token_usage_*` row this turn records. `metadata` is a mutable jsonb
-     * object carried onto the same rows. Both default to tenant-level.
+     * End-user attribution (ADR-0001), stamped on the Session at lazy
+     * materialization and on every usage row this Turn records.
      */
     userId: userIdSchema.default(""),
     metadata: metadataSchema.default({}),

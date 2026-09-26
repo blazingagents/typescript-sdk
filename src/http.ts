@@ -17,12 +17,6 @@ interface BodyReadResult {
   readFailed: boolean;
 }
 
-/**
- * The fetch client — a thin wrapper in the stripe/openai-node shape.
- * `apiKey` rides the `Authorization: Bearer ${apiKey}` header; `baseUrl`
- * defaults to `DEFAULT_BASE_URL` in `client.ts`
- * (`https://api.blazingagents.com`). No OpenAI wire compatibility.
- */
 function buildUrl(
   baseUrl: string,
   path: string,

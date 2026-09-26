@@ -159,8 +159,7 @@ export const createTaskBodySchema = z
   })
   .strict();
 
-// `PATCH /v1/tasks/{taskId}` — name/prompt/schedule/enabled/metadata;
-// agentId + userId immutable.
+// `PATCH /v1/tasks/{taskId}` — `agentId` and `userId` are immutable.
 export const updateTaskBodySchema = z
   .object({
     agentVersion: agentVersionNumberSchema.nullable().optional(),
@@ -254,9 +253,10 @@ export const tasksListQuerySchema = z
 
 export const taskResponseSchema = taskSchema;
 
-// Task run record. `userId`/`metadata` are inherited from the task at
-// enqueue (immutable thereafter); the run's session and usage facts carry
-// the same attribution.
+/**
+ * Task run record. `userId`/`metadata` are copied from the task at enqueue
+ * and carried onto the run's Session and usage facts.
+ */
 export const taskRunSchema = z
   .object({
     id: taskRunIdSchema,
@@ -299,9 +299,10 @@ export const createTaskRunResponseSchema = z
   })
   .strip();
 
-// `GET .../runs/{runId}/messages` — task-run session transcript, paginated,
-// plus `status`, `error`, and `finishedAt` for a single client poll loop.
-// `latestCursor` remains the tail position for the next `?after=` request.
+/**
+ * `GET .../runs/{runId}/messages` — the run transcript plus `status`,
+ * `error`, and `finishedAt`, so one poll loop can follow the run.
+ */
 export const taskRunMessagesResponseSchema = sessionMessagesResponseSchema
   .extend({
     error: z.string().nullable(),

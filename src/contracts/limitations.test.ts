@@ -64,12 +64,7 @@ import {
   TENANT_CREATION_SUSTAINED_WINDOW_MS,
 } from "./limitations.ts";
 
-/**
- * Each constant is asserted to be a positive integer (or, for byte caps, a
- * positive byte count) without locking its exact value — this catches
- * accidental deletion or rename (the export surface is the test's subject)
- * without making every tuning change a test failure.
- */
+// Asserts presence without locking values, so tuning a limit does not fail tests.
 function expectPositiveInt(value: number) {
   expect(Number.isInteger(value)).toBe(true);
   expect(value).toBeGreaterThan(0);

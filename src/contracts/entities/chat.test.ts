@@ -110,12 +110,6 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
 });
 
 describe("chatRequestBodySchema", () => {
-  /**
-   * The body no longer carries `id` or `mode` — the platform mints the
-   * `ss_` id and the URL presence (create vs resume route) is the mode.
-   * Body is `{ message | promptId+variables, trigger?, messageId?,
-   * userId?, metadata? }`.
-   */
   const baseBody = {
     message: {
       id: "msg_1",

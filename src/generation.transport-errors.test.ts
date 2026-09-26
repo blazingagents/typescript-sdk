@@ -140,7 +140,7 @@ describe("generation transport errors", () => {
     });
     await expect(completionResult.text).rejects.toMatchObject({
       code: "stream_error",
-      message: reason,
+      message: `[stream_error] ${reason}`,
     });
 
     const objectResult = await client(
@@ -152,7 +152,7 @@ describe("generation transport errors", () => {
     });
     await expect(objectResult.object).rejects.toMatchObject({
       code: "stream_error",
-      message: reason,
+      message: `[stream_error] ${reason}`,
     });
   });
 

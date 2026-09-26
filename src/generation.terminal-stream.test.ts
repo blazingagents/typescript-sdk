@@ -38,7 +38,8 @@ describe("terminal stream access", () => {
     expect(() => terminal[second]()).toThrowError(
       expect.objectContaining({
         code: "stream_error",
-        message: "The chat response body has already been claimed.",
+        message:
+          "[stream_error] The chat response body has already been claimed.",
         requestId: "stream-test",
       })
     );
@@ -58,7 +59,7 @@ describe("terminal stream access", () => {
     );
     await expect(terminal.toStream().getReader().read()).rejects.toMatchObject({
       code: "stream_error",
-      message: "socket closed",
+      message: "[stream_error] socket closed",
       requestId: "stream-test",
     });
   });

@@ -207,7 +207,9 @@ describe("client.object", () => {
     const error = (await result.object.catch((e) => e)) as BlazingAgentsError;
     expect(BlazingAgentsError.isInstance(error)).toBe(true);
     expect(error.code).toBe("stream_error");
-    expect(error.message).toBe("The agent produced invalid JSON.");
+    expect(error.message).toBe(
+      "[stream_error] The agent produced invalid JSON."
+    );
     expect(error.requestId).toBe("request-object-invalid-final");
   });
 

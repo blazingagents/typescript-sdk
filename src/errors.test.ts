@@ -26,7 +26,7 @@ describe("BlazingAgentsError", () => {
       code: "agent_name_conflict",
       details: { conflictingResourceId: "ag_0123456789abcdef" },
       headers,
-      message: "An Agent with this name already exists.",
+      message: "[agent_name_conflict] An Agent with this name already exists.",
       name: "BlazingAgentsError",
       param: "/name",
       requestId: "request-response",

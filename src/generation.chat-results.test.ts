@@ -86,7 +86,8 @@ describe("client.chat result", () => {
     expect(() => result.toResponse()).toThrowError(
       expect.objectContaining({
         code: "stream_error",
-        message: "The chat response body has already been claimed.",
+        message:
+          "[stream_error] The chat response body has already been claimed.",
       })
     );
   });

@@ -5,7 +5,8 @@ import { errorEnvelope } from "./test/fixtures.ts";
 import type { HttpConfig } from "./types.ts";
 
 const DIAGNOSTIC_BODY_LIMIT_BYTES = 64 * 1024;
-const INVALID_RESPONSE_MESSAGE = "The server returned an invalid response.";
+const INVALID_RESPONSE_MESSAGE =
+  "[invalid_response] The server returned an invalid response.";
 
 function config(fetch: HttpConfig["fetch"]): HttpConfig {
   return { apiKey: "ba_test", baseUrl: "http://localhost:8787", fetch };
@@ -138,6 +139,30 @@ describe("requestJson", () => {
     await expect(requestJson(config(fetch), "/x")).resolves.toEqual({ value });
   });
 
+  it("renders the API error code before the message for catalog lookup", async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          errorEnvelope(
+            "model_validation_unavailable",
+            "Provider model discovery is unavailable"
+          ),
+          { status: 503 }
+        )
+    );
+    const error = (await requestJson(config(fetch), "/x").catch(
+      (caught) => caught
+    )) as BlazingAgentsError;
+
+    expect(error.message).toBe(
+      "[model_validation_unavailable] Provider model discovery is unavailable"
+    );
+    expect(String(error)).toBe(
+      "BlazingAgentsError: [model_validation_unavailable] Provider model discovery is unavailable"
+    );
+    expect(error.code).toBe("model_validation_unavailable");
+  });
+
   it("preserves the complete known API error and HTTP context", async () => {
     const response = new Response(
       errorEnvelope(
@@ -164,7 +189,7 @@ describe("requestJson", () => {
     expect(error).toMatchObject({
       code: "agent_name_conflict",
       details: { conflictingResourceId: "ag_0123456789abcdef" },
-      message: "An Agent with this name already exists.",
+      message: "[agent_name_conflict] An Agent with this name already exists.",
       param: "/name",
       requestId: "request-response",
       status: 409,
@@ -206,7 +231,7 @@ describe("requestJson", () => {
     expect(error).toMatchObject({
       code: "future_server_outcome",
       details: { recovery: "refresh" },
-      message: "A newer server outcome.",
+      message: "[future_server_outcome] A newer server outcome.",
       param: "/version",
       requestId: "request-header",
       status: 422,
@@ -553,7 +578,7 @@ describe("requestJson", () => {
     expect(error).toMatchObject({
       cause,
       code: "network_error",
-      message: "connection refused",
+      message: "[network_error] connection refused",
     });
     expect(error.status).toBeUndefined();
   });
@@ -569,7 +594,8 @@ describe("requestJson", () => {
     expect(error).toMatchObject({
       cause: "string error",
       code: "network_error",
-      message: "Network request failed (fetch threw before any HTTP exchange).",
+      message:
+        "[network_error] Network request failed (fetch threw before any HTTP exchange).",
     });
   });
 
@@ -638,7 +664,7 @@ describe("parseErrorEnvelope", () => {
 
     expect(error).toMatchObject({
       code: "invalid_request",
-      message: "Bad request.",
+      message: "[invalid_request] Bad request.",
       status: 400,
     });
     expect(Array.from(error.headers?.entries() ?? [])).toEqual([]);

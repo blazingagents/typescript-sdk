@@ -102,3 +102,4 @@ export const providerKeyFragmentSchema = z.string().min(1).max(4);
 export type TurnId = z.infer<typeof turnIdSchema>;
 
 export const chatConnectionIdSchema = z.string().regex(/^cc_[0-9A-Za-z]{16}$/);
+export const chatDeliveryIdSchema = z.string().regex(/^cd_[0-9A-Za-z]{16}$/);

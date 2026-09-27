@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   agentIdSchema,
   chatConnectionIdSchema,
+  chatDeliveryIdSchema,
   tenantIdSchema,
 } from "../ids.ts";
 
@@ -166,4 +167,54 @@ export type ChatConnectionsResponse = z.output<
 >;
 export type RotateChatConnectionBody = z.input<
   typeof rotateChatConnectionBodySchema
+>;
+
+export const chatDeliveryStatusSchema = z.enum([
+  "pending",
+  "confirmed",
+  "failed",
+  "ambiguous",
+]);
+export type ChatDeliveryStatus = z.infer<typeof chatDeliveryStatusSchema>;
+
+export const chatDeliveryListStatusSchema = z.enum(["failed", "ambiguous"]);
+export type ChatDeliveryListStatus = z.infer<
+  typeof chatDeliveryListStatusSchema
+>;
+
+export const chatDeliverySchema = z
+  .object({
+    id: chatDeliveryIdSchema,
+    kind: z.enum(["reply", "card"]),
+    status: chatDeliveryStatusSchema,
+    attempt: z.number().int().nonnegative(),
+    credentialVersion: z.number().int().nonnegative(),
+    representation: z.string(),
+    diagnostic: z.string().nullable(),
+    receipts: z.unknown().optional(),
+    sessionId: z.string(),
+    messageId: z.string().nullable(),
+    approvalId: z.string().nullable(),
+    threadId: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strip();
+export type ChatDelivery = z.infer<typeof chatDeliverySchema>;
+
+export const tenantChatDeliverySchema = chatDeliverySchema.extend({
+  connectionId: chatConnectionIdSchema,
+  agentId: agentIdSchema,
+  platform: z.enum(["slack", "telegram"]),
+});
+export type TenantChatDelivery = z.infer<typeof tenantChatDeliverySchema>;
+
+export const chatDeliveriesResponseSchema = z
+  .object({
+    data: z.array(tenantChatDeliverySchema),
+    nextCursor: z.string().nullable(),
+  })
+  .strip();
+export type ChatDeliveriesResponse = z.infer<
+  typeof chatDeliveriesResponseSchema
 >;

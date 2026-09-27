@@ -17,6 +17,8 @@ import type { BlazingAgentsChatMessageMetadata } from "./contracts/entities/chat
 import type {
   ChatConnection,
   ChatConnectionsResponse,
+  ChatDeliveriesResponse,
+  ChatDeliveryListStatus,
   CreateChatConnectionBody,
   RotateChatConnectionBody,
   UpdateChatConnectionBody,
@@ -792,4 +794,21 @@ export interface ChatConnectionsResource {
       chatConnectionId: string;
     } & ResourceRequestOptions
   ): Promise<ChatConnection>;
+}
+
+export interface ChatDeliveriesListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  /** ISO 8601 date-time; inclusive lower bound on `createdAt`. */
+  since?: string;
+  /** `failed` and/or `ambiguous`; omitted means both. */
+  status?: readonly ChatDeliveryListStatus[];
+}
+
+/**
+ * `client.chatDeliveries` — the Tenant's deliveries across all Chat
+ * Connections behind `GET /v1/chat-deliveries`, newest first.
+ */
+export interface ChatDeliveriesResource {
+  list(input?: ChatDeliveriesListOptions): Promise<ChatDeliveriesResponse>;
 }

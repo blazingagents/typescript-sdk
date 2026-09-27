@@ -267,6 +267,23 @@ sdk.sessions.messages({
   abortSignal,
 });
 sdk.sessions.listLatest({ byAgent: true, abortSignal });
+sdk.chatDeliveries
+  .list({
+    status: ["failed", "ambiguous"],
+    since: "2026-09-01T00:00:00.000Z",
+    cursor: "cursor-1",
+    limit: 10,
+    abortSignal,
+  })
+  .then((page) => {
+    page.data[0]?.connectionId.toUpperCase();
+    page.data[0]?.platform.toUpperCase();
+    page.nextCursor?.toUpperCase();
+  });
+// @ts-expect-error the list filter accepts only failed and ambiguous
+sdk.chatDeliveries.list({ status: ["pending"] });
+// @ts-expect-error chat delivery list statuses are a fixed union
+sdk.chatDeliveries.list({ status: ["delivered"] });
 sdk.usage
   .overview({
     from: "2026-09-01",

@@ -23,6 +23,7 @@ describe("sdk smoke", () => {
     expect(client.merchantConnection).toBeDefined();
     expect(client.merchantBindings).toBeDefined();
     expect(client.merchantUsageEvents).toBeDefined();
+    expect(client.chatDeliveries).toBeDefined();
   });
 
   it("sends requests to the default API endpoint", async () => {

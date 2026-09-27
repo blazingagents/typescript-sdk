@@ -47,11 +47,16 @@ export {
   chatConnectionSchema,
   chatConnectionsResponseSchema,
   chatCredentialsSchema,
+  chatDeliveriesResponseSchema,
+  chatDeliveryListStatusSchema,
+  chatDeliverySchema,
+  chatDeliveryStatusSchema,
   chatHealthCheckSchema,
   chatHealthSchema,
   chatIdentitySchema,
   createChatConnectionBodySchema,
   rotateChatConnectionBodySchema,
+  tenantChatDeliverySchema,
   updateChatConnectionBodySchema,
 } from "./entities/chat-connections.ts";
 export {

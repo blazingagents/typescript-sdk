@@ -40,6 +40,18 @@ describe("taskSchema", () => {
       })
     ).not.toHaveProperty("extra");
   });
+
+  it("requires and validates the next fire time on a single task", () => {
+    expect(
+      taskSchema.parse(createTaskFixture({ nextFireAt: iso })).nextFireAt
+    ).toBe(iso);
+    expect(
+      taskSchema.safeParse(createTaskFixture({ nextFireAt: "tomorrow" }))
+        .success
+    ).toBe(false);
+    const { nextFireAt: _, ...missing } = createTaskFixture();
+    expect(taskSchema.safeParse(missing).success).toBe(false);
+  });
 });
 
 describe("taskRunSchema", () => {
@@ -101,13 +113,6 @@ describe("taskListItemSchema + tasksListResponseSchema", () => {
       taskListItemSchema.parse(createTaskListItemFixture({ nextFireAt: iso }))
         .nextFireAt
     ).toBe(iso);
-    expect(
-      taskListItemSchema.safeParse(
-        createTaskListItemFixture({ nextFireAt: "tomorrow" })
-      ).success
-    ).toBe(false);
-    const { nextFireAt: _, ...missing } = createTaskListItemFixture();
-    expect(taskListItemSchema.safeParse(missing).success).toBe(false);
   });
 
   it("tasksListResponseSchema is a paginated envelope", () => {

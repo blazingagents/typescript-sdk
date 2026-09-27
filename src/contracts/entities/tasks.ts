@@ -224,6 +224,7 @@ export const taskSchema = z
     deletedAt: z.iso.datetime({ offset: true }).nullable(),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
+    nextFireAt: z.iso.datetime({ offset: true }).nullable(),
   })
   .strip();
 
@@ -238,7 +239,6 @@ export const taskLatestRunSchema = z
 
 export const taskListItemSchema = taskSchema.extend({
   latestRun: taskLatestRunSchema.nullable(),
-  nextFireAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
 export const tasksListResponseSchema =

@@ -238,6 +238,7 @@ export const taskLatestRunSchema = z
 
 export const taskListItemSchema = taskSchema.extend({
   latestRun: taskLatestRunSchema.nullable(),
+  nextFireAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
 export const tasksListResponseSchema =

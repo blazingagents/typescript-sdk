@@ -148,7 +148,10 @@ describe("client.tasks", () => {
 
   it("list gets /v1/tasks with agentId+cursor+limit", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { data: [{ ...taskRow, latestRun: null }], nextCursor: null },
+      body: {
+        data: [{ ...taskRow, latestRun: null, nextFireAt: null }],
+        nextCursor: null,
+      },
     });
     const c = client(fetch);
     const page = await c.tasks.list({
@@ -157,6 +160,7 @@ describe("client.tasks", () => {
       limit: 25,
     });
     expect(page.data).toHaveLength(1);
+    expect(page.data[0]?.nextFireAt).toBeNull();
     expect(calls[0].url).toContain("agentId=ag_0123456789abcdef");
     expect(calls[0].url).toContain("cursor=abc");
     expect(calls[0].url).toContain("limit=25");

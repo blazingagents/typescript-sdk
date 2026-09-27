@@ -87,40 +87,59 @@ use `result.toStream()` on chat or terminal continuation results to read the
 original SSE bytes. It shares one-shot ownership with `toResponse()`; choose one
 accessor per result. Stream errors and cancellation retain the same behavior.
 
-### Direct native chat
+### Relay browser chat
 
-For a direct SDK integration, use `BlazingAgentsDirectChatTransport` with AI SDK
-`useChat`. It sends through `client.chat()` and uses AI SDK's stream decoder
-without constructing a streaming `Response`. Inject your native streaming fetch
-implementation into `BlazingAgents` when the runtime requires one.
+Tenant browser apps use `BlazingAgentsChatTransport` with their own backend.
+The backend holds the Tenant API key and authorizes each Session. The transport
+sends the newest user message and resumes with the server-minted Session ID.
+
+### Direct chat with the SDK
+
+For the platform dashboard or another runtime with an authorized credential,
+use `BlazingAgentsDirectChatTransport` with AI SDK `useChat`. It sends through
+`client.chat()` and decodes the stream without constructing a streaming
+`Response`. Inject a native streaming fetch implementation into `BlazingAgents`
+when the runtime requires one.
 
 ```tsx
 import { useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
-import { BlazingAgentsDirectChatTransport } from "@blazingagents/sdk";
+import { BlazingAgents, BlazingAgentsDirectChatTransport } from "@blazingagents/sdk";
 
-function Chat({ client, agentId, initialSessionId, saveSessionId }) {
+function Chat({ getCredential, agentId, initialSessionId, saveSessionId }) {
   const transport = useMemo(
     () => new BlazingAgentsDirectChatTransport({
-      client,
+      getClient: async () => new BlazingAgents({ apiKey: await getCredential() }),
       agentId,
       sessionId: initialSessionId,
       onSessionId: saveSessionId,
     }),
-    [client, agentId, initialSessionId, saveSessionId],
+    [getCredential, agentId, initialSessionId, saveSessionId],
   );
   const chat = useChat({ transport });
   // Render chat.messages and submit using chat.sendMessage({ text }).
 }
 ```
 
-Install `@ai-sdk/react` for the React hook. Keep the transport stable for one chat;
-remount the chat with a new transport when switching credentials, Agents, or
-Sessions. `onSessionId` runs once for a newly created Session before stream
-consumption, so it can be saved even if streaming later fails. The adapter
-preserves user message IDs, regeneration targets, and `useChat` cancellation.
-Regeneration requires an existing Session. Reconnection returns `null`; the
-adapter does not retry interrupted Turns or resume their streams.
+Install `@ai-sdk/react` for the React hook. Keep the transport stable for one
+Session; remount the chat with a new transport when switching Agents or
+Sessions. `getClient` runs before each request, so it can read a current
+dashboard credential. Return a `BlazingAgents` client with that credential.
+
+On Session creation, `version` pins the Agent Version, and `userId` and
+`metadata` set attribution. To invoke a stored Prompt, pass `promptId` and
+optional `variables` to the transport. Its first Turn sends those fields in
+place of the `useChat` user message. Later Turns send user messages and omit
+the create options, including `version`.
+
+`onSessionId` runs once for a newly created Session before stream consumption,
+so it can be saved even if streaming later fails. The transport preserves user
+message IDs, regeneration targets, and `useChat` cancellation. Regeneration
+requires an existing Session. When `useChat` submits tool approval responses,
+the transport sends each decision in order and streams the continuation. After
+reload, `reconnectToStream` joins a queued or running continuation for the
+supplied `sessionId`. It returns `null` when there is no active continuation.
+It does not retry an interrupted ordinary Turn.
 
 ### Cancel requests
 

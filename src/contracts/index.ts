@@ -109,9 +109,12 @@ export {
 } from "./entities/merchant.ts";
 export {
   createPromptBodySchema,
+  parsePromptVariables,
   promptResponseSchema,
   promptSchema,
   promptsResponseSchema,
+  promptTemplateSchema,
+  renderPromptTemplate,
   updatePromptBodySchema,
 } from "./entities/prompts.ts";
 export {

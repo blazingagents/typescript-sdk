@@ -177,6 +177,11 @@ export const chatDeliveryStatusSchema = z.enum([
 ]);
 export type ChatDeliveryStatus = z.infer<typeof chatDeliveryStatusSchema>;
 
+export const chatDeliveryListStatusSchema = z.enum(["failed", "ambiguous"]);
+export type ChatDeliveryListStatus = z.infer<
+  typeof chatDeliveryListStatusSchema
+>;
+
 export const chatDeliverySchema = z
   .object({
     id: chatDeliveryIdSchema,

@@ -24,6 +24,7 @@ const publicContractNames = [
   "chatConnectionsResponseSchema",
   "chatCredentialsSchema",
   "chatDeliveriesResponseSchema",
+  "chatDeliveryListStatusSchema",
   "chatDeliverySchema",
   "chatDeliveryStatusSchema",
   "chatHealthCheckSchema",

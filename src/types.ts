@@ -18,7 +18,7 @@ import type {
   ChatConnection,
   ChatConnectionsResponse,
   ChatDeliveriesResponse,
-  ChatDeliveryStatus,
+  ChatDeliveryListStatus,
   CreateChatConnectionBody,
   RotateChatConnectionBody,
   UpdateChatConnectionBody,
@@ -801,8 +801,8 @@ export interface ChatDeliveriesListOptions extends ResourceRequestOptions {
   limit?: number;
   /** ISO 8601 date-time; inclusive lower bound on `createdAt`. */
   since?: string;
-  /** One or more statuses, serialized as a single comma-separated `status`. */
-  status?: readonly ChatDeliveryStatus[];
+  /** `failed` and/or `ambiguous`; omitted means both. */
+  status?: readonly ChatDeliveryListStatus[];
 }
 
 /**

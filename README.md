@@ -240,8 +240,9 @@ Agent through REST. BA hosts the Chat SDK runtime, conversation history, and
 approval cards; no additional SDK resource is required.
 
 `client.chatDeliveries.list` reads the Tenant-wide delivery feed across all
-Chat Connections, newest first. Filter by status and creation time — for
-example, the failed and ambiguous deliveries since a timestamp:
+Chat Connections, newest first. `status` accepts `failed` and/or `ambiguous`;
+omitting it returns both. For example, the failed and ambiguous deliveries
+since a timestamp:
 
 ```ts
 const page = await client.chatDeliveries.list({

@@ -38,6 +38,7 @@ export type {
   ChatCredentials,
   ChatDeliveriesResponse,
   ChatDelivery,
+  ChatDeliveryListStatus,
   ChatDeliveryStatus,
   ChatHealth,
   ChatIdentity,

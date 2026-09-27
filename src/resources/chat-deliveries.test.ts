@@ -76,11 +76,11 @@ describe("client.chatDeliveries", () => {
       since: "2026-09-01T00:00:00.000Z",
       cursor: "cursor 1",
       limit: 10,
-      status: ["pending", "confirmed"],
+      status: ["failed", "ambiguous"],
     });
     expect(result.nextCursor).toBe("next");
     expect(calls[0].url).toBe(
-      `${BASE}/v1/chat-deliveries?since=2026-09-01T00%3A00%3A00.000Z&cursor=cursor+1&limit=10&status=pending%2Cconfirmed`
+      `${BASE}/v1/chat-deliveries?since=2026-09-01T00%3A00%3A00.000Z&cursor=cursor+1&limit=10&status=failed%2Cambiguous`
     );
   });
 

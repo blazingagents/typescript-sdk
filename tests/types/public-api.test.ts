@@ -280,7 +280,9 @@ sdk.chatDeliveries
     page.data[0]?.platform.toUpperCase();
     page.nextCursor?.toUpperCase();
   });
-// @ts-expect-error chat delivery statuses are a fixed union
+// @ts-expect-error the list filter accepts only failed and ambiguous
+sdk.chatDeliveries.list({ status: ["pending"] });
+// @ts-expect-error chat delivery list statuses are a fixed union
 sdk.chatDeliveries.list({ status: ["delivered"] });
 sdk.usage
   .overview({

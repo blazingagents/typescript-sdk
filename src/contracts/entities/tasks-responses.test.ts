@@ -92,8 +92,22 @@ describe("taskListItemSchema + tasksListResponseSchema", () => {
 
   it("accepts a null latestRun", () => {
     expect(
-      taskListItemSchema.safeParse(createTaskListItemFixture()).success
-    ).toBe(true);
+      taskListItemSchema.parse(createTaskListItemFixture()).nextFireAt
+    ).toBeNull();
+  });
+
+  it("keeps the next fire time on list items", () => {
+    expect(
+      taskListItemSchema.parse(createTaskListItemFixture({ nextFireAt: iso }))
+        .nextFireAt
+    ).toBe(iso);
+    expect(
+      taskListItemSchema.safeParse(
+        createTaskListItemFixture({ nextFireAt: "tomorrow" })
+      ).success
+    ).toBe(false);
+    const { nextFireAt: _, ...missing } = createTaskListItemFixture();
+    expect(taskListItemSchema.safeParse(missing).success).toBe(false);
   });
 
   it("tasksListResponseSchema is a paginated envelope", () => {

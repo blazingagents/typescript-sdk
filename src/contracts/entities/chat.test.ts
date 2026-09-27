@@ -47,21 +47,50 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
     metadata: {},
     modelId: "openrouter/test-model",
     outputTokens: 2,
+    reasoningTokens: null,
     turnId: "turn_0123456789abcdef",
     sessionId: "ss_0123456789abcdef",
     startedAt: "2026-07-16T10:00:00.000Z",
     status: "succeeded",
-    stepUsages: [{ inputTokens: 4, outputTokens: 2, stepNumber: 0 }],
+    stepUsages: [
+      { inputTokens: 4, outputTokens: 2, reasoningTokens: 1, stepNumber: 0 },
+    ],
     tenantId: "ten_0123456789abcdef",
     userId: "",
   };
 
   it("accepts the assistant message usage contract", () => {
+    const parsed = blazingAgentsChatMessageMetadataSchema.parse({
+      blazingAgents: { usage: validUsage },
+    });
+    expect(parsed.blazingAgents.usage.reasoningTokens).toBeNull();
+    expect(parsed.blazingAgents.usage.stepUsages[0]?.reasoningTokens).toBe(1);
+  });
+
+  it("requires nullable reasoning counts at both levels", () => {
+    const { reasoningTokens: _, ...missingSummary } = validUsage;
     expect(
       blazingAgentsChatMessageMetadataSchema.safeParse({
-        blazingAgents: { usage: validUsage },
+        blazingAgents: { usage: missingSummary },
       }).success
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      blazingAgentsChatMessageMetadataSchema.safeParse({
+        blazingAgents: {
+          usage: {
+            ...validUsage,
+            stepUsages: [{ inputTokens: 4, outputTokens: 2, stepNumber: 0 }],
+          },
+        },
+      }).success
+    ).toBe(false);
+    for (const reasoningTokens of [-1, 1.5, "1"]) {
+      expect(
+        blazingAgentsChatMessageMetadataSchema.safeParse({
+          blazingAgents: { usage: { ...validUsage, reasoningTokens } },
+        }).success
+      ).toBe(false);
+    }
   });
 
   it("strips usage fields outside the contract", () => {

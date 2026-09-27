@@ -46,6 +46,7 @@ export const usageSummarySchema = z
     metadata: z.record(z.string(), z.unknown()),
     modelId: agentModelIdSchema,
     outputTokens: z.number().int().min(0),
+    reasoningTokens: z.number().int().min(0).nullable(),
     turnId: turnIdSchema,
     sessionId: z.union([sessionIdSchema, z.literal("")]),
     stepUsages: z.array(
@@ -53,6 +54,7 @@ export const usageSummarySchema = z
         .object({
           inputTokens: z.number().int().min(0),
           outputTokens: z.number().int().min(0),
+          reasoningTokens: z.number().int().min(0).nullable(),
           stepNumber: z.number().int().min(0),
         })
         .strip()

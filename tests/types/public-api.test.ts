@@ -1,6 +1,8 @@
 import {
   type AgentResponse,
   BlazingAgents,
+  BlazingAgentsDirectChatTransport,
+  type BlazingAgentsDirectChatTransportOptions,
   BlazingAgentsError,
   type BlazingAgentsErrorCode,
   type BlazingAgentsUIMessage,
@@ -13,6 +15,20 @@ import {
 } from "../../src/index.ts";
 
 const sdk = new BlazingAgents({ apiKey: "ba_test" });
+export const directTransport = new BlazingAgentsDirectChatTransport({
+  agentId: "ag_0123456789abcdef",
+  client: async () => sdk,
+  promptId: "prompt_0123456789abcdef",
+  variables: { topic: "release" },
+  version: 3,
+});
+// @ts-expect-error variables require promptId
+export const transportWithInvalidOptions: BlazingAgentsDirectChatTransportOptions =
+  {
+    agentId: "ag_0123456789abcdef",
+    client: sdk,
+    variables: { topic: "release" },
+  };
 export const sdkWithBaseUrl = new BlazingAgents({
   apiKey: "ba_test",
   baseUrl: "https://example.test",
@@ -94,10 +110,18 @@ const assistantMessage: BlazingAgentsUIMessage = {
         metadata: {},
         modelId: "openrouter/test-model",
         outputTokens: 2,
+        reasoningTokens: null,
         sessionId: "ss_0123456789abcdef",
         startedAt: "2026-07-16T10:00:00.000Z",
         status: "succeeded",
-        stepUsages: [{ inputTokens: 4, outputTokens: 2, stepNumber: 0 }],
+        stepUsages: [
+          {
+            inputTokens: 4,
+            outputTokens: 2,
+            reasoningTokens: null,
+            stepNumber: 0,
+          },
+        ],
         tenantId: "ten_0123456789abcdef",
         turnId: "turn_0123456789abcdef",
         userId: "",

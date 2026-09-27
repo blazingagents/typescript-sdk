@@ -34,6 +34,7 @@ export function createTaskListItemFixture(
   return {
     ...createTaskFixture(overrides),
     latestRun: null,
+    nextFireAt: null,
     ...overrides,
   };
 }

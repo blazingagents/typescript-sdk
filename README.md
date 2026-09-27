@@ -239,6 +239,17 @@ Use the [connection example](https://github.com/blazingagents/typescript-sdk/blo
 Agent through REST. BA hosts the Chat SDK runtime, conversation history, and
 approval cards; no additional SDK resource is required.
 
+`client.chatDeliveries.list` reads the Tenant-wide delivery feed across all
+Chat Connections, newest first. Filter by status and creation time — for
+example, the failed and ambiguous deliveries since a timestamp:
+
+```ts
+const page = await client.chatDeliveries.list({
+  status: ["failed", "ambiguous"],
+  since: "2026-09-01T00:00:00.000Z",
+});
+```
+
 ## Merchant monetization
 
 Bill your own customers for model-token usage through your Polar or Dodo

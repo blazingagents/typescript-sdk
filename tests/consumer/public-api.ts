@@ -185,3 +185,18 @@ export async function manageChatConnections() {
   await client.chatConnections.delete({ chatConnectionId });
   return telegram;
 }
+
+export async function listChatDeliveries() {
+  const page = await client.chatDeliveries.list({
+    status: ["failed", "ambiguous"],
+    since: "2026-09-01T00:00:00.000Z",
+    limit: 10,
+    ...readOptions,
+  });
+  const first = page.data[0];
+  return {
+    connectionId: first?.connectionId,
+    deliveryId: first?.id,
+    nextCursor: page.nextCursor,
+  };
+}

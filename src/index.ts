@@ -36,10 +36,14 @@ export type {
   ChatConnection,
   ChatConnectionsResponse,
   ChatCredentials,
+  ChatDeliveriesResponse,
+  ChatDelivery,
+  ChatDeliveryStatus,
   ChatHealth,
   ChatIdentity,
   CreateChatConnectionBody,
   RotateChatConnectionBody,
+  TenantChatDelivery,
   UpdateChatConnectionBody,
 } from "./contracts/entities/chat-connections.ts";
 export type {
@@ -138,6 +142,8 @@ export type {
   BlazingAgentsUIMessage,
   BlazingAgentsUIMessageChunk,
   ChatConnectionsResource,
+  ChatDeliveriesListOptions,
+  ChatDeliveriesResource,
   ChatInput,
   ChatMessageInput,
   ChatPromptInput,

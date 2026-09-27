@@ -2,6 +2,7 @@ import { chat, completion, objectGeneration } from "./generation.ts";
 import { createAgentsResource } from "./resources/agents.ts";
 import { createArtifactsResource } from "./resources/artifacts.ts";
 import { createChatConnectionsResource } from "./resources/chat-connections.ts";
+import { createChatDeliveriesResource } from "./resources/chat-deliveries.ts";
 import { createMcpConnectionsResource } from "./resources/mcp-connections.ts";
 import { createMemoriesResource } from "./resources/memories.ts";
 import { createMerchantBindingsResource } from "./resources/merchant-bindings.ts";
@@ -22,6 +23,7 @@ import type {
   BlazingAgentsOptions,
   BlazingAgentsRequestOptions,
   ChatConnectionsResource,
+  ChatDeliveriesResource,
   ChatInput,
   ChatResult,
   CompletionInput,
@@ -51,6 +53,7 @@ export class BlazingAgents {
   private readonly config: HttpConfig;
 
   readonly chatConnections: ChatConnectionsResource;
+  readonly chatDeliveries: ChatDeliveriesResource;
   readonly agents: AgentsResource;
   readonly sessions: SessionsResource;
   readonly providers: ProvidersResource;
@@ -80,6 +83,7 @@ export class BlazingAgents {
       onResponse: options.onResponse,
     };
     this.chatConnections = createChatConnectionsResource(this.config);
+    this.chatDeliveries = createChatDeliveriesResource(this.config);
     this.agents = createAgentsResource(this.config);
     this.sessions = createSessionsResource(this.config);
     this.providers = createProvidersResource(this.config);

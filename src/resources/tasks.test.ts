@@ -19,6 +19,7 @@ const taskRow = {
   metadata: {},
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
+  nextFireAt: null,
 };
 const taskRunRow = {
   id: "tr_0123456789abcdef",
@@ -167,10 +168,13 @@ describe("client.tasks", () => {
   });
 
   it("get gets /v1/tasks/:id", async () => {
-    const { fetch, calls } = createMockFetch({ body: taskRow });
+    const { fetch, calls } = createMockFetch({
+      body: { ...taskRow, nextFireAt: "2026-01-02T00:00:00.000Z" },
+    });
     const c = client(fetch);
     const task = await c.tasks.get({ taskId: "tk_0123456789abcdef" });
     expect(task.id).toBe("tk_0123456789abcdef");
+    expect(task.nextFireAt).toBe("2026-01-02T00:00:00.000Z");
     expect(calls[0].url).toBe(`${BASE}/v1/tasks/tk_0123456789abcdef`);
   });
 

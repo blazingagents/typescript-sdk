@@ -24,6 +24,7 @@ export function createTaskFixture(overrides: Partial<Task> = {}): Task {
     deletedAt: null,
     createdAt: iso,
     updatedAt: iso,
+    nextFireAt: null,
     ...overrides,
   };
 }
@@ -34,7 +35,6 @@ export function createTaskListItemFixture(
   return {
     ...createTaskFixture(overrides),
     latestRun: null,
-    nextFireAt: null,
     ...overrides,
   };
 }

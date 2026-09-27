@@ -87,27 +87,34 @@ use `result.toStream()` on chat or terminal continuation results to read the
 original SSE bytes. It shares one-shot ownership with `toResponse()`; choose one
 accessor per result. Stream errors and cancellation retain the same behavior.
 
-### Direct native chat
+### Relay browser chat
 
-For a direct SDK integration, use `BlazingAgentsDirectChatTransport` with AI SDK
-`useChat`. It sends through `client.chat()` and uses AI SDK's stream decoder
-without constructing a streaming `Response`. Inject your native streaming fetch
-implementation into `BlazingAgents` when the runtime requires one.
+Tenant browser apps use `BlazingAgentsChatTransport` with their own backend.
+The backend holds the Tenant API key and authorizes each Session. The transport
+sends the newest user message and resumes with the server-minted Session ID.
+
+### Direct chat with the SDK
+
+For the platform dashboard or another runtime with an authorized credential,
+use `BlazingAgentsDirectChatTransport` with AI SDK `useChat`. It sends through
+`client.chat()` and decodes the stream without constructing a streaming
+`Response`. Inject a native streaming fetch implementation into `BlazingAgents`
+when the runtime requires one.
 
 ```tsx
 import { useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
 import { BlazingAgents, BlazingAgentsDirectChatTransport } from "@blazingagents/sdk";
 
-function Chat({ getApiKey, agentId, initialSessionId, saveSessionId }) {
+function Chat({ getCredential, agentId, initialSessionId, saveSessionId }) {
   const transport = useMemo(
     () => new BlazingAgentsDirectChatTransport({
-      client: async () => new BlazingAgents({ apiKey: await getApiKey() }),
+      getClient: async () => new BlazingAgents({ apiKey: await getCredential() }),
       agentId,
       sessionId: initialSessionId,
       onSessionId: saveSessionId,
     }),
-    [getApiKey, agentId, initialSessionId, saveSessionId],
+    [getCredential, agentId, initialSessionId, saveSessionId],
   );
   const chat = useChat({ transport });
   // Render chat.messages and submit using chat.sendMessage({ text }).
@@ -116,9 +123,8 @@ function Chat({ getApiKey, agentId, initialSessionId, saveSessionId }) {
 
 Install `@ai-sdk/react` for the React hook. Keep the transport stable for one
 Session; remount the chat with a new transport when switching Agents or
-Sessions. Pass a `BlazingAgents` client or a client factory. The factory runs
-before each request, so it can read a current dashboard credential. Avoid
-holding a credential in a long-lived client when it can expire.
+Sessions. `getClient` runs before each request, so it can read a current
+dashboard credential. Return a `BlazingAgents` client with that credential.
 
 On Session creation, `version` pins the Agent Version, and `userId` and
 `metadata` set attribution. To invoke a stored Prompt, pass `promptId` and

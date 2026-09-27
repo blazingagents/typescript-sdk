@@ -17,7 +17,7 @@ import {
 const sdk = new BlazingAgents({ apiKey: "ba_test" });
 export const directTransport = new BlazingAgentsDirectChatTransport({
   agentId: "ag_0123456789abcdef",
-  client: async () => sdk,
+  getClient: async () => sdk,
   promptId: "prompt_0123456789abcdef",
   variables: { topic: "release" },
   version: 3,
@@ -26,7 +26,7 @@ export const directTransport = new BlazingAgentsDirectChatTransport({
 export const transportWithInvalidOptions: BlazingAgentsDirectChatTransportOptions =
   {
     agentId: "ag_0123456789abcdef",
-    client: sdk,
+    getClient: () => sdk,
     variables: { topic: "release" },
   };
 export const sdkWithBaseUrl = new BlazingAgents({

@@ -72,7 +72,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const onSessionId = vi.fn();
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(fetch),
+      getClient: () => client(fetch),
       onSessionId,
     });
     const controller = new AbortController();
@@ -125,7 +125,8 @@ describe("BlazingAgentsDirectChatTransport", () => {
     async (...chunks) => {
       const transport = new BlazingAgentsDirectChatTransport({
         agentId,
-        client: client(() => Promise.resolve(new Response(sseStream(chunks)))),
+        getClient: () =>
+          client(() => Promise.resolve(new Response(sseStream(chunks)))),
         sessionId: mintedSessionId,
       });
       expect(await collect(await transport.sendMessages(input))).toEqual(
@@ -137,13 +138,14 @@ describe("BlazingAgentsDirectChatTransport", () => {
   it("creates a Session without an identity callback", async () => {
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(() =>
-        Promise.resolve(
-          new Response(sseStream(chatChunks), {
-            headers: { location: createLocation },
-          })
-        )
-      ),
+      getClient: () =>
+        client(() =>
+          Promise.resolve(
+            new Response(sseStream(chatChunks), {
+              headers: { location: createLocation },
+            })
+          )
+        ),
     });
     expect(await collect(await transport.sendMessages(input))).toEqual(
       chatChunks
@@ -157,7 +159,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const onSessionId = vi.fn();
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(fetch),
+      getClient: () => client(fetch),
       sessionId: mintedSessionId,
       onSessionId,
     });
@@ -172,13 +174,14 @@ describe("BlazingAgentsDirectChatTransport", () => {
       const cancel = vi.fn(() => Promise.reject(new Error("cancel failed")));
       const transport = new BlazingAgentsDirectChatTransport({
         agentId,
-        client: client(() =>
-          Promise.resolve(
-            new Response(new ReadableStream({ cancel }), {
-              headers: validLocation ? { location: createLocation } : {},
-            })
-          )
-        ),
+        getClient: () =>
+          client(() =>
+            Promise.resolve(
+              new Response(new ReadableStream({ cancel }), {
+                headers: validLocation ? { location: createLocation } : {},
+              })
+            )
+          ),
         onSessionId: () => Promise.reject(new Error("persistence failed")),
       });
       await expect(transport.sendMessages(input)).rejects.toThrow();
@@ -190,7 +193,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const fetch = vi.fn();
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(fetch),
+      getClient: () => client(fetch),
     });
     await expect(
       transport.sendMessages({ ...input, messages: [] })
@@ -203,7 +206,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     ).resolves.toBeNull();
     const resumed = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(fetch),
+      getClient: () => client(fetch),
       sessionId: mintedSessionId,
     });
     await expect(
@@ -214,7 +217,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
       () =>
         new BlazingAgentsDirectChatTransport({
           agentId,
-          client: client(fetch),
+          getClient: () => client(fetch),
           sessionId: "invalid",
         })
     ).toThrow();
@@ -225,9 +228,8 @@ describe("BlazingAgentsDirectChatTransport", () => {
     controller.abort();
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(() =>
-        Promise.reject(new DOMException("Aborted", "AbortError"))
-      ),
+      getClient: () =>
+        client(() => Promise.reject(new DOMException("Aborted", "AbortError"))),
     });
     await expect(
       transport.sendMessages({ ...input, abortSignal: controller.signal })
@@ -255,7 +257,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     let apiKey = "first";
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: () => new BlazingAgents({ apiKey, baseUrl: BASE, fetch }),
+      getClient: () => new BlazingAgents({ apiKey, baseUrl: BASE, fetch }),
       version: 3,
       userId: "user-1",
       metadata: { source: "playground" },
@@ -291,14 +293,15 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const bodies: unknown[] = [];
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client((_url, init) => {
-        bodies.push(JSON.parse(String(init?.body)));
-        return Promise.resolve(
-          new Response(sseStream(chatChunks), {
-            headers: { location: createLocation },
-          })
-        );
-      }),
+      getClient: () =>
+        client((_url, init) => {
+          bodies.push(JSON.parse(String(init?.body)));
+          return Promise.resolve(
+            new Response(sseStream(chatChunks), {
+              headers: { location: createLocation },
+            })
+          );
+        }),
       promptId: "prompt_0123456789abcdef",
       variables: { topic: "release" },
     });
@@ -335,9 +338,10 @@ describe("BlazingAgentsDirectChatTransport", () => {
       }
       return Promise.resolve(new Response(sseStream(chatChunks)));
     });
+    const getClient = vi.fn(() => client(fetch));
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(fetch),
+      getClient,
       sessionId: mintedSessionId,
     });
     const assistant: UIMessage = {
@@ -406,13 +410,14 @@ describe("BlazingAgentsDirectChatTransport", () => {
         body: null,
       },
     ]);
+    expect(getClient).toHaveBeenCalledTimes(3);
   });
 
   it("requires a Session before deciding an approval", async () => {
     const fetch = vi.fn();
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
-      client: client(fetch),
+      getClient: () => client(fetch),
     });
     await expect(
       transport.sendMessages({
@@ -442,9 +447,8 @@ describe("BlazingAgentsDirectChatTransport", () => {
   it("reconnects to a pending approval continuation after reload", async () => {
     const continuationId = "tool-approval:ss:assistant";
     const requests: string[] = [];
-    const transport = new BlazingAgentsDirectChatTransport({
-      agentId,
-      client: client((url) => {
+    const getClient = vi.fn(() =>
+      client((url) => {
         requests.push(String(url));
         return Promise.resolve(
           String(url).endsWith("/tool-approvals")
@@ -454,7 +458,11 @@ describe("BlazingAgentsDirectChatTransport", () => {
               })
             : new Response(sseStream(chatChunks))
         );
-      }),
+      })
+    );
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      getClient,
       sessionId: mintedSessionId,
     });
     const stream = await transport.reconnectToStream({ chatId: "local-chat" });
@@ -466,6 +474,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
       `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approvals`,
       `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approval-continuations/${continuationId}`,
     ]);
+    expect(getClient).toHaveBeenCalledTimes(2);
   });
 
   it.each(["waiting", "succeeded", "failed", null] as const)(
@@ -474,7 +483,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
       const requests: string[] = [];
       const transport = new BlazingAgentsDirectChatTransport({
         agentId,
-        client: async () =>
+        getClient: async () =>
           client((url) => {
             requests.push(String(url));
             return Promise.resolve(

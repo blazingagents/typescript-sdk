@@ -11,7 +11,7 @@ import type { ChatResult } from "./types.ts";
 
 export type BlazingAgentsDirectChatTransportOptions = {
   agentId: string;
-  client: BlazingAgents | (() => BlazingAgents | Promise<BlazingAgents>);
+  getClient: () => BlazingAgents | Promise<BlazingAgents>;
   metadata?: Record<string, unknown>;
   /** Receives the Session ID before the response stream is consumed. */
   onSessionId?: (sessionId: string) => Promise<void> | void;
@@ -28,14 +28,11 @@ export class BlazingAgentsDirectChatTransport<
   UI_MESSAGE extends UIMessage = UIMessage,
 > extends DefaultChatTransport<UI_MESSAGE> {
   readonly #options: BlazingAgentsDirectChatTransportOptions;
-  readonly #client: () => BlazingAgents | Promise<BlazingAgents>;
   #sessionId: string | undefined;
 
   constructor(options: BlazingAgentsDirectChatTransportOptions) {
     super();
     this.#options = options;
-    const client = options.client;
-    this.#client = typeof client === "function" ? client : () => client;
     this.#sessionId =
       options.sessionId === undefined
         ? undefined
@@ -58,7 +55,7 @@ export class BlazingAgentsDirectChatTransport<
       return await this.#sendApprovalContinuation(input, last);
     }
 
-    const client = await this.#client();
+    const client = await this.#options.getClient();
     const common = {
       agentId: this.#options.agentId,
       messageId: input.messageId,
@@ -119,7 +116,7 @@ export class BlazingAgentsDirectChatTransport<
       return null;
     }
     const { continuation } = await (
-      await this.#client()
+      await this.#options.getClient()
     ).sessions.toolApprovals({
       agentId: this.#options.agentId,
       sessionId: this.#sessionId,
@@ -128,7 +125,7 @@ export class BlazingAgentsDirectChatTransport<
       return null;
     }
     const result = await (
-      await this.#client()
+      await this.#options.getClient()
     ).sessions.joinToolApprovalContinuation({
       agentId: this.#options.agentId,
       sessionId: this.#sessionId,
@@ -151,7 +148,7 @@ export class BlazingAgentsDirectChatTransport<
     for (const part of last.parts.slice(lastStep + 1)) {
       if (isToolUIPart(part) && part.state === "approval-responded") {
         const decision = await (
-          await this.#client()
+          await this.#options.getClient()
         ).sessions.decideToolApproval({
           agentId: this.#options.agentId,
           sessionId: this.#sessionId,
@@ -167,7 +164,7 @@ export class BlazingAgentsDirectChatTransport<
       throw new Error("Tool approval response is missing an approval.");
     }
     const continuation = await (
-      await this.#client()
+      await this.#options.getClient()
     ).sessions.joinToolApprovalContinuation({
       agentId: this.#options.agentId,
       sessionId: this.#sessionId,

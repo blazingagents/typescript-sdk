@@ -26,7 +26,7 @@ const readOptions = {
   abortSignal: new AbortController().signal,
 } satisfies ResourceRequestOptions;
 export const nativeTransport = new BlazingAgentsDirectChatTransport({
-  client,
+  getClient: () => client,
   agentId: "ag_0123456789abcdef",
 });
 // @ts-expect-error API-key lifecycle is dashboard-only and absent from the SDK.

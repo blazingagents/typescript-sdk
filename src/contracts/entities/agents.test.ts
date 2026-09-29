@@ -136,10 +136,10 @@ describe("Agent current and Version contracts", () => {
 
 describe("Agent list and lifecycle contracts", () => {
   it("filters current Agents by Attribution or Workspace", () => {
-    expect(agentsListQuerySchema.parse({})).toEqual({});
+    expect(agentsListQuerySchema.parse({})).toEqual({ limit: 50 });
     expect(
       agentsListQuerySchema.parse({ userId: "u-42", workspaceId })
-    ).toEqual({ userId: "u-42", workspaceId });
+    ).toEqual({ limit: 50, userId: "u-42", workspaceId });
     expect(
       agentsListQuerySchema.safeParse({ workspaceId: "sb_xxxxxxxxxxxxxxxx" })
         .success
@@ -340,26 +340,33 @@ describe("additive Agent response fields", () => {
   it("strips new envelope and Agent fields while retaining known configuration", () => {
     expect(
       agentsResponseSchema.parse({
-        agents: [{ ...baseAgent, thinkingLevel: "high", futureSetting: true }],
+        data: [{ ...baseAgent, thinkingLevel: "high", futureSetting: true }],
+        nextCursor: null,
         revision: 2,
       })
-    ).toEqual({ agents: [{ ...baseAgent, thinkingLevel: "high" }] });
+    ).toEqual({
+      data: [{ ...baseAgent, thinkingLevel: "high" }],
+      nextCursor: null,
+    });
   });
 
   it("still rejects missing required fields and malformed known fields", () => {
     expect(
       agentsResponseSchema.safeParse({
-        agents: [{ ...baseAgent, name: undefined }],
+        data: [{ ...baseAgent, name: undefined }],
+        nextCursor: null,
       }).success
     ).toBe(false);
     expect(
       agentsResponseSchema.safeParse({
-        agents: [{ ...baseAgent, thinkingLevel: 42 }],
+        data: [{ ...baseAgent, thinkingLevel: 42 }],
+        nextCursor: null,
       }).success
     ).toBe(false);
     expect(
       agentsResponseSchema.safeParse({
-        agents: [{ ...baseAgent, tools: ["future-tool"] }],
+        data: [{ ...baseAgent, tools: ["future-tool"] }],
+        nextCursor: null,
       }).success
     ).toBe(false);
     expect(

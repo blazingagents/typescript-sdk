@@ -19,6 +19,7 @@ export type {
 export type {
   Agent,
   AgentResponse,
+  AgentsListQuery,
   AgentsResponse,
   AgentVersion,
   AgentVersionsListQuery,
@@ -80,6 +81,13 @@ export type {
   UpsertMerchantBindingBody,
 } from "./contracts/entities/merchant.ts";
 export type {
+  CreatePromptBody,
+  PromptResponse,
+  PromptsListQuery,
+  PromptsResponse,
+  UpdatePromptBody,
+} from "./contracts/entities/prompts.ts";
+export type {
   CreateProviderBody,
   ProviderListItem,
   ProviderModel,
@@ -106,6 +114,8 @@ export type {
   SkillsListResponse,
 } from "./contracts/entities/skills.ts";
 export type {
+  SessionUsageQuery,
+  SessionUsageResponse,
   UsageBucket,
   UsageOverviewQuery,
   UsageOverviewResponse,
@@ -178,6 +188,7 @@ export type {
   TenantResource,
   TerminalStreamResult,
   UsageResource,
+  UserClient,
   WorkspacesListOptions,
   WorkspacesResource,
 } from "./types.ts";

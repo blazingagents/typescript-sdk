@@ -95,9 +95,11 @@ describe("client.agents", () => {
     expect(JSON.parse(calls[4].init?.body as string)).toEqual({
       name: "Renamed",
     });
-    const listed = createMockFetch({ body: { agents: [body] } });
+    const listed = createMockFetch({
+      body: { data: [body], nextCursor: null },
+    });
     await expect(client(listed.fetch).agents.list()).resolves.toMatchObject({
-      agents: [policies],
+      data: [policies],
     });
   });
 
@@ -204,12 +206,14 @@ describe("client.agents", () => {
     });
   });
 
-  it("list gets /v1/agents and parses { agents: [...] }", async () => {
-    const { fetch } = createMockFetch({ body: { agents: [agentRow()] } });
+  it("list gets /v1/agents and parses { data: [...] }", async () => {
+    const { fetch } = createMockFetch({
+      body: { data: [agentRow()], nextCursor: null },
+    });
     const c = client(fetch);
     const result = await c.agents.list();
-    expect(result.agents).toHaveLength(1);
-    expect(result.agents[0].id).toBe("ag_0123456789abcdef");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("ag_0123456789abcdef");
   });
 
   it.each([
@@ -223,7 +227,9 @@ describe("client.agents", () => {
       `${BASE}/v1/agents?userId=end+user%2F1&workspaceId=ws_0123456789abcdef`,
     ],
   ])("serializes list filters %#", async (options, expectedUrl) => {
-    const { fetch, calls } = createMockFetch({ body: { agents: [] } });
+    const { fetch, calls } = createMockFetch({
+      body: { data: [], nextCursor: null },
+    });
     await client(fetch).agents.list(options);
     expect(calls[0].url).toBe(expectedUrl);
   });

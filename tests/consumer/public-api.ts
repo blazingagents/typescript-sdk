@@ -14,6 +14,7 @@ import {
   type ResourceRequestOptions,
   type SkillCopyResults,
   type SkillDetail,
+  type UserClient,
 } from "@blazingagents/sdk";
 
 const options = {
@@ -22,6 +23,11 @@ const options = {
 } satisfies BlazingAgentsOptions;
 
 const client = new BlazingAgents(options);
+const scoped: UserClient = client
+  .forUser("consumer-user")
+  .withOptions({ clientRequestId: "consumer-1" });
+// @ts-expect-error End-user clients cannot administer tenant providers.
+export const scopedProviders = scoped.providers;
 const readOptions = {
   abortSignal: new AbortController().signal,
 } satisfies ResourceRequestOptions;
@@ -78,6 +84,10 @@ const skillsResource: AgentSkillsResource = client.agent({
 
 export async function publicApiConsumer() {
   const agents = await client.agents.list(readOptions);
+  const scopedAgents = await scoped.agents.list({ limit: 50, ...readOptions });
+  const sessionUsage = await scoped.usage.sessions({
+    sessionIds: ["ss_0123456789abcdef"],
+  });
   await client.sessions.list({
     agentId: "ag_0123456789abcdef",
     ...readOptions,
@@ -124,6 +134,8 @@ export async function publicApiConsumer() {
 
   return {
     agents,
+    scopedAgents,
+    sessionUsage,
     artifactDownload,
     chat,
     chatRequestId: chat.requestId,

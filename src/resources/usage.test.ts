@@ -43,6 +43,30 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 }
 
 describe("client.usage", () => {
+  it("posts exact session IDs and preserves zero totals", async () => {
+    const sessionId = "ss_0123456789abcdef";
+    const totals = {
+      inputTokens: 0,
+      outputTokens: 0,
+      requestCount: 0,
+      durationMs: 0,
+    };
+    const response = { data: [{ sessionId, totals }] };
+    const { fetch, calls } = createMockFetch({ body: response });
+    const result = await client(fetch).usage.sessions({
+      sessionIds: [sessionId],
+      from: "2026-01-01",
+      to: "2026-01-31",
+    });
+    expect(result).toEqual(response);
+    expect(calls[0].url).toBe(`${BASE}/v1/usage/sessions`);
+    expect(calls[0].init?.method).toBe("POST");
+    expect(JSON.parse(calls[0].init?.body as string)).toEqual({
+      sessionIds: [sessionId],
+      from: "2026-01-01",
+      to: "2026-01-31",
+    });
+  });
   it("get queries /v1/usage with the query params", async () => {
     const { fetch, calls } = createMockFetch({ body: usageResponse });
     const c = client(fetch);

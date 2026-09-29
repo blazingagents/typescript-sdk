@@ -61,8 +61,10 @@ describe("apiErrorCodeSchema", () => {
   it("defines the closed public error-code contract", () => {
     const codes = [
       "invalid_request",
+      "idempotency_conflict",
       "validation_failed",
       "unauthorized",
+      "forbidden",
       "not_found",
       "quota_exceeded",
       "subscription_required",
@@ -76,14 +78,11 @@ describe("apiErrorCodeSchema", () => {
       "agent_version_not_found",
       "agent_mcp_connection_not_found",
       "agent_mcp_connections_invalid",
-      "agent_name_conflict",
       "provider_required",
       "api_key_limit_reached",
       "artifact_session_cap_reached",
       "invalid_cursor",
       "message_not_found",
-      "prompt_limit_reached",
-      "prompt_name_conflict",
       "prompt_variable_missing",
       "prompt_variable_unknown",
       "provider_in_use",
@@ -144,7 +143,7 @@ describe("apiErrorCodeSchema", () => {
   });
 
   it("rejects unknown codes", () => {
-    expect(apiErrorCodeSchema.safeParse("forbidden").success).toBe(false);
+    expect(apiErrorCodeSchema.safeParse("unknown_outcome").success).toBe(false);
     expect(apiErrorCodeSchema.safeParse("").success).toBe(false);
   });
 });

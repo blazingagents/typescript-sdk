@@ -27,7 +27,9 @@ describe("sdk smoke", () => {
   });
 
   it("sends requests to the default API endpoint", async () => {
-    const { fetch, calls } = createMockFetch({ body: { agents: [] } });
+    const { fetch, calls } = createMockFetch({
+      body: { data: [], nextCursor: null },
+    });
     const client = new BlazingAgents({ apiKey: "ba_test", fetch });
 
     await client.agents.list();
@@ -36,7 +38,9 @@ describe("sdk smoke", () => {
   });
 
   it("normalizes every trailing slash in a custom base URL", async () => {
-    const { fetch, calls } = createMockFetch({ body: { agents: [] } });
+    const { fetch, calls } = createMockFetch({
+      body: { data: [], nextCursor: null },
+    });
     const client = new BlazingAgents({
       apiKey: "ba_test",
       baseUrl: "https://api.example.test///",
@@ -49,7 +53,9 @@ describe("sdk smoke", () => {
   });
 
   it("scopes caller correlation to a client view", async () => {
-    const { fetch, calls } = createMockFetch({ body: { agents: [] } });
+    const { fetch, calls } = createMockFetch({
+      body: { data: [], nextCursor: null },
+    });
     const onResponse = vi.fn();
     const client = new BlazingAgents({
       apiKey: "ba_test",

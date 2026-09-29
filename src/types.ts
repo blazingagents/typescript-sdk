@@ -101,6 +101,8 @@ import type {
   UpdateTenantSettingsBody,
 } from "./contracts/entities/tenants.ts";
 import type {
+  SessionUsageQuery,
+  SessionUsageResponse,
   UsageOverviewQuery,
   UsageOverviewResponse,
   UsageQuery,
@@ -163,6 +165,7 @@ export interface HttpConfig {
   clientRequestId?: string;
   fetch?: BlazingAgentsFetch;
   onResponse?: ((response: ResponseObservation) => void) | undefined;
+  scopeUserId?: string;
 }
 
 export interface BlazingAgentsOptions {
@@ -175,6 +178,22 @@ export interface BlazingAgentsOptions {
 
 export interface BlazingAgentsRequestOptions {
   clientRequestId: string;
+}
+
+export interface UserClient {
+  agent(input: { agentId: string }): AgentClient;
+  readonly agents: AgentsResource;
+  readonly artifacts: ArtifactsResource;
+  chat(input: ChatInput): Promise<ChatResult>;
+  completion(input: CompletionInput): Promise<CompletionResult>;
+  readonly memories: MemoriesResource;
+  object(input: ObjectInput): Promise<ObjectResult>;
+  readonly prompts: PromptsResource;
+  readonly sessions: SessionsResource;
+  readonly tasks: TasksResource;
+  readonly usage: Pick<UsageResource, "get" | "sessions">;
+  withOptions(options: BlazingAgentsRequestOptions): UserClient;
+  readonly workspaces: WorkspacesResource;
 }
 
 export interface ResponseObservation {
@@ -382,6 +401,8 @@ export interface AgentClient {
 }
 
 export interface AgentsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
   userId?: string;
   workspaceId?: string;
 }
@@ -469,7 +490,12 @@ export interface PromptsResource {
     input: { promptId: string } & ResourceRequestOptions
   ): Promise<PromptResponse>;
   list(
-    input?: { userId?: string; agentId?: string } & ResourceRequestOptions
+    input?: {
+      userId?: string;
+      agentId?: string;
+      cursor?: string;
+      limit?: number;
+    } & ResourceRequestOptions
   ): Promise<PromptsResponse>;
   update(
     input: UpdatePromptBody & { promptId: string } & ResourceRequestOptions
@@ -692,6 +718,9 @@ export interface UsageResource {
   overview(
     input?: Partial<UsageOverviewQuery> & ResourceRequestOptions
   ): Promise<UsageOverviewResponse>;
+  sessions(
+    input: SessionUsageQuery & ResourceRequestOptions
+  ): Promise<SessionUsageResponse>;
 }
 
 /**

@@ -144,7 +144,7 @@ describe("createTaskBodySchema", () => {
     }
   );
 
-  it("rejects an idempotency key when creating and submitting a task", () => {
+  it("accepts an idempotency key when creating and submitting a task", () => {
     expect(
       createTaskBodySchema.safeParse({
         agentId,
@@ -153,7 +153,7 @@ describe("createTaskBodySchema", () => {
         submit: true,
         idempotencyKey: "once",
       }).success
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("rejects a malformed agentId", () => {

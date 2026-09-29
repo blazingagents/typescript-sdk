@@ -53,10 +53,12 @@ describe("client.prompts", () => {
   });
 
   it("list gets /v1/prompts", async () => {
-    const { fetch } = createMockFetch({ body: { prompts: [promptRow] } });
+    const { fetch } = createMockFetch({
+      body: { data: [promptRow], nextCursor: null },
+    });
     const c = client(fetch);
     const result = await c.prompts.list();
-    expect(result.prompts).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it.each([
@@ -64,7 +66,9 @@ describe("client.prompts", () => {
     ["", `${BASE}/v1/prompts?userId=`],
     ["end user/1", `${BASE}/v1/prompts?userId=end+user%2F1`],
   ])("serializes list attribution %#", async (userId, expectedUrl) => {
-    const { fetch, calls } = createMockFetch({ body: { prompts: [] } });
+    const { fetch, calls } = createMockFetch({
+      body: { data: [], nextCursor: null },
+    });
     await client(fetch).prompts.list({ userId });
     expect(calls[0].url).toBe(expectedUrl);
   });
@@ -82,11 +86,11 @@ describe("client.prompts", () => {
       agentId
     );
     const listed = createMockFetch({
-      body: { prompts: [{ ...promptRow, agentId }] },
+      body: { data: [{ ...promptRow, agentId }], nextCursor: null },
     });
     expect(
       (await client(listed.fetch).prompts.list({ agentId, userId: "user-42" }))
-        .prompts[0].agentId
+        .data[0].agentId
     ).toBe(agentId);
     const url = new URL(listed.calls[0].url);
     expect(url.searchParams.get("agentId")).toBe(agentId);
@@ -132,7 +136,9 @@ describe("client.prompts", () => {
   });
 
   it("rejects malformed success payloads", async () => {
-    const { fetch } = createMockFetch({ body: { prompts: [{ id: 1 }] } });
+    const { fetch } = createMockFetch({
+      body: { data: [{ id: 1 }], nextCursor: null },
+    });
     await expect(client(fetch).prompts.list()).rejects.toBeDefined();
   });
 });

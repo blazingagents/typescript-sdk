@@ -9,10 +9,10 @@ describe("BlazingAgentsError", () => {
     });
     const error = new BlazingAgentsError(
       {
-        code: "agent_name_conflict",
-        details: { conflictingResourceId: "ag_0123456789abcdef" },
+        code: "provider_name_conflict",
+        details: { conflictingResourceId: "prv_0123456789abcdef" },
         headers,
-        message: "An Agent with this name already exists.",
+        message: "A Provider with this name already exists.",
         param: "/name",
         requestId: "request-response",
         responseBody: "diagnostic",
@@ -23,10 +23,11 @@ describe("BlazingAgentsError", () => {
     );
     expect(error).toMatchObject({
       cause: "upstream failure",
-      code: "agent_name_conflict",
-      details: { conflictingResourceId: "ag_0123456789abcdef" },
+      code: "provider_name_conflict",
+      details: { conflictingResourceId: "prv_0123456789abcdef" },
       headers,
-      message: "[agent_name_conflict] An Agent with this name already exists.",
+      message:
+        "[provider_name_conflict] A Provider with this name already exists.",
       name: "BlazingAgentsError",
       param: "/name",
       requestId: "request-response",

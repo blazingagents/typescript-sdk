@@ -9,9 +9,11 @@ import {
 } from "../ids.ts";
 import {
   DEFAULT_AGENT_VERSIONS_LIST_LIMIT,
+  DEFAULT_AGENTS_LIST_LIMIT,
   MAX_AGENT_INSTRUCTIONS_LENGTH,
   MAX_AGENT_NAME_LENGTH,
   MAX_AGENT_VERSIONS_LIST_LIMIT,
+  MAX_AGENTS_LIST_LIMIT,
   MAX_MCP_CONNECTIONS_PER_AGENT,
 } from "../limitations.ts";
 import {
@@ -108,16 +110,19 @@ export const agentSchema = z
     path: ["providerId"],
   });
 
-export const agentsResponseSchema = z
-  .object({
-    agents: z.array(agentSchema),
-  })
-  .strip();
+export const agentsResponseSchema = paginatedResponseSchema(agentSchema);
 
 export const agentResponseSchema = agentSchema;
 
 export const agentsListQuerySchema = z
   .object({
+    cursor: cursorSchema.optional(),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_AGENTS_LIST_LIMIT)
+      .default(DEFAULT_AGENTS_LIST_LIMIT),
     userId: userIdSchema.optional(),
     workspaceId: workspaceIdSchema.optional(),
   })

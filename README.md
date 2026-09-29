@@ -21,6 +21,7 @@ requires Node.js 24 or newer.
 - Public Zod contracts for validating API requests and responses.
 - Cursor pagination and binary transfers.
 - Request correlation and a typed, forward-compatible error model.
+- End-user scoped clients for user-owned resources and generation.
 
 ## Installation
 

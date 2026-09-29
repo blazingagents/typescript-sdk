@@ -140,8 +140,11 @@ describe("promptsResponseSchema", () => {
       createdAt: iso,
       updatedAt: iso,
     };
-    expect(promptsResponseSchema.parse({ prompts: [prompt] })).toStrictEqual({
-      prompts: [prompt],
+    expect(
+      promptsResponseSchema.parse({ data: [prompt], nextCursor: null })
+    ).toStrictEqual({
+      data: [prompt],
+      nextCursor: null,
     });
   });
 });

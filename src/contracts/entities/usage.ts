@@ -8,6 +8,7 @@ import {
   MAX_USAGE_RANGE_DAYS,
   MAX_USAGE_SESSION_TOP_N,
 } from "../limitations.ts";
+import { hasUniqueValues } from "../utils.ts";
 import { userIdSchema } from "./attribution.ts";
 
 function validateUsageRange(
@@ -140,6 +141,37 @@ export const usageTotalsSchema = z
   })
   .strip();
 
+export const sessionUsageQuerySchema = z
+  .object({
+    sessionIds: z
+      .array(sessionIdSchema)
+      .min(1)
+      .max(100)
+      .refine(hasUniqueValues, {
+        message: "Session ids must be unique.",
+      }),
+    from: z.iso.date().optional(),
+    to: z.iso.date().optional(),
+  })
+  .strict()
+  .superRefine(validateUsageRange);
+
+export const sessionUsageResponseSchema = z
+  .object({
+    data: z
+      .array(
+        z
+          .object({
+            sessionId: sessionIdSchema,
+            totals: usageTotalsSchema,
+          })
+          .strip()
+      )
+      .min(1)
+      .max(100),
+  })
+  .strip();
+
 export const usageResponseSchema = z
   .object({
     buckets: z.array(usageBucketSchema),
@@ -245,3 +277,5 @@ export type UsageTotals = z.infer<typeof usageTotalsSchema>;
 export type UsageResponse = z.infer<typeof usageResponseSchema>;
 export type UsageOverviewQuery = z.infer<typeof usageOverviewQuerySchema>;
 export type UsageOverviewResponse = z.infer<typeof usageOverviewResponseSchema>;
+export type SessionUsageQuery = z.infer<typeof sessionUsageQuerySchema>;
+export type SessionUsageResponse = z.infer<typeof sessionUsageResponseSchema>;

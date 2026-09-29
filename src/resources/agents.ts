@@ -11,13 +11,6 @@ import {
 import { requestJson } from "../http.ts";
 import type { AgentsResource, HttpConfig } from "../types.ts";
 
-/**
- * `client.agents` — full CRUD over `/v1/agents`. The list endpoint is
- * unpaginated (bounded by the 100/tenant cap); create/update bodies are
- * the core zod contracts' input shapes. Responses are parsed against the
- * core wire schemas (parse-on-read).
- */
-
 export function createAgentsResource(config: HttpConfig): AgentsResource {
   const getVersion: AgentsResource["getVersion"] = async ({
     agentId,
@@ -66,6 +59,8 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         {
           signal: options.abortSignal,
           query: {
+            cursor: options.cursor,
+            limit: options.limit,
             userId: options.userId,
             workspaceId: options.workspaceId,
           },

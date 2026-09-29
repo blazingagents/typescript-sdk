@@ -120,6 +120,9 @@ async function rawRequest(
     ...(clientRequestId === undefined
       ? {}
       : { "x-client-request-id": clientRequestId }),
+    ...(config.scopeUserId === undefined
+      ? {}
+      : { "X-BA-User-Id": config.scopeUserId }),
   };
   let body: BodyInit | FormData | null = options.body ?? null;
   if (options.json !== undefined) {

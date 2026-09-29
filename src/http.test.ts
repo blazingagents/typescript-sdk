@@ -166,10 +166,10 @@ describe("requestJson", () => {
   it("preserves the complete known API error and HTTP context", async () => {
     const response = new Response(
       errorEnvelope(
-        "agent_name_conflict",
-        "An Agent with this name already exists.",
+        "provider_name_conflict",
+        "A Provider with this name already exists.",
         {
-          details: { conflictingResourceId: "ag_0123456789abcdef" },
+          details: { conflictingResourceId: "prv_0123456789abcdef" },
           param: "/name",
         }
       ),
@@ -187,9 +187,10 @@ describe("requestJson", () => {
     )) as BlazingAgentsError;
 
     expect(error).toMatchObject({
-      code: "agent_name_conflict",
-      details: { conflictingResourceId: "ag_0123456789abcdef" },
-      message: "[agent_name_conflict] An Agent with this name already exists.",
+      code: "provider_name_conflict",
+      details: { conflictingResourceId: "prv_0123456789abcdef" },
+      message:
+        "[provider_name_conflict] A Provider with this name already exists.",
       param: "/name",
       requestId: "request-response",
       status: 409,

@@ -138,12 +138,9 @@ const taskPromptSchema = z.string().trim().min(1).max(MAX_TASK_PROMPT_LENGTH);
 
 /**
  * `POST /v1/tasks` — schedule present = scheduled task; absent = on-demand.
- * `submit: true` enqueues a run immediately (on-demand's only trigger
- * alongside creation) with a server-minted random run id. This path is
- * NOT idempotent — each call creates a new task + new run. For run-level
- * idempotency, use `POST /v1/tasks/{taskId}/runs` with an idempotency key
- * (the task must already exist so the deterministic run id is stable
- * across replays).
+ * `submit: true` enqueues a run immediately. An optional `idempotencyKey`
+ * makes retries return the original Task and initial run id. Without a key,
+ * each call creates a new Task. Run creation has its own idempotency key.
  */
 export const createTaskBodySchema = z
   .object({
@@ -154,6 +151,7 @@ export const createTaskBodySchema = z
     schedule: taskScheduleInputSchema.nullable().default(null),
     enabled: z.boolean().default(true),
     submit: z.boolean().default(false),
+    idempotencyKey: z.string().trim().min(1).optional(),
     userId: userIdSchema.default(""),
     metadata: metadataSchema.default({}),
   })

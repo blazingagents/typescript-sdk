@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { chat, completion, objectGeneration } from "./generation.ts";
 import { createAgentsResource } from "./resources/agents.ts";
 import { createArtifactsResource } from "./resources/artifacts.ts";
@@ -42,12 +43,39 @@ import type {
   TasksResource,
   TenantResource,
   UsageResource,
+  UserClient,
   WorkspacesResource,
 } from "./types.ts";
 
 const DEFAULT_BASE_URL = "https://api.blazingagents.com";
 
 const TRAILING_SLASH_RE = /\/+$/;
+const scopedUserIdSchema = z
+  .string()
+  .max(256)
+  .regex(/^[\x21-\x7E](?:[\x20-\x7E]*[\x21-\x7E])?$/);
+
+function createUserClient(config: HttpConfig): UserClient {
+  const usage = createUsageResource(config);
+  return {
+    agents: createAgentsResource(config),
+    sessions: createSessionsResource(config),
+    prompts: createPromptsResource(config),
+    tasks: createTasksResource(config),
+    artifacts: createArtifactsResource(config),
+    workspaces: createWorkspacesResource(config),
+    memories: createMemoriesResource(config),
+    usage: { get: usage.get, sessions: usage.sessions },
+    agent: ({ agentId }) => ({
+      skills: createAgentSkillsResource(config, agentId),
+    }),
+    chat: (input) => chat(config, input),
+    completion: (input) => completion(config, input),
+    object: (input) => objectGeneration(config, input),
+    withOptions: (options) =>
+      createUserClient({ ...config, clientRequestId: options.clientRequestId }),
+  };
+}
 
 export class BlazingAgents {
   private readonly config: HttpConfig;
@@ -102,6 +130,14 @@ export class BlazingAgents {
 
   agent({ agentId }: { agentId: string }): AgentClient {
     return { skills: createAgentSkillsResource(this.config, agentId) };
+  }
+
+  /** Scope requests to one end user. IDs use printable ASCII, at most 256 characters, without leading or trailing spaces. */
+  forUser(userId: string): UserClient {
+    return createUserClient({
+      ...this.config,
+      scopeUserId: scopedUserIdSchema.parse(userId),
+    });
   }
 
   /**

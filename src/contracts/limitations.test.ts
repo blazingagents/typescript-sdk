@@ -30,7 +30,7 @@ import {
   MAX_PROMPT_NAME_LENGTH,
   MAX_PROMPT_TEMPLATE_BYTES,
   MAX_PROMPT_VARIABLES,
-  MAX_PROMPTS_PER_TENANT,
+  MAX_PROMPTS_LIST_LIMIT,
   MAX_PROVIDER_NAME_LENGTH,
   MAX_PROVIDERS_PER_TENANT,
   MAX_QUOTA_RESET_DAY,
@@ -99,7 +99,7 @@ describe("limitations export surface", () => {
   });
 
   it("exports the prompt caps from ticket 16", () => {
-    expectPositiveInt(MAX_PROMPTS_PER_TENANT);
+    expectPositiveInt(MAX_PROMPTS_LIST_LIMIT);
     expectPositiveInt(MAX_PROMPT_TEMPLATE_BYTES);
     expectPositiveInt(MAX_PROMPT_VARIABLES);
     expectPositiveInt(MAX_PROMPT_NAME_LENGTH);

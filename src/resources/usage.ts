@@ -1,4 +1,6 @@
 import {
+  sessionUsageQuerySchema,
+  sessionUsageResponseSchema,
   usageOverviewResponseSchemaForQuery,
   usageResponseSchema,
 } from "../contracts/entities/usage.ts";
@@ -13,6 +15,19 @@ import type { HttpConfig, UsageResource } from "../types.ts";
 
 export function createUsageResource(config: HttpConfig): UsageResource {
   return {
+    async sessions({ abortSignal, ...input }) {
+      const body = sessionUsageQuerySchema.parse(input);
+      return await requestJson(
+        config,
+        "/v1/usage/sessions",
+        {
+          method: "POST",
+          json: body,
+          signal: abortSignal,
+        },
+        sessionUsageResponseSchema
+      );
+    },
     async get({ abortSignal, ...query } = {}) {
       return await requestJson(
         config,

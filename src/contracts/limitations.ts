@@ -35,10 +35,8 @@ export const MAX_SKILL_COPY_DESTINATIONS = 30;
 export const DEFAULT_SKILLS_LIST_LIMIT = 50;
 export const MAX_SKILLS_LIST_LIMIT = 100;
 
-/**
- * Prompts — max 100 per tenant, ~10 KB template cap, name ≤ 80.
- */
-export const MAX_PROMPTS_PER_TENANT = 100;
+export const DEFAULT_PROMPTS_LIST_LIMIT = 50;
+export const MAX_PROMPTS_LIST_LIMIT = 100;
 export const MAX_PROMPT_TEMPLATE_BYTES = 10 * 1024;
 export const MAX_PROMPT_VARIABLES = 10;
 export const MAX_PROMPT_NAME_LENGTH = 80;
@@ -83,6 +81,8 @@ export const MAX_MCP_REQUEST_CONTEXT_BYTES = 16 * 1024;
 
 /** Agents — name ≤ 80, instructions ≤ 3000. */
 export const MAX_AGENT_NAME_LENGTH = 80;
+export const DEFAULT_AGENTS_LIST_LIMIT = 50;
+export const MAX_AGENTS_LIST_LIMIT = 100;
 export const MAX_AGENT_INSTRUCTIONS_LENGTH = 3000;
 export const DEFAULT_AGENT_VERSIONS_LIST_LIMIT = 50;
 export const MAX_AGENT_VERSIONS_LIST_LIMIT = 200;

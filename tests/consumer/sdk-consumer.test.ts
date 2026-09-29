@@ -108,7 +108,7 @@ describe("installed SDK consumer contract", () => {
 
       if (request.method === "GET" && request.url === "/v1/agents") {
         response.writeHead(200, { "content-type": "application/json" });
-        response.end(JSON.stringify({ agents: [agent] }));
+        response.end(JSON.stringify({ data: [agent], nextCursor: null }));
         return;
       }
 
@@ -117,7 +117,7 @@ describe("installed SDK consumer contract", () => {
         request.url === `/v1/agents?workspaceId=${workspace.id}`
       ) {
         response.writeHead(200, { "content-type": "application/json" });
-        response.end(JSON.stringify({ agents: [agent] }));
+        response.end(JSON.stringify({ data: [agent], nextCursor: null }));
         return;
       }
 
@@ -367,8 +367,8 @@ describe("installed SDK consumer contract", () => {
   it("uses the public package entry for a resource request", async () => {
     const result = await client.agents.list();
 
-    expect(result.agents).toEqual([agent]);
-    expect(result.agents[0].workspaceId).toBe(workspace.id);
+    expect(result.data).toEqual([agent]);
+    expect(result.data[0].workspaceId).toBe(workspace.id);
     expect(authorizationHeaders.at(-1)).toBe("Bearer ba_consumer_contract");
   });
 
@@ -394,7 +394,7 @@ describe("installed SDK consumer contract", () => {
   it("uses compiled Workspace and Agent attachment filters", async () => {
     await expect(
       client.agents.list({ workspaceId: workspace.id })
-    ).resolves.toEqual({ agents: [agent] });
+    ).resolves.toEqual({ data: [agent], nextCursor: null });
     await expect(client.workspaces.list({ limit: 1 })).resolves.toEqual({
       data: [workspace],
       nextCursor: null,

@@ -5,11 +5,6 @@ import {
 import { requestJson } from "../http.ts";
 import type { HttpConfig, PromptsResource } from "../types.ts";
 
-/**
- * `client.prompts` — CRUD over `/v1/prompts`. The list endpoint is
- * unpaginated (bounded by the 100/tenant cap).
- */
-
 export function createPromptsResource(config: HttpConfig): PromptsResource {
   return {
     async create({ abortSignal, ...body }) {
@@ -24,13 +19,13 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptResponseSchema
       );
     },
-    async list({ userId, agentId, abortSignal } = {}) {
+    async list({ userId, agentId, cursor, limit, abortSignal } = {}) {
       return await requestJson(
         config,
         "/v1/prompts",
         {
           signal: abortSignal,
-          query: { userId, agentId },
+          query: { userId, agentId, cursor, limit },
         },
         promptsResponseSchema
       );

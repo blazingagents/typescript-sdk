@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  sessionUsageQuerySchema,
+  sessionUsageResponseSchema,
   usageBucketSchema,
   usageGroupBySchema,
   usageOverviewQuerySchema,
@@ -41,6 +43,46 @@ describe("usageGroupBySchema", () => {
 
   it("rejects unknown groupBy", () => {
     expect(usageGroupBySchema.safeParse("hour").success).toBe(false);
+  });
+});
+
+describe("session usage", () => {
+  it("requires one to 100 unique session IDs and a valid range", () => {
+    const ids = [sessionId];
+    expect(sessionUsageQuerySchema.safeParse({ sessionIds: ids }).success).toBe(
+      true
+    );
+    expect(sessionUsageQuerySchema.safeParse({ sessionIds: [] }).success).toBe(
+      false
+    );
+    expect(
+      sessionUsageQuerySchema.safeParse({ sessionIds: [sessionId, sessionId] })
+        .success
+    ).toBe(false);
+    expect(
+      sessionUsageQuerySchema.safeParse({
+        sessionIds: Array.from({ length: 101 }, () => sessionId),
+      }).success
+    ).toBe(false);
+    expect(
+      sessionUsageQuerySchema.safeParse({ sessionIds: ids, from: "2026-01-01" })
+        .success
+    ).toBe(false);
+    expect(
+      sessionUsageResponseSchema.parse({
+        data: [
+          {
+            sessionId,
+            totals: {
+              inputTokens: 0,
+              outputTokens: 0,
+              requestCount: 0,
+              durationMs: 0,
+            },
+          },
+        ],
+      }).data
+    ).toHaveLength(1);
   });
 });
 

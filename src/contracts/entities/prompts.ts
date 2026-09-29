@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { cursorSchema, paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, promptIdSchema, tenantIdSchema } from "../ids.ts";
 import {
+  DEFAULT_PROMPTS_LIST_LIMIT,
   MAX_PROMPT_NAME_LENGTH,
   MAX_PROMPT_TEMPLATE_BYTES,
   MAX_PROMPT_VARIABLES,
+  MAX_PROMPTS_LIST_LIMIT,
 } from "../limitations.ts";
 import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
@@ -82,11 +85,20 @@ export const promptSchema = z
   })
   .strip();
 
-export const promptsResponseSchema = z
+export const promptsResponseSchema = paginatedResponseSchema(promptSchema);
+export const promptsListQuerySchema = z
   .object({
-    prompts: z.array(promptSchema),
+    cursor: cursorSchema.optional(),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_PROMPTS_LIST_LIMIT)
+      .default(DEFAULT_PROMPTS_LIST_LIMIT),
+    userId: userIdSchema.optional(),
+    agentId: agentIdSchema.optional(),
   })
-  .strip();
+  .strict();
 
 export const promptResponseSchema = promptSchema;
 
@@ -132,6 +144,7 @@ export function renderPromptTemplate(
 
 export type Prompt = z.infer<typeof promptSchema>;
 export type PromptsResponse = z.infer<typeof promptsResponseSchema>;
+export type PromptsListQuery = z.infer<typeof promptsListQuerySchema>;
 export type PromptResponse = z.infer<typeof promptResponseSchema>;
 export type CreatePromptBody = z.input<typeof createPromptBodySchema>;
 export type UpdatePromptBody = z.infer<typeof updatePromptBodySchema>;

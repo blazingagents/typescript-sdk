@@ -26,10 +26,12 @@ requires Node.js 24 or newer.
 ## Installation
 
 ```console
-npm install @blazingagents/sdk ai@7.0.84
+npm install @blazingagents/sdk ai@^7.0.84 zod@^4.5.4
 ```
 
-`ai` is a peer dependency. The SDK re-exports its `UIMessage` type.
+`ai` (`^7.0.84`) and `zod` (`^4.5.4`) are peer dependencies. The SDK
+re-exports AI SDK message types and Zod schemas, so consumers share these
+dependencies with the SDK.
 
 ## Quick start
 

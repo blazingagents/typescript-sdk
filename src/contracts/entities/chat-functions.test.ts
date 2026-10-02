@@ -38,12 +38,16 @@ describe("functionCallIdSchema", () => {
 });
 
 describe("chatFunctionNameSchema", () => {
-  it.each(["getOrder", "get_order", "a", "x-1", `a${"b".repeat(63)}`])(
-    "accepts %s",
-    (name) => {
-      expect(chatFunctionNameSchema.safeParse(name).success).toBe(true);
-    }
-  );
+  it.each([
+    "getOrder",
+    "get_order",
+    "_private",
+    "a",
+    "x-1",
+    `a${"b".repeat(63)}`,
+  ])("accepts %s", (name) => {
+    expect(chatFunctionNameSchema.safeParse(name).success).toBe(true);
+  });
 
   it.each([
     "",
@@ -181,6 +185,7 @@ describe("chatFunctionOutcomeSchema", () => {
       { kind: "output" },
       { kind: "output", value: "x".repeat(MAX_CHAT_FUNCTION_PAYLOAD_BYTES) },
       { kind: "error", message: "" },
+      { kind: "error", message: "x".repeat(4097) },
       { kind: "cancelled" },
     ]) {
       expect(chatFunctionOutcomeSchema.safeParse(candidate).success).toBe(

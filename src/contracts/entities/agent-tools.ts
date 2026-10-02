@@ -82,7 +82,7 @@ const RESERVED_CHAT_FUNCTION_NAMES: ReadonlySet<string> = new Set([
  */
 export const chatFunctionNameSchema = z
   .string()
-  .regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/)
+  .regex(/^[A-Za-z_][A-Za-z0-9_-]{0,63}$/)
   .refine(
     (name) =>
       !(RESERVED_CHAT_FUNCTION_NAMES.has(name) || name.startsWith("mcp__")),

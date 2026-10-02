@@ -224,7 +224,12 @@ export const chatFunctionCallEventSchema = z
 export const chatFunctionOutcomeSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("output"), value: z.json() }).strict(),
-    z.object({ kind: z.literal("error"), message: z.string().min(1) }).strict(),
+    z
+      .object({
+        kind: z.literal("error"),
+        message: z.string().min(1).max(4096),
+      })
+      .strict(),
   ])
   .refine(
     (outcome) => jsonByteLength(outcome) <= MAX_CHAT_FUNCTION_PAYLOAD_BYTES,

@@ -38,20 +38,17 @@ describe("functionCallIdSchema", () => {
 });
 
 describe("chatFunctionNameSchema", () => {
-  it.each([
-    "getOrder",
-    "get_order",
-    "_private",
-    "a",
-    "x-1",
-    `a${"b".repeat(63)}`,
-  ])("accepts %s", (name) => {
-    expect(chatFunctionNameSchema.safeParse(name).success).toBe(true);
-  });
+  it.each(["getOrder", "get_order", "a", "x-1", `a${"b".repeat(63)}`])(
+    "accepts %s",
+    (name) => {
+      expect(chatFunctionNameSchema.safeParse(name).success).toBe(true);
+    }
+  );
 
   it.each([
     "",
     "1abc",
+    "_private",
     "has space",
     "dot.name",
     `a${"b".repeat(64)}`,

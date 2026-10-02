@@ -1,7 +1,14 @@
 import { createTextStreamResponse, parsePartialJson } from "ai";
+import { toolApprovalsResponseSchema } from "./contracts/entities/sessions.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
-import { requestStream } from "./http.ts";
+import {
+  type ChatFunctions,
+  dispatchChatFunctions,
+  type FunctionDispatchTarget,
+  toChatFunctionDefinitions,
+} from "./functions.ts";
+import { requestJson, requestStream } from "./http.ts";
 import type {
   ChatInput,
   ChatResult,
@@ -10,6 +17,7 @@ import type {
   HttpConfig,
   ObjectInput,
   ObjectResult,
+  ResumeChatInput,
   TerminalStreamResult,
 } from "./types.ts";
 
@@ -18,6 +26,10 @@ export async function chat(
   input: ChatInput
 ): Promise<ChatResult> {
   const body = buildChatBody(input);
+  const functions = activeFunctions(input.functions);
+  if (functions) {
+    body.functions = toChatFunctionDefinitions(functions);
+  }
   /**
    * URL presence is the mode: no `sessionId` → create
    * (`POST /v1/agents/:agentId/sessions`, server mints the `ss_` id,
@@ -34,7 +46,56 @@ export async function chat(
     clientRequestId: input.clientRequestId,
     ...(input.abortSignal ? { signal: input.abortSignal } : {}),
   });
-  return buildChatResult(response, input.sessionId);
+  return buildChatResult(config, response, input.sessionId, {
+    agentId: input.agentId,
+    functions,
+    abortSignal: input.abortSignal,
+  });
+}
+
+/**
+ * Reattaches handlers to a tool-approval continuation that waits for them.
+ * Locates the Session's active continuation and starts or joins it through
+ * the explicit backend resume operation.
+ */
+export async function resumeChat(
+  config: HttpConfig,
+  input: ResumeChatInput
+): Promise<ChatResult> {
+  const sessionPath = `/v1/agents/${input.agentId}/sessions/${input.sessionId}`;
+  const { continuation } = await requestJson(
+    config,
+    `${sessionPath}/tool-approvals`,
+    { signal: input.abortSignal },
+    toolApprovalsResponseSchema
+  );
+  if (continuation?.state !== "queued" && continuation?.state !== "running") {
+    throw new BlazingAgentsError({
+      code: "not_found",
+      message: "The Session has no tool approval continuation to resume.",
+    });
+  }
+  const response = await requestStream(
+    config,
+    `${sessionPath}/tool-approval-continuations/${continuation.id}/resume`,
+    {
+      json: {},
+      method: "POST",
+      clientRequestId: input.clientRequestId,
+      ...(input.abortSignal ? { signal: input.abortSignal } : {}),
+    }
+  );
+  return buildChatResult(config, response, input.sessionId, {
+    agentId: input.agentId,
+    functions: activeFunctions(input.functions),
+    abortSignal: input.abortSignal,
+  });
+}
+
+function activeFunctions(
+  functions: ChatFunctions | undefined
+): ChatFunctions | undefined {
+  return functions && Object.keys(functions).length > 0 ? functions : undefined;
 }
 
 function buildChatBody(input: ChatInput): Record<string, unknown> {
@@ -111,35 +172,56 @@ function sessionIdFromLocation(
 }
 
 function buildChatResult(
+  config: HttpConfig,
   response: Response,
-  resumeSessionId: string | undefined
+  resumeSessionId: string | undefined,
+  dispatch: Omit<FunctionDispatchTarget, "functions" | "sessionId"> &
+    Partial<Pick<FunctionDispatchTarget, "functions">>
 ): ChatResult {
-  const terminalResult = buildTerminalStreamResult(response, "chat");
   /**
    * `sessionId` resolves from the `Location` header on create, or to the
    * passed id on resume. Read eagerly (the header is available before the
    * body streams) so awaiting `result.sessionId` does not depend on
    * draining the stream.
    */
-  let sessionIdPromise: Promise<string>;
-  if (resumeSessionId === undefined) {
+  let sessionId: string | undefined = resumeSessionId;
+  let sessionIdError: unknown;
+  if (sessionId === undefined) {
     try {
-      sessionIdPromise = Promise.resolve(
-        sessionIdFromLocation(response, terminalResult.requestId)
+      sessionId = sessionIdFromLocation(
+        response,
+        response.headers.get("x-request-id") ?? undefined
       );
     } catch (error) {
-      sessionIdPromise = Promise.reject(error);
+      sessionIdError = error;
     }
-  } else {
-    sessionIdPromise = Promise.resolve(resumeSessionId);
   }
+  const sessionIdPromise =
+    sessionId === undefined
+      ? Promise.reject(sessionIdError)
+      : Promise.resolve(sessionId);
   sessionIdPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
   });
+  const streamResponse =
+    dispatch.functions && sessionId !== undefined && response.body
+      ? new Response(
+          dispatchChatFunctions(
+            config,
+            { ...dispatch, functions: dispatch.functions, sessionId },
+            response.body
+          ),
+          {
+            headers: response.headers,
+            status: response.status,
+            statusText: response.statusText,
+          }
+        )
+      : response;
 
   return {
     sessionId: sessionIdPromise,
-    ...terminalResult,
+    ...buildTerminalStreamResult(streamResponse, "chat"),
   };
 }
 

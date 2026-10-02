@@ -8,7 +8,7 @@ import {
   tenantIdSchema,
   turnIdSchema,
 } from "../ids.ts";
-import { AGENT_TOOL_CATALOG } from "./agent-tools.ts";
+import { chatFunctionNameSchema } from "./agent-tools.ts";
 import { agentModelIdSchema, agentVersionNumberSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
@@ -175,26 +175,8 @@ export const MAX_CHAT_FUNCTIONS = 32;
 export const MAX_CHAT_FUNCTION_DEFINITIONS_BYTES = 64 * 1024;
 export const MAX_CHAT_FUNCTION_PAYLOAD_BYTES = 256 * 1024;
 
-const RESERVED_CHAT_FUNCTION_NAMES: ReadonlySet<string> = new Set([
-  ...AGENT_TOOL_CATALOG.flatMap((group) => group.tools),
-  "activate_skill",
-]);
-
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).byteLength;
-
-/**
- * A model-facing tool name. Built-in tool names and the `mcp__` prefix used
- * for MCP tools are reserved so a caller function never shadows them.
- */
-export const chatFunctionNameSchema = z
-  .string()
-  .regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/)
-  .refine(
-    (name) =>
-      !(RESERVED_CHAT_FUNCTION_NAMES.has(name) || name.startsWith("mcp__")),
-    { message: "Function name is reserved for a built-in or MCP tool." }
-  );
 
 /** One caller-local function as sent to Blazing Agents: description and JSON Schema only. */
 export const chatFunctionDefinitionSchema = z

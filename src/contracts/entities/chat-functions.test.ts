@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { functionCallIdSchema } from "../ids.ts";
+import { chatFunctionNameSchema } from "./agent-tools.ts";
 import {
   chatFunctionCallEventSchema,
   chatFunctionDefinitionSchema,
   chatFunctionDefinitionsSchema,
-  chatFunctionNameSchema,
   chatFunctionOutcomeSchema,
   chatRequestBodySchema,
   claimChatFunctionBodySchema,

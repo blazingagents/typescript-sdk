@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /** Tool groups an Agent can attach. File operations use its durable Workspace. */
 
 export const agentToolGroupIds = [
@@ -68,3 +70,21 @@ export function expandToolGroups(ids: Iterable<string>): Set<string> {
 
   return result;
 }
+
+const RESERVED_CHAT_FUNCTION_NAMES: ReadonlySet<string> = new Set([
+  ...AGENT_TOOL_CATALOG.flatMap((group) => group.tools),
+  "activate_skill",
+]);
+
+/**
+ * A model-facing tool name. Built-in tool names and the `mcp__` prefix used
+ * for MCP tools are reserved so a caller function never shadows them.
+ */
+export const chatFunctionNameSchema = z
+  .string()
+  .regex(/^[A-Za-z][A-Za-z0-9_-]{0,63}$/)
+  .refine(
+    (name) =>
+      !(RESERVED_CHAT_FUNCTION_NAMES.has(name) || name.startsWith("mcp__")),
+    { message: "Function name is reserved for a built-in or MCP tool." }
+  );

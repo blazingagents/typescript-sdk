@@ -5,13 +5,16 @@ export { receivedApiErrorResponseSchema } from "./api.ts";
 export type {
   ApprovalDecision,
   ApprovalPolicy,
+  ToolExecutionReference,
   ToolReference,
 } from "./entities/agent-approval.ts";
 export {
   approvalDecisionSchema,
   approvalPolicySchema,
+  toolExecutionReferenceSchema,
   toolReferenceSchema,
 } from "./entities/agent-approval.ts";
+export { chatFunctionNameSchema } from "./entities/agent-tools.ts";
 export {
   agentResponseSchema,
   agentSchema,
@@ -47,7 +50,6 @@ export {
   chatFunctionCallEventSchema,
   chatFunctionDefinitionSchema,
   chatFunctionDefinitionsSchema,
-  chatFunctionNameSchema,
   chatFunctionOutcomeSchema,
   chatModeSchema,
   chatRequestBodySchema,

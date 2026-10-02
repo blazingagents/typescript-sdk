@@ -154,6 +154,7 @@ const publicContractNames = [
   "toolApprovalDecisionResponseSchema",
   "toolApprovalStateSchema",
   "toolApprovalsResponseSchema",
+  "toolExecutionReferenceSchema",
   "toolReferenceSchema",
   "updateAgentBodySchema",
   "updateChatConnectionBodySchema",

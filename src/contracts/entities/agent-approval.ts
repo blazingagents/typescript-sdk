@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { mcpConnectionIdSchema } from "../ids.ts";
-import { AGENT_TOOL_CATALOG } from "./agent-tools.ts";
+import { AGENT_TOOL_CATALOG, chatFunctionNameSchema } from "./agent-tools.ts";
 
 export const approvalDecisionSchema = z.enum([
   "full",
@@ -24,6 +24,18 @@ export const toolReferenceSchema = z.discriminatedUnion("type", [
       connectionId: mcpConnectionIdSchema,
       name: z.string().min(1),
     })
+    .strict(),
+]);
+
+/**
+ * Identifies the tool behind one execution or approval record. Caller-local
+ * functions appear here for display and audit only; approval policies keep
+ * `toolReferenceSchema`, so function names never become Agent configuration.
+ */
+export const toolExecutionReferenceSchema = z.discriminatedUnion("type", [
+  ...toolReferenceSchema.options,
+  z
+    .object({ type: z.literal("function"), name: chatFunctionNameSchema })
     .strict(),
 ]);
 
@@ -59,5 +71,8 @@ export const approvalPolicySchema = z
 
 export type ApprovalPolicy = z.infer<typeof approvalPolicySchema>;
 export type ToolReference = z.infer<typeof toolReferenceSchema>;
+export type ToolExecutionReference = z.infer<
+  typeof toolExecutionReferenceSchema
+>;
 
 export type ApprovalDecision = z.infer<typeof approvalDecisionSchema>;

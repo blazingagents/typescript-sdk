@@ -1,8 +1,6 @@
 import {
   agentResponseSchema,
   agentsResponseSchema,
-  agentVersionSchema,
-  agentVersionsResponseSchema,
 } from "../contracts/entities/agents.ts";
 import {
   mcpAttachmentResponseSchema,
@@ -12,17 +10,6 @@ import { requestJson } from "../http.ts";
 import type { AgentsResource, HttpConfig } from "../types.ts";
 
 export function createAgentsResource(config: HttpConfig): AgentsResource {
-  const getVersion: AgentsResource["getVersion"] = async ({
-    agentId,
-    version,
-    abortSignal,
-  }) =>
-    requestJson(
-      config,
-      `/v1/agents/${agentId}/versions/${version}`,
-      { signal: abortSignal },
-      agentVersionSchema
-    );
   const update: AgentsResource["update"] = async ({
     agentId,
     abortSignal,
@@ -92,18 +79,6 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentResponseSchema
       );
     },
-    getVersion,
-    async listVersions({ agentId, ...options }) {
-      return await requestJson(
-        config,
-        `/v1/agents/${agentId}/versions`,
-        {
-          signal: options.abortSignal,
-          query: { cursor: options.cursor, limit: options.limit },
-        },
-        agentVersionsResponseSchema
-      );
-    },
     async listMcpAttachments({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -111,30 +86,6 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         { signal: abortSignal },
         mcpAttachmentsResponseSchema
       );
-    },
-    async restoreVersion({ agentId, version: versionNumber, abortSignal }) {
-      const version = await getVersion({
-        agentId,
-        version: versionNumber,
-        abortSignal,
-      });
-      return update({
-        agentId,
-        abortSignal,
-        approvalInChat: version.approvalInChat,
-        approvalInTasks: version.approvalInTasks,
-        name: version.name,
-        model: version.model,
-        thinkingLevel: version.thinkingLevel,
-        autoCompaction: version.autoCompaction,
-        compactionReserveTokens: version.compactionReserveTokens,
-        providerId: version.providerId,
-        memoryInjectionEnabled: version.memoryInjectionEnabled,
-        tools: version.tools,
-        instructions: version.instructions,
-        metadata: version.metadata,
-        mcpConnectionIds: version.mcpConnectionIds,
-      });
     },
     update,
     async updateMcpAttachment({

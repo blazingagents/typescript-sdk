@@ -12,7 +12,6 @@ export interface RelayContext {
   functions?: ChatFunctions;
   metadata?: Record<string, unknown>;
   userId: string;
-  version?: number;
 }
 
 export interface SessionOwnershipStore {
@@ -88,7 +87,6 @@ export function createChatRelay(
           ? {
               ...chatInput,
               trigger: "submit-message",
-              version: context.version,
             }
           : {
               ...chatInput,
@@ -178,7 +176,6 @@ export function createCompletionRelay(
         prompt: body.prompt,
         abortSignal: request.signal,
         userId: context.userId,
-        version: context.version,
       });
       return result.toResponse();
     } catch (error) {

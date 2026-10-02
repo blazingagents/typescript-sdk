@@ -20,7 +20,6 @@ const context: RelayContext = {
   agentId: "ag_0123456789abcdef",
   metadata: { plan: "demo" },
   userId: "user-a",
-  version: 2,
 };
 
 function request(body: unknown): Request {
@@ -108,7 +107,6 @@ describe("relay factories", () => {
         sessionId: undefined,
         trigger: "submit-message",
         userId: "attacker",
-        version: 99,
       })
     );
 
@@ -121,7 +119,6 @@ describe("relay factories", () => {
       abortSignal: expect.any(AbortSignal),
       trigger: "submit-message",
       userId: context.userId,
-      version: 2,
     });
     expect(store.recordOwner).toHaveBeenCalledWith(
       "ss_0123456789abcdef",
@@ -258,7 +255,6 @@ describe("relay factories", () => {
       prompt: "Explain",
       abortSignal: expect.any(AbortSignal),
       userId: context.userId,
-      version: 2,
     });
   });
 

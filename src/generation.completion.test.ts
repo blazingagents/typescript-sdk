@@ -21,19 +21,6 @@ describe("client.completion", () => {
     expect(calls[0].init?.method).toBe("POST");
   });
 
-  it("sends the optional Version Pin unchanged", async () => {
-    const { fetch, calls } = createMockFetch({ stream: textStream(["Hello"]) });
-    const sdk = client(fetch);
-    await sdk.completion({
-      agentId: "ag_0123456789abcdef",
-      prompt: "hi",
-      version: 7,
-    });
-
-    const body = JSON.parse(calls[0].init?.body as string);
-    expect(body.version).toBe(7);
-  });
-
   it("textStream yields text deltas", async () => {
     const { fetch } = createMockFetch({
       stream: textStream(["Hello ", "world"]),

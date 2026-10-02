@@ -3,8 +3,6 @@ import type { ApiErrorCode } from "./contracts/api.ts";
 import type {
   Agent,
   AgentsResponse,
-  AgentVersion,
-  AgentVersionsResponse,
   CreateAgentBody,
   UpdateAgentBody,
 } from "./contracts/entities/agents.ts";
@@ -73,6 +71,7 @@ import type {
   DecideToolApprovalBody,
   LatestSessionsListResponse,
   SessionMessagesResponse,
+  SessionResponse,
   SessionsListResponse,
   ToolApprovalDecisionResponse,
   ToolApprovalsResponse,
@@ -231,13 +230,11 @@ interface CorrelatedRequestInput {
 interface NewSessionInput {
   sessionId?: never;
   trigger?: "submit-message";
-  version?: number;
 }
 
 interface ExistingSessionInput {
   sessionId: string;
   trigger?: ChatTrigger;
-  version?: never;
 }
 
 type ChatSessionInput = NewSessionInput | ExistingSessionInput;
@@ -303,11 +300,7 @@ export interface TerminalStreamResult {
   toStream: () => ReadableStream<Uint8Array>;
 }
 
-interface StatelessGenerationInput
-  extends AttributionInput,
-    CorrelatedRequestInput {
-  version?: number;
-}
+type StatelessGenerationInput = AttributionInput & CorrelatedRequestInput;
 
 export interface CompletionPromptInput extends StatelessGenerationInput {
   abortSignal?: AbortSignal;
@@ -380,22 +373,12 @@ export interface AgentsResource {
   disable(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
   enable(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
   get(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
-  getVersion(
-    input: { agentId: string; version: number } & ResourceRequestOptions
-  ): Promise<AgentVersion>;
   list(input?: AgentsListOptions): Promise<AgentsResponse>;
   listMcpAttachments(
     input: { agentId: string } & ResourceRequestOptions
   ): Promise<McpAttachmentsResponse>;
-  listVersions(
-    input: { agentId: string } & AgentVersionsListOptions
-  ): Promise<AgentVersionsResponse>;
   removeAvatar(
     input: { agentId: string } & ResourceRequestOptions
-  ): Promise<Agent>;
-  /** Copies an immutable Version into the Agent, creating a new latest Version. */
-  restoreVersion(
-    input: { agentId: string; version: number } & ResourceRequestOptions
   ): Promise<Agent>;
   /** A concrete `workspaceId` switches the Agent; detachment is unsupported. */
   update(
@@ -445,11 +428,6 @@ export interface WorkspacesListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
   userId?: string;
-}
-
-export interface AgentVersionsListOptions extends ResourceRequestOptions {
-  cursor?: string;
-  limit?: number;
 }
 
 export interface ArtifactsListOptions extends ResourceRequestOptions {
@@ -605,6 +583,9 @@ export interface SessionsResource {
       deleteArtifacts: boolean;
     } & ResourceRequestOptions
   ): Promise<void>;
+  get(
+    input: { agentId: string; sessionId: string } & ResourceRequestOptions
+  ): Promise<SessionResponse>;
   joinToolApprovalContinuation(
     input: {
       agentId: string;

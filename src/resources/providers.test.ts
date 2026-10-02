@@ -161,15 +161,15 @@ describe("client.providers", () => {
     expect(calls[0].url).toBe(`${BASE}/v1/providers/prv_0123456789abcdef`);
   });
 
-  it("delete exposes historical Version invalidation confirmation", async () => {
+  it("delete exposes saved snapshot invalidation confirmation", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
     const c = client(fetch);
     await c.providers.delete({
       providerId: "prv_0123456789abcdef",
-      confirmVersionInvalidation: true,
+      confirmSnapshotInvalidation: true,
     });
     expect(calls[0].url).toBe(
-      `${BASE}/v1/providers/prv_0123456789abcdef?confirmVersionInvalidation=true`
+      `${BASE}/v1/providers/prv_0123456789abcdef?confirmSnapshotInvalidation=true`
     );
   });
 });

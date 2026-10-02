@@ -8,11 +8,9 @@ import {
   workspaceIdSchema,
 } from "../ids.ts";
 import {
-  DEFAULT_AGENT_VERSIONS_LIST_LIMIT,
   DEFAULT_AGENTS_LIST_LIMIT,
   MAX_AGENT_INSTRUCTIONS_LENGTH,
   MAX_AGENT_NAME_LENGTH,
-  MAX_AGENT_VERSIONS_LIST_LIMIT,
   MAX_AGENTS_LIST_LIMIT,
   MAX_MCP_CONNECTIONS_PER_AGENT,
 } from "../limitations.ts";
@@ -57,12 +55,6 @@ export const agentMcpConnectionIdsSchema = z
     message: "MCP connection ids must be unique.",
   });
 
-export const agentVersionNumberSchema = z
-  .number()
-  .int()
-  .min(1)
-  .max(2_147_483_647);
-
 export const agentStatusSchema = z.enum(["active", "disabled"]);
 
 const providerModelPairMessage =
@@ -101,7 +93,6 @@ export const agentSchema = z
     avatarUrl: z.url().nullable(),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
-    version: agentVersionNumberSchema,
     status: agentStatusSchema,
   })
   .strip()
@@ -128,12 +119,9 @@ export const agentsListQuerySchema = z
   })
   .strict();
 
-export const agentVersionSchema = z
+export const agentConfigSchema = z
   .object({
     ...approvalFields,
-    agentId: agentIdSchema,
-    tenantId: tenantIdSchema,
-    version: agentVersionNumberSchema,
     name: agentSchema.shape.name,
     model: agentSchema.shape.model,
     thinkingLevel: agentSchema.shape.thinkingLevel,
@@ -145,28 +133,12 @@ export const agentVersionSchema = z
     instructions: agentSchema.shape.instructions,
     metadata: agentSchema.shape.metadata,
     mcpConnectionIds: agentSchema.shape.mcpConnectionIds,
-    createdAt: agentSchema.shape.createdAt,
   })
   .strip()
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],
   });
-
-export const agentVersionsListQuerySchema = z
-  .object({
-    cursor: cursorSchema.optional(),
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_AGENT_VERSIONS_LIST_LIMIT)
-      .default(DEFAULT_AGENT_VERSIONS_LIST_LIMIT),
-  })
-  .strict();
-
-export const agentVersionsResponseSchema =
-  paginatedResponseSchema(agentVersionSchema);
 
 export const createAgentBodySchema = z
   .object({
@@ -237,11 +209,7 @@ export type Agent = z.infer<typeof agentSchema>;
 export type AgentsResponse = z.infer<typeof agentsResponseSchema>;
 export type AgentResponse = z.infer<typeof agentResponseSchema>;
 export type AgentsListQuery = z.infer<typeof agentsListQuerySchema>;
-export type AgentVersion = z.infer<typeof agentVersionSchema>;
+export type AgentConfig = z.infer<typeof agentConfigSchema>;
 export type AgentStatus = z.infer<typeof agentStatusSchema>;
-export type AgentVersionsListQuery = z.infer<
-  typeof agentVersionsListQuerySchema
->;
-export type AgentVersionsResponse = z.infer<typeof agentVersionsResponseSchema>;
 export type CreateAgentBody = z.input<typeof createAgentBodySchema>;
 export type UpdateAgentBody = z.input<typeof updateAgentBodySchema>;

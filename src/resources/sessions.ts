@@ -1,6 +1,7 @@
 import {
   latestSessionsListResponseSchema,
   sessionMessagesResponseSchema,
+  sessionResponseSchema,
   sessionsListResponseSchema,
   toolApprovalDecisionResponseSchema,
   toolApprovalsResponseSchema,
@@ -11,7 +12,7 @@ import { requestJson, requestStream } from "../http.ts";
 import type { HttpConfig, SessionsResource } from "../types.ts";
 
 /**
- * `client.sessions` — list/get-messages/delete over
+ * `client.sessions` reads, paginates, and deletes Sessions under
  * `/v1/agents/:agentId/sessions`. Pagination is manual: the SDK returns
  * the page as-is (`{ data, nextCursor }` verbatim); the caller passes
  * `nextCursor` back as `cursor` on the next call.
@@ -19,6 +20,14 @@ import type { HttpConfig, SessionsResource } from "../types.ts";
 
 export function createSessionsResource(config: HttpConfig): SessionsResource {
   return {
+    async get({ agentId, sessionId, abortSignal }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentId}/sessions/${sessionId}`,
+        { signal: abortSignal },
+        sessionResponseSchema
+      );
+    },
     async decideToolApproval({
       agentId,
       sessionId,

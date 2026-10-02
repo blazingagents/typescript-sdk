@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
+import { agentConfigFixture } from "../contracts/test/fixtures/tasks.ts";
 import { createMockFetch } from "../test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
@@ -7,7 +8,6 @@ const taskRow = {
   id: "tk_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
   agentId: "ag_0123456789abcdef",
-  agentVersion: null,
   name: "Daily",
   prompt: "Run",
   schedule: null,
@@ -26,7 +26,7 @@ const taskRunRow = {
   taskId: "tk_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
   agentId: "ag_0123456789abcdef",
-  agentVersion: 1,
+  agentConfig: agentConfigFixture,
   sessionId: "ss_0123456789abcdef",
   turnId: null,
   status: "queued",
@@ -117,34 +117,6 @@ describe("client.tasks", () => {
     const body = JSON.parse(calls[0].init?.body as string);
     expect(body.userId).toBe("user-42");
     expect(body.metadata).toEqual({ tier: "pro" });
-  });
-
-  it("create and update send Agent Version Pin changes through shared bodies", async () => {
-    const createMock = createMockFetch({
-      body: {
-        task: { ...taskRow, agentVersion: 7 },
-        runId: null,
-      },
-    });
-    const created = await client(createMock.fetch).tasks.create({
-      agentId: "ag_0123456789abcdef",
-      agentVersion: 7,
-      name: "Pinned",
-      prompt: "Run Version 7",
-    });
-    expect(created.task.agentVersion).toBe(7);
-    expect(JSON.parse(createMock.calls[0].init?.body as string)).toMatchObject({
-      agentVersion: 7,
-    });
-
-    const updateMock = createMockFetch({ body: taskRow });
-    await client(updateMock.fetch).tasks.update({
-      taskId: "tk_0123456789abcdef",
-      agentVersion: null,
-    });
-    expect(JSON.parse(updateMock.calls[0].init?.body as string)).toEqual({
-      agentVersion: null,
-    });
   });
 
   it("list gets /v1/tasks with agentId+cursor+limit", async () => {

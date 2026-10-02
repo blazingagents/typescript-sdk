@@ -1,14 +1,12 @@
 import { z } from "zod";
 import {
-  agentIdSchema,
   providerIdSchema,
   providerKeyFragmentSchema,
   sessionIdSchema,
-  taskIdSchema,
+  taskRunIdSchema,
   tenantIdSchema,
 } from "../ids.ts";
 import { MAX_PROVIDER_NAME_LENGTH } from "../limitations.ts";
-import { agentVersionNumberSchema } from "./agents.ts";
 
 /**
  * Provider type — the enum of model providers we support. Selects catalog
@@ -95,16 +93,8 @@ export const providerModelsResponseSchema = z
 
 export const providerHistoricalUseDetailsSchema = z
   .object({
-    agentVersions: z.array(
-      z
-        .object({
-          agentId: agentIdSchema,
-          version: agentVersionNumberSchema,
-        })
-        .strip()
-    ),
     sessionIds: z.array(sessionIdSchema),
-    taskIds: z.array(taskIdSchema),
+    taskRunIds: z.array(taskRunIdSchema),
   })
   .strip();
 
@@ -157,7 +147,7 @@ export type ProviderHistoricalUseDetails = z.infer<
   typeof providerHistoricalUseDetailsSchema
 >;
 export interface DeleteProviderOptions {
-  confirmVersionInvalidation?: boolean;
+  confirmSnapshotInvalidation?: boolean;
 }
 export type ProviderResponse = z.infer<typeof providerResponseSchema>;
 export type CreateProviderBody = z.infer<typeof createProviderBodySchema>;

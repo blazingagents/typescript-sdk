@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
+import { agentConfigFixture } from "../contracts/test/fixtures/tasks.ts";
 import { createMockFetch, sseStream } from "../test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
 const sessionListItem = {
-  agentVersion: null,
   id: "ss_0123456789abcdef",
   messageCount: 2,
   lastMessagePreview: "hi",
@@ -24,6 +24,20 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 }
 
 describe("client.sessions", () => {
+  it("gets a Session with its saved Agent config", async () => {
+    const response = { ...sessionListItem, agentConfig: agentConfigFixture };
+    const { fetch, calls } = createMockFetch({ body: response });
+
+    await expect(
+      client(fetch).sessions.get({
+        agentId: "ag_0123456789abcdef",
+        sessionId: "ss_0123456789abcdef",
+      })
+    ).resolves.toEqual(response);
+    expect(calls[0].url).toBe(
+      `${BASE}/v1/agents/ag_0123456789abcdef/sessions/ss_0123456789abcdef`
+    );
+  });
   it("inspects pending Tool approval state", async () => {
     const response = {
       continuation: { id: "tool-approval:ss:assistant", state: "waiting" },

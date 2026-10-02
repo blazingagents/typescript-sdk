@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentConfigSchema,
   agentSchema,
   agentStatusSchema,
   agentsListQuerySchema,
   agentsResponseSchema,
-  agentVersionNumberSchema,
-  agentVersionSchema,
-  agentVersionsListQuerySchema,
-  agentVersionsResponseSchema,
   createAgentBodySchema,
   updateAgentBodySchema,
 } from "./agents.ts";
@@ -41,13 +38,9 @@ const baseAgent = {
   updatedAt: iso,
   avatarUrl: null,
   status: "active",
-  version: 1,
 };
 
-const baseAgentVersion = {
-  agentId,
-  tenantId,
-  version: 1,
+const baseAgentConfig = {
   name: "Builder",
   model: "openrouter/test-model",
   providerId,
@@ -61,10 +54,9 @@ const baseAgentVersion = {
   instructions: "Build carefully.",
   metadata: {},
   mcpConnectionIds: [],
-  createdAt: iso,
 };
 
-describe("Agent current and Version contracts", () => {
+describe("Agent current and config contracts", () => {
   it("accepts configured and unconfigured Provider-model pairs only", () => {
     expect(agentSchema.safeParse(baseAgent).success).toBe(true);
     expect(
@@ -78,16 +70,16 @@ describe("Agent current and Version contracts", () => {
       false
     );
 
-    expect(agentVersionSchema.safeParse(baseAgentVersion).success).toBe(true);
+    expect(agentConfigSchema.safeParse(baseAgentConfig).success).toBe(true);
     expect(
-      agentVersionSchema.safeParse({
-        ...baseAgentVersion,
+      agentConfigSchema.safeParse({
+        ...baseAgentConfig,
         model: null,
         providerId: null,
       }).success
     ).toBe(true);
     expect(
-      agentVersionSchema.safeParse({ ...baseAgentVersion, providerId: null })
+      agentConfigSchema.safeParse({ ...baseAgentConfig, providerId: null })
         .success
     ).toBe(false);
   });
@@ -110,22 +102,28 @@ describe("Agent current and Version contracts", () => {
     ).not.toHaveProperty(field);
   });
 
-  it("keeps Workspace and Skills outside immutable Versions", () => {
-    expect(agentVersionSchema.parse(baseAgentVersion)).toEqual(
-      baseAgentVersion
-    );
+  it("keeps identity, Workspace, and Skills outside saved configurations", () => {
+    expect(agentConfigSchema.parse(baseAgentConfig)).toEqual(baseAgentConfig);
     expect(
-      agentVersionSchema.parse({ ...baseAgentVersion, workspaceId })
+      agentConfigSchema.parse({ ...baseAgentConfig, workspaceId })
     ).not.toHaveProperty("workspaceId");
     expect(
-      agentVersionSchema.parse({ ...baseAgentVersion, skills: [] })
+      agentConfigSchema.parse({ ...baseAgentConfig, skills: [] })
     ).not.toHaveProperty("skills");
+    expect(
+      agentConfigSchema.parse({
+        ...baseAgentConfig,
+        agentId,
+        tenantId,
+        version: 1,
+      })
+    ).toEqual(baseAgentConfig);
   });
 
-  it("validates Versioned provider, tools, and MCP attachments", () => {
+  it("validates saved provider, tools, and MCP attachments", () => {
     expect(
-      agentVersionSchema.safeParse({
-        ...baseAgentVersion,
+      agentConfigSchema.safeParse({
+        ...baseAgentConfig,
         providerId,
         tools: ["workspace"],
         mcpConnectionIds: [mcpConnectionId],
@@ -149,27 +147,6 @@ describe("Agent list and lifecycle contracts", () => {
   it("accepts only active and disabled lifecycle states", () => {
     expect(agentStatusSchema.options).toEqual(["active", "disabled"]);
     expect(agentStatusSchema.safeParse("archived").success).toBe(false);
-  });
-
-  it("accepts only positive signed int32 Version numbers", () => {
-    expect(agentVersionNumberSchema.parse(1)).toBe(1);
-    expect(agentVersionNumberSchema.parse(2_147_483_647)).toBe(2_147_483_647);
-    for (const value of [0, -1, 1.5, 2_147_483_648]) {
-      expect(agentVersionNumberSchema.safeParse(value).success).toBe(false);
-    }
-  });
-
-  it("defines the standard Version page", () => {
-    expect(agentVersionsListQuerySchema.parse({})).toEqual({ limit: 50 });
-    expect(
-      agentVersionsListQuerySchema.parse({ cursor: "opaque", limit: "200" })
-    ).toEqual({ cursor: "opaque", limit: 200 });
-    expect(
-      agentVersionsResponseSchema.parse({
-        data: [baseAgentVersion],
-        nextCursor: null,
-      })
-    ).toEqual({ data: [baseAgentVersion], nextCursor: null });
   });
 });
 
@@ -245,7 +222,7 @@ describe("Agent mutation contracts", () => {
     );
   });
 
-  it("accepts ordinary versioned updates", () => {
+  it("accepts ordinary configuration updates", () => {
     expect(
       updateAgentBodySchema.parse({
         model: "openrouter/test-model",

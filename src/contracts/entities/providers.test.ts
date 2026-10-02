@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createProviderBodySchema,
+  providerHistoricalUseDetailsSchema,
   providerModelsResponseSchema,
   providerResponseSchema,
   providerSchema,
@@ -9,6 +10,22 @@ import {
   providerTypeSchema,
   updateProviderBodySchema,
 } from "./providers.ts";
+
+describe("providerHistoricalUseDetailsSchema", () => {
+  it("identifies saved Sessions and active TaskRuns", () => {
+    const details = {
+      sessionIds: ["ss_0123456789abcdef"],
+      taskRunIds: ["tr_0123456789abcdef"],
+    };
+    expect(providerHistoricalUseDetailsSchema.parse(details)).toEqual(details);
+    expect(
+      providerHistoricalUseDetailsSchema.safeParse({
+        ...details,
+        taskRunIds: ["tk_0123456789abcdef"],
+      }).success
+    ).toBe(false);
+  });
+});
 
 describe("providerModelsResponseSchema", () => {
   it("accepts the normalized models envelope", () => {

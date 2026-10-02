@@ -1,45 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
 import { agentRow, createMockFetch, errorEnvelope } from "../test/fixtures.ts";
-import type { BlazingAgentsFetch } from "../types.ts";
 
 const BASE = "http://localhost:8787";
 
 function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
   return new BlazingAgents({ apiKey: "ba_test", baseUrl: BASE, fetch });
 }
-
-const agentVersion = {
-  agentId: "ag_0123456789abcdef",
-  tenantId: "ten_0123456789abcdef",
-  version: 3,
-  approvalInChat: {
-    default: "manual",
-    overrides: [
-      {
-        tool: {
-          type: "mcp",
-          connectionId: "mcp_0123456789abcdef",
-          name: "send_mail",
-        },
-        decision: "auto",
-      },
-    ],
-  },
-  approvalInTasks: { default: "deny", overrides: [] },
-  thinkingLevel: "high",
-  name: "Historical Builder",
-  model: "anthropic/claude-sonnet-4.5",
-  providerId: "prv_0123456789abcdef",
-  autoCompaction: false,
-  compactionReserveTokens: 32_000,
-  memoryInjectionEnabled: true,
-  tools: ["workspace", "write_todos"],
-  instructions: "Historical instructions.",
-  metadata: { source: "version-3" },
-  mcpConnectionIds: ["mcp_0123456789abcdef"],
-  createdAt: "2026-07-19T12:00:00.000Z",
-};
 
 describe("client.agents", () => {
   it("serializes policies, preserves omitted updates, and parses read responses", async () => {
@@ -240,102 +207,6 @@ describe("client.agents", () => {
     const agent = await c.agents.get({ agentId: "ag_0123456789abcdef" });
     expect(agent.id).toBe("ag_0123456789abcdef");
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef`);
-  });
-
-  it("lists full Agent Versions with optional pagination", async () => {
-    const { fetch, calls } = createMockFetch({
-      body: { data: [agentVersion], nextCursor: "next" },
-    });
-
-    await expect(
-      client(fetch).agents.listVersions({
-        agentId: "ag_0123456789abcdef",
-        cursor: "opaque page",
-        limit: 25,
-      })
-    ).resolves.toEqual({ data: [agentVersion], nextCursor: "next" });
-    expect(calls[0].url).toBe(
-      `${BASE}/v1/agents/ag_0123456789abcdef/versions?cursor=opaque+page&limit=25`
-    );
-  });
-
-  it("lists Agent Versions without query parameters when options are omitted", async () => {
-    const { fetch, calls } = createMockFetch({
-      body: { data: [], nextCursor: null },
-    });
-
-    await client(fetch).agents.listVersions({ agentId: "ag_0123456789abcdef" });
-
-    expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef/versions`);
-  });
-
-  it("gets one full immutable Agent Version", async () => {
-    const { fetch, calls } = createMockFetch({ body: agentVersion });
-
-    await expect(
-      client(fetch).agents.getVersion({
-        agentId: "ag_0123456789abcdef",
-        version: 3,
-      })
-    ).resolves.toEqual(agentVersion);
-    expect(calls[0].url).toBe(
-      `${BASE}/v1/agents/ag_0123456789abcdef/versions/3`
-    );
-  });
-
-  it("restores by copying every versioned field through ordinary update", async () => {
-    const abortSignal = new AbortController().signal;
-    const fetch = vi
-      .fn<BlazingAgentsFetch>()
-      .mockResolvedValueOnce(Response.json(agentVersion))
-      .mockResolvedValueOnce(
-        Response.json(
-          agentRow({
-            name: agentVersion.name,
-            autoCompaction: false,
-            compactionReserveTokens: 32_000,
-            memoryInjectionEnabled: true,
-            version: 4,
-          })
-        )
-      );
-
-    await expect(
-      client(fetch).agents.restoreVersion({
-        abortSignal,
-        agentId: "ag_0123456789abcdef",
-        version: 3,
-      })
-    ).resolves.toMatchObject({
-      name: "Historical Builder",
-      version: 4,
-    });
-
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(fetch.mock.calls[0][1]?.signal).toBe(abortSignal);
-    expect(fetch.mock.calls[1][1]?.signal).toBe(abortSignal);
-    expect(fetch.mock.calls[0][0]).toBe(
-      `${BASE}/v1/agents/ag_0123456789abcdef/versions/3`
-    );
-    expect(fetch.mock.calls[1][0]).toBe(
-      `${BASE}/v1/agents/ag_0123456789abcdef`
-    );
-    expect(fetch.mock.calls[1][1]?.method).toBe("PUT");
-    expect(JSON.parse(fetch.mock.calls[1][1]?.body as string)).toEqual({
-      approvalInChat: agentVersion.approvalInChat,
-      approvalInTasks: agentVersion.approvalInTasks,
-      name: agentVersion.name,
-      model: agentVersion.model,
-      providerId: agentVersion.providerId,
-      thinkingLevel: agentVersion.thinkingLevel,
-      autoCompaction: agentVersion.autoCompaction,
-      compactionReserveTokens: agentVersion.compactionReserveTokens,
-      memoryInjectionEnabled: agentVersion.memoryInjectionEnabled,
-      tools: agentVersion.tools,
-      instructions: agentVersion.instructions,
-      metadata: agentVersion.metadata,
-      mcpConnectionIds: agentVersion.mcpConnectionIds,
-    });
   });
 
   it("update PUTs /v1/agents/:id", async () => {

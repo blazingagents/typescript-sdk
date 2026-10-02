@@ -84,8 +84,6 @@ export const MAX_AGENT_NAME_LENGTH = 80;
 export const DEFAULT_AGENTS_LIST_LIMIT = 50;
 export const MAX_AGENTS_LIST_LIMIT = 100;
 export const MAX_AGENT_INSTRUCTIONS_LENGTH = 3000;
-export const DEFAULT_AGENT_VERSIONS_LIST_LIMIT = 50;
-export const MAX_AGENT_VERSIONS_LIST_LIMIT = 200;
 
 /**
  * Artifacts — 10 MiB per file, 10 publications per Tool call, and 100

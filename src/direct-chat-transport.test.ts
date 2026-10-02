@@ -260,7 +260,6 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
       getClient: () => new BlazingAgents({ apiKey, baseUrl: BASE, fetch }),
-      version: 3,
       userId: "user-1",
       metadata: { source: "playground" },
     });
@@ -278,7 +277,6 @@ describe("BlazingAgentsDirectChatTransport", () => {
         body: {
           message,
           trigger: "submit-message",
-          version: 3,
           userId: "user-1",
           metadata: { source: "playground" },
         },

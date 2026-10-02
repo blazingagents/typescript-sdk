@@ -75,7 +75,6 @@ describe("apiErrorCodeSchema", () => {
       "checkout_evidence_mismatch",
       "agent_disabled",
       "admin_agent_managed",
-      "agent_version_not_found",
       "agent_mcp_connection_not_found",
       "agent_mcp_connections_invalid",
       "provider_required",

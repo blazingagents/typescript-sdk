@@ -6,7 +6,7 @@ import {
   MAX_SESSION_MESSAGES_LIMIT,
 } from "../limitations.ts";
 import { toolExecutionReferenceSchema } from "./agent-approval.ts";
-import { agentSchema, agentVersionNumberSchema } from "./agents.ts";
+import { agentConfigSchema, agentSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
 /**
@@ -15,7 +15,6 @@ import { metadataSchema, userIdSchema } from "./attribution.ts";
  */
 export const sessionListItemSchema = z
   .object({
-    agentVersion: agentVersionNumberSchema.nullable(),
     id: sessionIdSchema,
     messageCount: z.number().int().nonnegative(),
     lastMessagePreview: z.string().nullable(),
@@ -30,11 +29,15 @@ export const sessionsListResponseSchema = paginatedResponseSchema(
   sessionListItemSchema
 );
 
+export const sessionResponseSchema = sessionListItemSchema
+  .extend({ agentConfig: agentConfigSchema })
+  .strip();
+
 /**
  * `GET /v1/sessions/latest` list item — one per Agent: the Agent's most
  * recently updated Session (optionally among one end user's Sessions).
  * Carries `agentId` and the Agent's current model, Thinking level, and status,
- * independently of the Session's pinned Version.
+ * independently of the Session's saved configuration.
  */
 export const latestSessionListItemSchema = sessionListItemSchema
   .extend({
@@ -158,6 +161,7 @@ export const toolApprovalDecisionResponseSchema = z
   .strip();
 
 export type SessionListItem = z.infer<typeof sessionListItemSchema>;
+export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
 export type LatestSessionListItem = z.infer<typeof latestSessionListItemSchema>;
 export type LatestSessionsListResponse = z.infer<

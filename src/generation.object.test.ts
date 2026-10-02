@@ -35,22 +35,6 @@ describe("client.object", () => {
     });
   });
 
-  it("sends the optional Version Pin unchanged", async () => {
-    const { fetch, calls } = createMockFetch({
-      stream: textStream([JSON.stringify({ name: "Alice" })]),
-    });
-    const sdk = client(fetch);
-    await sdk.object({
-      agentId: "ag_0123456789abcdef",
-      promptId: "prompt_0123456789abcdef",
-      schema: { type: "object" },
-      version: 9,
-    });
-
-    const body = JSON.parse(calls[0].init?.body as string);
-    expect(body.version).toBe(9);
-  });
-
   it("partialObjectStream yields cumulative partial JSON", async () => {
     const { fetch } = createMockFetch({
       stream: textStream(['{"name":"Al', 'ice"}']),

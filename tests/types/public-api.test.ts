@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
+  type AgentConfig,
   type AgentResponse,
+  agentConfigSchema,
   BlazingAgents,
   BlazingAgentsDirectChatTransport,
   type BlazingAgentsDirectChatTransportOptions,
@@ -12,18 +14,45 @@ import {
   type CreateWorkspaceBody,
   defineFunction,
   type KnownBlazingAgentsErrorCode,
+  type SessionResponse,
+  sessionResponseSchema,
   type UpdateAgentBody,
   type Workspace,
   type WorkspacesListOptions,
 } from "../../src/index.ts";
 
 const sdk = new BlazingAgents({ apiKey: "ba_test" });
+const config: AgentConfig = agentConfigSchema.parse({
+  name: "Builder",
+  model: null,
+  providerId: null,
+  thinkingLevel: null,
+  instructions: "",
+  tools: [],
+  mcpConnectionIds: [],
+  approvalInChat: { default: "full", overrides: [] },
+  approvalInTasks: { default: "full", overrides: [] },
+  autoCompaction: true,
+  compactionReserveTokens: 16_384,
+  memoryInjectionEnabled: false,
+  metadata: {},
+});
+const session: SessionResponse = sessionResponseSchema.parse({
+  id: "ss_0123456789abcdef",
+  messageCount: 0,
+  lastMessagePreview: null,
+  userId: "",
+  metadata: {},
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
+  agentConfig: config,
+});
+sdk.sessions.get({ agentId: "ag_0123456789abcdef", sessionId: session.id });
 export const directTransport = new BlazingAgentsDirectChatTransport({
   agentId: "ag_0123456789abcdef",
   getClient: async () => sdk,
   promptId: "prompt_0123456789abcdef",
   variables: { topic: "release" },
-  version: 3,
 });
 // @ts-expect-error variables require promptId
 export const transportWithInvalidOptions: BlazingAgentsDirectChatTransportOptions =
@@ -82,7 +111,6 @@ const message = {
 };
 
 sdk.chat({ agentId: "ag_0123456789abcdef", message });
-sdk.chat({ agentId: "ag_0123456789abcdef", message, version: 7 });
 // @ts-expect-error a new Session cannot regenerate a message
 sdk.chat({
   agentId: "ag_0123456789abcdef",
@@ -102,7 +130,6 @@ const assistantMessage: BlazingAgentsUIMessage = {
     blazingAgents: {
       usage: {
         agentId: "ag_0123456789abcdef",
-        agentVersion: 1,
         commitId: "commit-1",
         completedAt: "2026-07-16T10:00:01.000Z",
         durationMs: 1000,
@@ -147,11 +174,11 @@ sdk.chat({
   sessionId: "ss_0123456789abcdef",
   trigger: "regenerate-message",
 });
-// @ts-expect-error an existing Session cannot be repinned
 sdk.chat({
   agentId: "ag_0123456789abcdef",
   message,
   sessionId: "ss_0123456789abcdef",
+  // @ts-expect-error chat requests cannot select an Agent version
   version: 7,
 });
 // @ts-expect-error sessionId must be a string

@@ -17,7 +17,6 @@ describe("createTaskBodySchema", () => {
       })
     ).toStrictEqual({
       agentId,
-      agentVersion: null,
       name: "Follow up",
       prompt: "Draft the reply",
       schedule: null,
@@ -41,7 +40,6 @@ describe("createTaskBodySchema", () => {
       })
     ).toStrictEqual({
       agentId,
-      agentVersion: null,
       name: "Daily",
       prompt: "Summarize yesterday",
       schedule: {
@@ -72,7 +70,6 @@ describe("createTaskBodySchema", () => {
       })
     ).toStrictEqual({
       agentId,
-      agentVersion: null,
       name: "Daily",
       prompt: "Summarize yesterday",
       schedule: {
@@ -97,7 +94,6 @@ describe("createTaskBodySchema", () => {
       })
     ).toStrictEqual({
       agentId,
-      agentVersion: null,
       name: "Daily",
       prompt: "Summarize yesterday",
       schedule: null,
@@ -118,31 +114,6 @@ describe("createTaskBodySchema", () => {
       }).success
     ).toBe(true);
   });
-
-  it("accepts a positive Agent Version Pin", () => {
-    expect(
-      createTaskBodySchema.parse({
-        agentId,
-        agentVersion: 7,
-        name: "Pinned",
-        prompt: "Use the selected Version",
-      }).agentVersion
-    ).toBe(7);
-  });
-
-  it.each([0, 2_147_483_648])(
-    "rejects an invalid Agent Version Pin of %s",
-    (agentVersion) => {
-      expect(
-        createTaskBodySchema.safeParse({
-          agentId,
-          agentVersion,
-          name: "Pinned",
-          prompt: "Use the selected Version",
-        }).success
-      ).toBe(false);
-    }
-  );
 
   it("accepts an idempotency key when creating and submitting a task", () => {
     expect(
@@ -190,15 +161,6 @@ describe("updateTaskBodySchema", () => {
       updateTaskBodySchema.parse({ metadata: { plan: "pro" } })
     ).toStrictEqual({ metadata: { plan: "pro" } });
   });
-
-  it.each([7, null])(
-    "accepts an Agent Version Pin update of %s",
-    (agentVersion) => {
-      expect(updateTaskBodySchema.parse({ agentVersion })).toStrictEqual({
-        agentVersion,
-      });
-    }
-  );
 
   it("rejects userId on update (immutable, strict body)", () => {
     expect(updateTaskBodySchema.safeParse({ userId: "u-42" }).success).toBe(

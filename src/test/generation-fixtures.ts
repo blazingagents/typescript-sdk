@@ -13,7 +13,6 @@ export const chatMessageMetadata = {
   blazingAgents: {
     usage: {
       agentId: "ag_0123456789abcdef",
-      agentVersion: 1,
       commitId: "commit-1",
       completedAt: "2026-07-16T10:00:01.000Z",
       durationMs: 1000,

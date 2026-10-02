@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { agentConfigFixture } from "../test/fixtures/tasks.ts";
 
 import {
   decideToolApprovalBodySchema,
@@ -7,6 +8,7 @@ import {
   sessionListItemSchema,
   sessionMessagesQuerySchema,
   sessionMessagesResponseSchema,
+  sessionResponseSchema,
   sessionsListResponseSchema,
   toolApprovalDecisionResponseSchema,
   toolApprovalsResponseSchema,
@@ -16,7 +18,6 @@ const sessionId = "ss_xxxxxxxxxxxxxxxx";
 const iso = "2026-07-04T00:00:00.000Z";
 
 const baseSession = {
-  agentVersion: null,
   id: sessionId,
   messageCount: 3,
   lastMessagePreview: "Hello",
@@ -25,6 +26,24 @@ const baseSession = {
   createdAt: iso,
   updatedAt: iso,
 };
+
+describe("sessionResponseSchema", () => {
+  it("requires the saved config while list items remain compact", () => {
+    expect(sessionResponseSchema.safeParse(baseSession).success).toBe(false);
+    expect(
+      sessionResponseSchema.parse({
+        ...baseSession,
+        agentConfig: agentConfigFixture,
+      })
+    ).toEqual({ ...baseSession, agentConfig: agentConfigFixture });
+    expect(
+      sessionListItemSchema.parse({
+        ...baseSession,
+        agentConfig: agentConfigFixture,
+      })
+    ).toEqual(baseSession);
+  });
+});
 
 describe("sessionListItemSchema", () => {
   it("accepts a complete list item matching the contract shape", () => {
@@ -39,23 +58,6 @@ describe("sessionListItemSchema", () => {
       }).success
     ).toBe(true);
   });
-
-  it("accepts a positive int32 configured Agent Version Pin", () => {
-    expect(
-      sessionListItemSchema.parse({ ...baseSession, agentVersion: 7 })
-        .agentVersion
-    ).toBe(7);
-  });
-
-  it.each([0, 1.5, 2_147_483_648])(
-    "rejects malformed configured Agent Version Pin %s",
-    (agentVersion) => {
-      expect(
-        sessionListItemSchema.safeParse({ ...baseSession, agentVersion })
-          .success
-      ).toBe(false);
-    }
-  );
 
   it("rejects a malformed session id", () => {
     expect(

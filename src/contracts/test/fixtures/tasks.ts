@@ -1,3 +1,4 @@
+import type { AgentConfig } from "../../entities/agents.ts";
 import type { Task, TaskListItem, TaskRun } from "../../entities/tasks.ts";
 
 export const tenantId = "ten_xxxxxxxxxxxxxxxx";
@@ -6,13 +7,27 @@ export const taskId = "tk_xxxxxxxxxxxxxxxx";
 export const taskRunId = "tr_xxxxxxxxxxxxxxxx";
 export const sessionId = "ss_xxxxxxxxxxxxxxxx";
 export const iso = "2026-07-04T00:00:00.000Z";
+export const agentConfigFixture: AgentConfig = {
+  name: "Builder",
+  model: "openrouter/test-model",
+  providerId: "prv_xxxxxxxxxxxxxxxx",
+  thinkingLevel: null,
+  instructions: "Build carefully.",
+  tools: [],
+  mcpConnectionIds: [],
+  approvalInChat: { default: "full", overrides: [] },
+  approvalInTasks: { default: "full", overrides: [] },
+  autoCompaction: true,
+  compactionReserveTokens: 16_384,
+  memoryInjectionEnabled: false,
+  metadata: {},
+};
 
 export function createTaskFixture(overrides: Partial<Task> = {}): Task {
   return {
     id: taskId,
     tenantId,
     agentId,
-    agentVersion: null,
     name: "Follow up",
     prompt: "Draft the reply",
     schedule: null,
@@ -47,7 +62,7 @@ export function createTaskRunFixture(
     taskId,
     tenantId,
     agentId,
-    agentVersion: 1,
+    agentConfig: agentConfigFixture,
     sessionId,
     turnId: "turn_xxxxxxxxxxxxxxxx",
     status: "running",

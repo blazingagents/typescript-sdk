@@ -9,7 +9,7 @@ import {
   turnIdSchema,
 } from "../ids.ts";
 import { chatFunctionNameSchema } from "./agent-tools.ts";
-import { agentModelIdSchema, agentVersionNumberSchema } from "./agents.ts";
+import { agentModelIdSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
 /**
@@ -32,7 +32,6 @@ export const chatTriggerSchema = z.enum([
 export const usageSummarySchema = z
   .object({
     agentId: agentIdSchema,
-    agentVersion: agentVersionNumberSchema,
     commitId: z.string().trim().min(1),
     completedAt: z.iso.datetime({ offset: true }),
     durationMs: z.number().int().min(0),
@@ -278,7 +277,6 @@ export const chatRequestBodySchema = z
     variables: promptVariablesSchema.optional(),
     trigger: chatTriggerSchema.default("submit-message"),
     messageId: z.string().min(1).optional(),
-    version: agentVersionNumberSchema.optional(),
     /**
      * End-user attribution (ADR-0001), stamped on the Session at lazy
      * materialization and on every usage row this Turn records.
@@ -320,7 +318,6 @@ export const generationRequestBodySchema = z
         .object({ type: z.literal("object"), schema: jsonSchemaShapeSchema })
         .strict(),
     ]),
-    version: agentVersionNumberSchema.optional(),
     userId: userIdSchema.default(""),
     metadata: metadataSchema.default({}),
   })

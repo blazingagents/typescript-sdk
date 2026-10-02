@@ -36,7 +36,6 @@ describe("chatTriggerSchema", () => {
 describe("blazingAgentsChatMessageMetadataSchema", () => {
   const validUsage = {
     agentId: "ag_0123456789abcdef",
-    agentVersion: 3,
     commitId: "commit-1",
     completedAt: "2026-07-16T10:00:01.000Z",
     durationMs: 1000,
@@ -99,42 +98,6 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
         blazingAgents: { usage: { ...validUsage, removedField: 0 } },
       })
     ).not.toHaveProperty("blazingAgents.usage.removedField");
-  });
-
-  it("requires a positive int32 resolved Agent Version", () => {
-    const usage = {
-      agentId: "ag_0123456789abcdef",
-      commitId: "commit-1",
-      completedAt: "2026-07-16T10:00:01.000Z",
-      durationMs: 1000,
-      errorMessage: null,
-      inputTokens: 4,
-      measurementComplete: true,
-      modelDurationMs: 250,
-      metadata: {},
-      modelId: "openrouter/test-model",
-      outputTokens: 2,
-      turnId: "turn_0123456789abcdef",
-      sessionId: "ss_0123456789abcdef",
-      startedAt: "2026-07-16T10:00:00.000Z",
-      status: "succeeded",
-      stepUsages: [],
-      tenantId: "ten_0123456789abcdef",
-      userId: "",
-    };
-
-    expect(
-      blazingAgentsChatMessageMetadataSchema.safeParse({
-        blazingAgents: { usage },
-      }).success
-    ).toBe(false);
-    for (const agentVersion of [0, 2_147_483_648, 1.5]) {
-      expect(
-        blazingAgentsChatMessageMetadataSchema.safeParse({
-          blazingAgents: { usage: { ...usage, agentVersion } },
-        }).success
-      ).toBe(false);
-    }
   });
 });
 
@@ -201,21 +164,6 @@ describe("chatRequestBodySchema", () => {
       metadata: { plan: "pro" },
     });
   });
-
-  it("accepts a positive int32 Agent Version Pin", () => {
-    expect(
-      chatRequestBodySchema.parse({ ...baseBody, version: 7 }).version
-    ).toBe(7);
-  });
-
-  it.each([0, 1.5, 2_147_483_648])(
-    "rejects malformed Agent Version Pin %s",
-    (version) => {
-      expect(
-        chatRequestBodySchema.safeParse({ ...baseBody, version }).success
-      ).toBe(false);
-    }
-  );
 
   it("accepts a regenerate body with a messageId", () => {
     expect(
@@ -321,26 +269,6 @@ describe("generationRequestBodySchema", () => {
     expectTypeOf<
       Common & Literal & Stored & Variables
     >().not.toExtend<GenerationRequestBody>();
-  });
-
-  it("accepts only a positive-int32 Version Pin", () => {
-    expect(
-      generationRequestBodySchema.parse({
-        prompt: "Summarize this.",
-        output: { type: "text" },
-        version: 7,
-      })
-    ).toMatchObject({ version: 7 });
-
-    for (const version of [0, 2_147_483_648, 1.5]) {
-      expect(
-        generationRequestBodySchema.safeParse({
-          prompt: "Summarize this.",
-          output: { type: "text" },
-          version,
-        }).success
-      ).toBe(false);
-    }
   });
 
   it("accepts text and object output requests while rejecting mixed output shapes", () => {

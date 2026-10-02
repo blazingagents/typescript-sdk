@@ -10,12 +10,8 @@ const requests: [
   ["agents.list", (c, o) => c.agents.list({ userId: "user", ...o })],
   ["agents.get", (c, o) => c.agents.get({ agentId: "agent", ...o })],
   [
-    "agents.getVersion",
-    (c, o) => c.agents.getVersion({ agentId: "agent", version: 1, ...o }),
-  ],
-  [
-    "agents.listVersions",
-    (c, o) => c.agents.listVersions({ agentId: "agent", ...o }),
+    "sessions.get",
+    (c, o) => c.sessions.get({ agentId: "agent", sessionId: "session", ...o }),
   ],
   [
     "agents.listMcpAttachments",

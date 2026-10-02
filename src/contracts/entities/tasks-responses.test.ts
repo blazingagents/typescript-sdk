@@ -21,15 +21,7 @@ import {
 
 describe("taskSchema", () => {
   it("accepts a complete on-demand task", () => {
-    expect(
-      taskSchema.safeParse({ ...createTaskFixture(), agentVersion: null })
-        .success
-    ).toBe(true);
-  });
-
-  it("requires the configured Agent Version Pin", () => {
-    const { agentVersion: _, ...taskWithoutPin } = createTaskFixture();
-    expect(taskSchema.safeParse(taskWithoutPin).success).toBe(false);
+    expect(taskSchema.safeParse(createTaskFixture()).success).toBe(true);
   });
 
   it("strips extra fields", () => {
@@ -56,22 +48,18 @@ describe("taskSchema", () => {
 
 describe("taskRunSchema", () => {
   it("accepts a complete run record", () => {
-    expect(
-      taskRunSchema.safeParse({ ...createTaskRunFixture(), agentVersion: 3 })
-        .success
-    ).toBe(true);
+    expect(taskRunSchema.safeParse(createTaskRunFixture()).success).toBe(true);
   });
 
-  it("requires the resolved Agent Version", () => {
-    const { agentVersion: _, ...runWithoutVersion } = createTaskRunFixture();
-    expect(taskRunSchema.safeParse(runWithoutVersion).success).toBe(false);
+  it("requires saved Agent config", () => {
+    const { agentConfig: _, ...runWithoutConfig } = createTaskRunFixture();
+    expect(taskRunSchema.safeParse(runWithoutConfig).success).toBe(false);
   });
 
   it("accepts a null sessionId for a not-yet-started run", () => {
     expect(
       taskRunSchema.safeParse(
         createTaskRunFixture({
-          agentVersion: 3,
           sessionId: null,
           status: "queued",
           userId: "u-42",

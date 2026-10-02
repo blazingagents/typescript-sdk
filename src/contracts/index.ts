@@ -16,13 +16,12 @@ export {
 } from "./entities/agent-approval.ts";
 export { chatFunctionNameSchema } from "./entities/agent-tools.ts";
 export {
+  agentConfigSchema,
   agentResponseSchema,
   agentSchema,
   agentStatusSchema,
   agentsListQuerySchema,
   agentsResponseSchema,
-  agentVersionSchema,
-  agentVersionsResponseSchema,
   createAgentBodySchema,
   updateAgentBodySchema,
 } from "./entities/agents.ts";
@@ -164,6 +163,7 @@ export {
   sessionListItemSchema,
   sessionMessageSchema,
   sessionMessagesResponseSchema,
+  sessionResponseSchema,
   sessionsListResponseSchema,
   toolApprovalContinuationStateSchema,
   toolApprovalDecisionResponseSchema,

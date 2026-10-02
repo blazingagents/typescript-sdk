@@ -122,10 +122,6 @@ function buildChatBody(input: ChatInput): Record<string, unknown> {
   if (input.messageId !== undefined) {
     base.messageId = input.messageId;
   }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined Version Pin.
-  if (input.version !== undefined) {
-    base.version = input.version;
-  }
   if ("message" in input) {
     base.message = input.message;
   } else {
@@ -398,10 +394,6 @@ function buildStatelessGenerationBody(
   output: Record<string, unknown>
 ): Record<string, unknown> {
   const body: Record<string, unknown> = { output };
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined Version Pin.
-  if (input.version !== undefined) {
-    body.version = input.version;
-  }
   if ("prompt" in input) {
     body.prompt = input.prompt;
   } else {

@@ -19,15 +19,14 @@ export type {
 } from "./contracts/entities/agent-approval.ts";
 export type {
   Agent,
+  AgentConfig,
   AgentResponse,
   AgentsListQuery,
   AgentsResponse,
-  AgentVersion,
-  AgentVersionsListQuery,
-  AgentVersionsResponse,
   CreateAgentBody,
   UpdateAgentBody,
 } from "./contracts/entities/agents.ts";
+export { agentConfigSchema } from "./contracts/entities/agents.ts";
 export type {
   ArtifactDownloadUrlResponse,
   ArtifactListItem,
@@ -100,10 +99,12 @@ export type {
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 export type {
+  SessionResponse,
   ToolApprovalDecisionResponse,
   ToolApprovalState,
   ToolApprovalsResponse,
 } from "./contracts/entities/sessions.ts";
+export { sessionResponseSchema } from "./contracts/entities/sessions.ts";
 export type {
   CreateSkillBody,
   Skill,
@@ -151,7 +152,6 @@ export type {
   AgentSkillsResource,
   AgentsListOptions,
   AgentsResource,
-  AgentVersionsListOptions,
   ArtifactsResource,
   AttributionInput,
   BlazingAgentsErrorCode,

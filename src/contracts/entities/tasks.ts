@@ -15,7 +15,7 @@ import {
   MIN_TASK_INTERVAL_MS,
 } from "../limitations.ts";
 import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
-import { agentVersionNumberSchema } from "./agents.ts";
+import { agentConfigSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 import { sessionMessagesResponseSchema } from "./sessions.ts";
 
@@ -145,7 +145,6 @@ const taskPromptSchema = z.string().trim().min(1).max(MAX_TASK_PROMPT_LENGTH);
 export const createTaskBodySchema = z
   .object({
     agentId: agentIdSchema,
-    agentVersion: agentVersionNumberSchema.nullable().default(null),
     name: taskNameSchema,
     prompt: taskPromptSchema,
     schedule: taskScheduleInputSchema.nullable().default(null),
@@ -160,7 +159,6 @@ export const createTaskBodySchema = z
 // `PATCH /v1/tasks/{taskId}` — `agentId` and `userId` are immutable.
 export const updateTaskBodySchema = z
   .object({
-    agentVersion: agentVersionNumberSchema.nullable().optional(),
     name: taskNameSchema.optional(),
     prompt: taskPromptSchema.optional(),
     schedule: taskScheduleInputSchema.nullable().optional(),
@@ -210,7 +208,6 @@ export const taskSchema = z
     id: taskIdSchema,
     tenantId: tenantIdSchema,
     agentId: agentIdSchema,
-    agentVersion: agentVersionNumberSchema.nullable(),
     name: taskNameSchema,
     prompt: taskPromptSchema,
     schedule: taskScheduleResponseSchema.nullable(),
@@ -262,7 +259,7 @@ export const taskRunSchema = z
     taskId: taskIdSchema,
     tenantId: tenantIdSchema,
     agentId: agentIdSchema,
-    agentVersion: agentVersionNumberSchema,
+    agentConfig: agentConfigSchema,
     sessionId: sessionIdSchema.nullable(),
     turnId: turnIdSchema.nullable(),
     status: taskRunStatusSchema,

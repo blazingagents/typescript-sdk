@@ -49,23 +49,6 @@ describe("client.chat requests", () => {
     expect(await result.sessionId).toBe(mintedSessionId);
   });
 
-  it("create: sends the configured Agent Version Pin", async () => {
-    const { fetch, calls } = createMockCreateFetch(sseStream(chatChunks));
-    const c = client(fetch);
-    await c.chat({
-      agentId: "ag_0123456789abcdef",
-      message: {
-        id: "u1",
-        role: "user",
-        parts: [{ type: "text", text: "hi" }],
-      },
-      version: 7,
-    });
-
-    const body = JSON.parse(calls[0].init?.body as string);
-    expect(body.version).toBe(7);
-  });
-
   it("resume: posts to /v1/agents/:agentId/sessions/:sessionId with the message body", async () => {
     const { fetch, calls } = createMockFetch({ stream: sseStream(chatChunks) });
     const c = client(fetch);

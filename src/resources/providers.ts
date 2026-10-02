@@ -74,7 +74,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         method: "DELETE",
         signal: abortSignal,
         query: {
-          confirmVersionInvalidation: options.confirmVersionInvalidation,
+          confirmSnapshotInvalidation: options.confirmSnapshotInvalidation,
         },
       });
     },

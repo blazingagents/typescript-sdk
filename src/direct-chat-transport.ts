@@ -20,7 +20,6 @@ export type BlazingAgentsDirectChatTransportOptions = {
   onSessionId?: (sessionId: string) => Promise<void> | void;
   sessionId?: string;
   userId?: string;
-  version?: number;
 } & (
   | { promptId: string; variables?: Record<string, string> }
   | { promptId?: never; variables?: never }
@@ -70,7 +69,6 @@ export class BlazingAgentsDirectChatTransport<
       const create = {
         ...common,
         trigger: "submit-message" as const,
-        version: this.#options.version,
         userId: this.#options.userId,
         metadata: this.#options.metadata,
       };

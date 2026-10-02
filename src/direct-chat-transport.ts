@@ -1,16 +1,19 @@
 import {
   type ChatTransport,
   DefaultChatTransport,
-  isToolUIPart,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
+import { continueAfterApproval, decideApprovalResponses } from "./approvals.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
+import type { ChatFunctions } from "./functions.ts";
 import type { ChatResult } from "./types.ts";
 
 export type BlazingAgentsDirectChatTransportOptions = {
   agentId: string;
+  /** Caller-local functions for every Turn and approved continuation of this chat. */
+  functions?: ChatFunctions;
   getClient: () => BlazingAgents | Promise<BlazingAgents>;
   metadata?: Record<string, unknown>;
   /** Receives the Session ID before the response stream is consumed. */
@@ -58,6 +61,7 @@ export class BlazingAgentsDirectChatTransport<
     const client = await this.#options.getClient();
     const common = {
       agentId: this.#options.agentId,
+      functions: this.#options.functions,
       messageId: input.messageId,
       abortSignal: input.abortSignal,
     };
@@ -115,21 +119,19 @@ export class BlazingAgentsDirectChatTransport<
     if (this.#sessionId === undefined) {
       return null;
     }
-    const { continuation } = await (
-      await this.#options.getClient()
-    ).sessions.toolApprovals({
+    const client = await this.#options.getClient();
+    const { continuation } = await client.sessions.toolApprovals({
       agentId: this.#options.agentId,
       sessionId: this.#sessionId,
     });
     if (continuation?.state !== "queued" && continuation?.state !== "running") {
       return null;
     }
-    const result = await (
-      await this.#options.getClient()
-    ).sessions.joinToolApprovalContinuation({
+    const result = await continueAfterApproval(client, {
       agentId: this.#options.agentId,
       sessionId: this.#sessionId,
       continuationId: continuation.id,
+      functions: this.#options.functions,
     });
     return this.processResponseStream(result.toStream());
   }
@@ -141,35 +143,23 @@ export class BlazingAgentsDirectChatTransport<
     if (this.#sessionId === undefined) {
       throw new Error("Tool approval requires an existing Session.");
     }
-    const lastStep = last.parts.findLastIndex(
-      (part) => part.type === "step-start"
-    );
-    let continuationId: string | undefined;
-    for (const part of last.parts.slice(lastStep + 1)) {
-      if (isToolUIPart(part) && part.state === "approval-responded") {
-        const decision = await (
-          await this.#options.getClient()
-        ).sessions.decideToolApproval({
-          agentId: this.#options.agentId,
-          sessionId: this.#sessionId,
-          approvalId: part.approval.id,
-          approved: part.approval.approved,
-          reason: part.approval.reason,
-          abortSignal: input.abortSignal,
-        });
-        continuationId = decision.continuationId;
-      }
-    }
+    const client = await this.#options.getClient();
+    const target = {
+      agentId: this.#options.agentId,
+      sessionId: this.#sessionId,
+      abortSignal: input.abortSignal,
+    };
+    const continuationId = await decideApprovalResponses(client, {
+      ...target,
+      message: last,
+    });
     if (continuationId === undefined) {
       throw new Error("Tool approval response is missing an approval.");
     }
-    const continuation = await (
-      await this.#options.getClient()
-    ).sessions.joinToolApprovalContinuation({
-      agentId: this.#options.agentId,
-      sessionId: this.#sessionId,
+    const continuation = await continueAfterApproval(client, {
+      ...target,
       continuationId,
-      abortSignal: input.abortSignal,
+      functions: this.#options.functions,
     });
     return this.processResponseStream(continuation.toStream());
   }

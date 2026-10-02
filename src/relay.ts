@@ -1,11 +1,15 @@
 import { safeValidateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
+import { continueAfterApproval, decideApprovalResponses } from "./approvals.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
+import type { ChatFunctions } from "./functions.ts";
 
 export interface RelayContext {
   agentId: string;
+  /** Handlers for this authenticated request; they also resume approved continuations. */
+  functions?: ChatFunctions;
   metadata?: Record<string, unknown>;
   userId: string;
   version?: number;
@@ -16,8 +20,8 @@ export interface SessionOwnershipStore {
   recordOwner(sessionId: string, userId: string): Promise<void>;
 }
 
-interface RelayOptions {
-  client: Pick<BlazingAgents, "chat" | "completion">;
+interface RelayOptions<Method extends keyof BlazingAgents> {
+  client: Pick<BlazingAgents, Method>;
   resolveContext(request: Request): Promise<RelayContext | null>;
 }
 
@@ -32,8 +36,14 @@ const chatBodySchema = z.object({
 
 const completionBodySchema = z.object({ prompt: z.string().trim().min(1) });
 
+/**
+ * Relays useChat submissions. An assistant message carrying approval
+ * responses records each decision and then streams the continuation.
+ */
 export function createChatRelay(
-  options: RelayOptions & { sessions: SessionOwnershipStore }
+  options: RelayOptions<"chat" | "resumeChat" | "sessions"> & {
+    sessions: SessionOwnershipStore;
+  }
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {
@@ -54,9 +64,20 @@ export function createChatRelay(
       ) {
         return errorResponse(403, "forbidden", "Session is not available.");
       }
+      const message = validated.data[0] as UIMessage;
+      if (message.role === "assistant") {
+        return await relayApprovalResponses(options.client, {
+          agentId: context.agentId,
+          functions: context.functions,
+          message,
+          request,
+          sessionId: body.sessionId,
+        });
+      }
       const chatInput = {
         agentId: context.agentId,
-        message: validated.data[0] as UIMessage,
+        functions: context.functions,
+        message,
         messageId: body.messageId,
         metadata: context.metadata,
         abortSignal: request.signal,
@@ -94,8 +115,54 @@ export function createChatRelay(
   };
 }
 
+async function relayApprovalResponses(
+  client: Pick<BlazingAgents, "resumeChat" | "sessions">,
+  {
+    functions,
+    message,
+    request,
+    ...input
+  }: {
+    agentId: string;
+    functions?: ChatFunctions;
+    message: UIMessage;
+    request: Request;
+    sessionId?: string;
+  }
+): Promise<Response> {
+  if (input.sessionId === undefined) {
+    return errorResponse(
+      400,
+      "invalid_request",
+      "Tool approval requires an existing Session."
+    );
+  }
+  const target = {
+    agentId: input.agentId,
+    sessionId: input.sessionId,
+    abortSignal: request.signal,
+  };
+  const continuationId = await decideApprovalResponses(client, {
+    ...target,
+    message,
+  });
+  if (continuationId === undefined) {
+    return errorResponse(
+      400,
+      "invalid_request",
+      "The message has no tool approval responses."
+    );
+  }
+  const continuation = await continueAfterApproval(client, {
+    ...target,
+    continuationId,
+    functions,
+  });
+  return continuation.toResponse();
+}
+
 export function createCompletionRelay(
-  options: RelayOptions
+  options: RelayOptions<"completion">
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {

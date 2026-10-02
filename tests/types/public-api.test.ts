@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   type AgentResponse,
   BlazingAgents,
@@ -6,8 +7,10 @@ import {
   BlazingAgentsError,
   type BlazingAgentsErrorCode,
   type BlazingAgentsUIMessage,
+  type ChatFunctions,
   type CreateAgentBody,
   type CreateWorkspaceBody,
+  defineFunction,
   type KnownBlazingAgentsErrorCode,
   type UpdateAgentBody,
   type Workspace,
@@ -357,3 +360,30 @@ sdk.sessions.delete({
 });
 // @ts-expect-error required provider update fields remain required
 sdk.providers.update({ providerId: "prv_0123456789abcdef", abortSignal });
+
+export const typedFunctions = {
+  getOrder: defineFunction({
+    description: "Get an order",
+    inputSchema: z.object({ orderId: z.string(), count: z.coerce.number() }),
+    execute: ({ orderId, count }, { idempotencyKey, signal }) => {
+      const id: string = orderId;
+      const total: number = count;
+      return { id, total, idempotencyKey, aborted: signal.aborted };
+    },
+  }),
+} satisfies ChatFunctions;
+export const chatWithFunctions = sdk.chat({
+  agentId: "ag_0123456789abcdef",
+  message: { id: "m", role: "user", parts: [] },
+  functions: typedFunctions,
+});
+export const resumedWithFunctions = sdk.forUser("user-a").resumeChat({
+  agentId: "ag_0123456789abcdef",
+  sessionId: "ss_0123456789abcdef",
+  functions: typedFunctions,
+});
+// @ts-expect-error resumeChat requires handlers
+export const resumedWithoutFunctions = sdk.resumeChat({
+  agentId: "ag_0123456789abcdef",
+  sessionId: "ss_0123456789abcdef",
+});

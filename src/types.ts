@@ -114,6 +114,7 @@ import type {
   Workspace,
   WorkspacesListResponse,
 } from "./contracts/entities/workspaces.ts";
+import type { ChatFunctions } from "./functions.ts";
 
 export type KnownBlazingAgentsErrorCode =
   | ApiErrorCode
@@ -189,6 +190,7 @@ export interface UserClient {
   readonly memories: MemoriesResource;
   object(input: ObjectInput): Promise<ObjectResult>;
   readonly prompts: PromptsResource;
+  resumeChat(input: ResumeChatInput): Promise<ChatResult>;
   readonly sessions: SessionsResource;
   readonly tasks: TasksResource;
   readonly usage: Pick<UsageResource, "get" | "sessions">;
@@ -245,6 +247,8 @@ interface ChatMessageContentInput
     CorrelatedRequestInput {
   abortSignal?: AbortSignal;
   agentId: string;
+  /** Caller-local functions for this invocation; handlers run in this process. */
+  functions?: ChatFunctions;
   message: UIMessage;
   messageId?: string;
   promptId?: never;
@@ -256,6 +260,8 @@ interface ChatPromptContentInput
     CorrelatedRequestInput {
   abortSignal?: AbortSignal;
   agentId: string;
+  /** Caller-local functions for this invocation; handlers run in this process. */
+  functions?: ChatFunctions;
   message?: never;
   messageId?: string;
   promptId: string;
@@ -265,6 +271,16 @@ interface ChatPromptContentInput
 export type ChatMessageInput = ChatMessageContentInput & ChatSessionInput;
 export type ChatPromptInput = ChatPromptContentInput & ChatSessionInput;
 export type ChatInput = ChatMessageInput | ChatPromptInput;
+
+/** Reattaches handlers to a Session's tool-approval continuation. */
+export interface ResumeChatInput extends CorrelatedRequestInput {
+  abortSignal?: AbortSignal;
+  agentId: string;
+  /** The decided continuation; omitted, the Session's queued or running one is resumed. */
+  continuationId?: string;
+  functions: ChatFunctions;
+  sessionId: string;
+}
 
 export interface ChatResult {
   requestId?: string;

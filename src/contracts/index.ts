@@ -5,13 +5,16 @@ export { receivedApiErrorResponseSchema } from "./api.ts";
 export type {
   ApprovalDecision,
   ApprovalPolicy,
+  ToolExecutionReference,
   ToolReference,
 } from "./entities/agent-approval.ts";
 export {
   approvalDecisionSchema,
   approvalPolicySchema,
+  toolExecutionReferenceSchema,
   toolReferenceSchema,
 } from "./entities/agent-approval.ts";
+export { chatFunctionNameSchema } from "./entities/agent-tools.ts";
 export {
   agentResponseSchema,
   agentSchema,
@@ -32,15 +35,36 @@ export {
   attributionCreateInputSchema,
   metadataSchema,
 } from "./entities/attribution.ts";
-export type { PromptVariables, UsageSummary } from "./entities/chat.ts";
+export type {
+  ChatFunctionCallEvent,
+  ChatFunctionDefinition,
+  ChatFunctionDefinitions,
+  ChatFunctionOutcome,
+  ClaimChatFunctionBody,
+  PromptVariables,
+  ResolveChatFunctionBody,
+  UsageSummary,
+} from "./entities/chat.ts";
 export {
   blazingAgentsChatMessageMetadataSchema,
+  chatFunctionCallEventSchema,
+  chatFunctionDefinitionSchema,
+  chatFunctionDefinitionsSchema,
+  chatFunctionOutcomeSchema,
   chatModeSchema,
   chatRequestBodySchema,
   chatTriggerSchema,
+  claimChatFunctionBodySchema,
+  claimChatFunctionResponseSchema,
   generationRequestBodySchema,
   jsonSchemaShapeSchema,
+  MAX_CHAT_FUNCTION_DEFINITIONS_BYTES,
+  MAX_CHAT_FUNCTION_PAYLOAD_BYTES,
+  MAX_CHAT_FUNCTIONS,
   promptVariablesSchema,
+  resolveChatFunctionBodySchema,
+  resolveChatFunctionResponseSchema,
+  resumeToolApprovalContinuationBodySchema,
   usageSummarySchema,
 } from "./entities/chat.ts";
 export {
@@ -208,6 +232,7 @@ export {
 export {
   agentIdSchema,
   apiKeyTokenSchema,
+  functionCallIdSchema,
   isAdminAgentId,
   promptIdSchema,
   sessionIdSchema,

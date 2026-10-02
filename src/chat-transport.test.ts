@@ -237,4 +237,62 @@ describe("BlazingAgentsChatTransport", () => {
     ).rejects.toThrow("requires a user message");
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  const approvalResponse: UIMessage = {
+    id: "response-1",
+    role: "assistant",
+    parts: [
+      { type: "step-start" },
+      {
+        type: "dynamic-tool",
+        toolName: "getOrder",
+        toolCallId: "call-1",
+        state: "approval-responded",
+        input: { orderId: "o1" },
+        approval: { id: "approval-1", approved: true },
+      },
+    ],
+  };
+
+  it("relays approval responses as the assistant message", async () => {
+    const fetch = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual({
+        message: approvalResponse,
+        sessionId: "ss_0123456789abcdef",
+        trigger: "submit-message",
+      });
+      return Promise.resolve(new Response(sseStream(chatChunks)));
+    });
+    const transport = new BlazingAgentsChatTransport({
+      fetch,
+      sessionId: "ss_0123456789abcdef",
+    });
+
+    for await (const _chunk of await transport.sendMessages({
+      abortSignal: undefined,
+      chatId: "client-chat-id",
+      messageId: undefined,
+      messages: [firstMessage, approvalResponse],
+      trigger: "submit-message",
+    })) {
+      /** Drain the transport response. */
+    }
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("requires a Session before relaying approval responses", async () => {
+    const fetch = vi.fn();
+    const transport = new BlazingAgentsChatTransport({ fetch });
+
+    await expect(
+      transport.sendMessages({
+        abortSignal: undefined,
+        chatId: "client-chat-id",
+        messageId: undefined,
+        messages: [firstMessage, approvalResponse],
+        trigger: "submit-message",
+      })
+    ).rejects.toThrow("requires an existing Session");
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

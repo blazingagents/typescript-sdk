@@ -3,9 +3,16 @@ import type { AddressInfo } from "node:net";
 import {
   BlazingAgents,
   BlazingAgentsError,
+  defineFunction,
   type SkillCopyResults,
 } from "@blazingagents/sdk";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod";
+
+const functionSessionId = "ss_fedcba9876543210";
+const functionCallPath = `/v1/agents/ag_0123456789abcdef/sessions/${functionSessionId}/function-calls/fc_0123456789abcdef`;
+const functionResults: unknown[] = [];
+let resolveFunctionResult: (body: unknown) => void = () => undefined;
 
 const agent = {
   avatarUrl: null,
@@ -285,6 +292,56 @@ describe("installed SDK consumer contract", () => {
 
       if (
         request.method === "POST" &&
+        request.url === `/v1/agents/${agent.id}/sessions/${functionSessionId}`
+      ) {
+        const resultReceived = new Promise<unknown>((resolve) => {
+          resolveFunctionResult = resolve;
+        });
+        response.writeHead(200, { "content-type": "text/event-stream" });
+        response.write(
+          `data: ${JSON.stringify({
+            type: "data-ba-function-call",
+            data: {
+              id: "fc_0123456789abcdef",
+              name: "getOrder",
+              input: { orderId: "o1" },
+              deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+            },
+            transient: true,
+          })}\n\n`
+        );
+        resultReceived.then((body) => {
+          response.write(
+            `data: ${JSON.stringify({ type: "data-result", data: body })}\n\n`
+          );
+          response.end("data: [DONE]\n\n");
+        });
+        return;
+      }
+
+      if (
+        request.method === "POST" &&
+        (request.url === `${functionCallPath}/claim` ||
+          request.url === `${functionCallPath}/result`)
+      ) {
+        const chunks: Buffer[] = [];
+        request.on("data", (chunk: Buffer) => chunks.push(chunk));
+        request.on("end", () => {
+          response.writeHead(200, { "content-type": "application/json" });
+          if (request.url?.endsWith("/claim")) {
+            response.end(JSON.stringify({ claimed: true }));
+            return;
+          }
+          const body = JSON.parse(Buffer.concat(chunks).toString());
+          functionResults.push(body);
+          response.end(JSON.stringify({ accepted: true }));
+          resolveFunctionResult(body);
+        });
+        return;
+      }
+
+      if (
+        request.method === "POST" &&
         request.url === `/v1/agents/${agent.id}/sessions`
       ) {
         response.writeHead(201, {
@@ -532,5 +589,40 @@ describe("installed SDK consumer contract", () => {
       'data: {"type":"text-delta","id":"text-1","delta":"Hello consumer"}'
     );
     expect(authorizationHeaders.at(-1)).toBe("Bearer ba_consumer_contract");
+  });
+
+  it("executes a caller-local function while the compiled package streams", async () => {
+    const result = await client.chat({
+      agentId: agent.id,
+      sessionId: functionSessionId,
+      message: {
+        id: "user-2",
+        role: "user",
+        parts: [{ type: "text", text: "Where is my order?" }],
+      },
+      functions: {
+        getOrder: defineFunction({
+          description: "Get an order",
+          inputSchema: z.object({ orderId: z.string() }),
+          execute: ({ orderId }, { idempotencyKey }) => ({
+            orderId,
+            idempotencyKey,
+          }),
+        }),
+      },
+    });
+    const body = await result.toResponse().text();
+
+    expect(body).not.toContain("data-ba-function-call");
+    expect(functionResults).toEqual([
+      {
+        claimRequestId: expect.any(String),
+        outcome: {
+          kind: "output",
+          value: { orderId: "o1", idempotencyKey: "fc_0123456789abcdef" },
+        },
+      },
+    ]);
+    expect(body).toContain('"type":"data-result"');
   });
 });

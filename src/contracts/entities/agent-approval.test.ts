@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   approvalDecisionSchema,
   approvalPolicySchema,
+  toolExecutionReferenceSchema,
   toolReferenceSchema,
 } from "./agent-approval.ts";
 import { createAgentBodySchema, updateAgentBodySchema } from "./agents.ts";
@@ -94,6 +95,25 @@ describe("approval contracts", () => {
         ],
       }).success
     ).toBe(true);
+  });
+  it("references functions on approval records but never in policies", () => {
+    const fn = { type: "function", name: "getOrder" } as const;
+    expect(toolExecutionReferenceSchema.parse(fn)).toEqual(fn);
+    expect(toolExecutionReferenceSchema.parse(tool)).toEqual(tool);
+    expect(
+      toolApprovalStateSchema.parse({ ...approval, tool: fn }).tool
+    ).toEqual(fn);
+    expect(toolReferenceSchema.safeParse(fn).success).toBe(false);
+    expect(
+      approvalPolicySchema.safeParse({
+        default: "manual",
+        overrides: [{ tool: fn, decision: "full" }],
+      }).success
+    ).toBe(false);
+    expect(
+      toolExecutionReferenceSchema.safeParse({ type: "function", name: "bash" })
+        .success
+    ).toBe(false);
   });
   it("preserves approval metadata with exact optionality and nullability", () => {
     expect(toolApprovalStateSchema.parse(approval)).toEqual(approval);

@@ -2,11 +2,13 @@ import { z } from "zod";
 
 import {
   agentIdSchema,
+  functionCallIdSchema,
   promptIdSchema,
   sessionIdSchema,
   tenantIdSchema,
   turnIdSchema,
 } from "../ids.ts";
+import { chatFunctionNameSchema } from "./agent-tools.ts";
 import { agentModelIdSchema, agentVersionNumberSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
@@ -90,50 +92,6 @@ type ExclusivePromptInput<Literal extends object> =
       variables?: z.infer<typeof promptVariablesSchema>;
     });
 
-/**
- * `POST /v1/agents/{agentId}/sessions` (create) and
- * `POST /v1/agents/{agentId}/sessions/{sessionId}` (resume) request body.
- * The URL selects the mode; on create the platform mints the `ss_` id and
- * returns it in `Location`. Exactly one of `message` or `promptId` is
- * required, and `variables` requires `promptId`. Regenerate is resume-only,
- * enforced by the route layer rather than this schema.
- */
-export const chatRequestBodySchema = z
-  .object({
-    /**
-     * AI SDK owns the runtime UIMessage schema. Core keeps this wire field
-     * unknown; the HTTP boundary validates it with `safeValidateUIMessages`
-     * before treating it as a UIMessage.
-     */
-    message: z.unknown().optional(),
-    promptId: promptIdSchema.optional(),
-    variables: promptVariablesSchema.optional(),
-    trigger: chatTriggerSchema.default("submit-message"),
-    messageId: z.string().min(1).optional(),
-    version: agentVersionNumberSchema.optional(),
-    /**
-     * End-user attribution (ADR-0001), stamped on the Session at lazy
-     * materialization and on every usage row this Turn records.
-     */
-    userId: userIdSchema.default(""),
-    metadata: metadataSchema.default({}),
-  })
-  .strict()
-  .refine(
-    (
-      body
-    ): body is typeof body &
-      ExclusivePromptInput<{ message: null | NonNullable<unknown> }> =>
-      body.message === undefined
-        ? body.promptId !== undefined
-        : body.promptId === undefined && body.variables === undefined,
-    {
-      message:
-        "Provide either `message` or `promptId` (+`variables`); they are mutually exclusive, and `variables` is only allowed with `promptId`.",
-      path: ["message"],
-    }
-  );
-
 type ConvertibleJsonSchema = z.core.JSONSchema.JSONSchema;
 
 const JSON_SCHEMA_COMPOSITION_KEYS = ["allOf", "anyOf", "oneOf"] as const;
@@ -212,6 +170,140 @@ export const jsonSchemaShapeSchema = z.custom<ConvertibleJsonSchema>(
   { message: "schema contains an unsupported or invalid JSON Schema feature" }
 );
 
+export const MAX_CHAT_FUNCTIONS = 32;
+export const MAX_CHAT_FUNCTION_DEFINITIONS_BYTES = 64 * 1024;
+export const MAX_CHAT_FUNCTION_PAYLOAD_BYTES = 256 * 1024;
+
+export const jsonByteLength = (value: unknown): number =>
+  new TextEncoder().encode(JSON.stringify(value)).byteLength;
+
+/** One caller-local function as sent to Blazing Agents: description and JSON Schema only. */
+export const chatFunctionDefinitionSchema = z
+  .object({
+    description: z.string().trim().min(1),
+    inputSchema: jsonSchemaShapeSchema.refine(
+      (schema) => typeof schema === "object" && schema.type === "object",
+      { message: "Function input schema must describe a JSON object." }
+    ),
+  })
+  .strict();
+
+export const chatFunctionDefinitionsSchema = z
+  .record(chatFunctionNameSchema, chatFunctionDefinitionSchema)
+  .refine((functions) => Object.keys(functions).length <= MAX_CHAT_FUNCTIONS, {
+    message: `At most ${MAX_CHAT_FUNCTIONS} functions are allowed.`,
+  })
+  .refine(
+    (functions) =>
+      jsonByteLength(functions) <= MAX_CHAT_FUNCTION_DEFINITIONS_BYTES,
+    {
+      message: `Function definitions must not exceed ${MAX_CHAT_FUNCTION_DEFINITIONS_BYTES} bytes.`,
+    }
+  );
+
+/**
+ * Transient UI data part that authorizes one claim attempt for a function
+ * call. The SDK consumes it and never forwards it to the browser.
+ */
+export const chatFunctionCallEventSchema = z
+  .object({
+    type: z.literal("data-ba-function-call"),
+    data: z
+      .object({
+        id: functionCallIdSchema,
+        name: chatFunctionNameSchema,
+        input: z.json(),
+        deadlineAt: z.iso.datetime({ offset: true }),
+      })
+      .strip(),
+    transient: z.literal(true),
+  })
+  .strip();
+
+export const chatFunctionOutcomeSchema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("output"), value: z.json() }).strict(),
+    z
+      .object({
+        kind: z.literal("error"),
+        message: z.string().min(1).max(4096),
+      })
+      .strict(),
+  ])
+  .refine(
+    (outcome) => jsonByteLength(outcome) <= MAX_CHAT_FUNCTION_PAYLOAD_BYTES,
+    {
+      message: `Function outcome must not exceed ${MAX_CHAT_FUNCTION_PAYLOAD_BYTES} bytes.`,
+    }
+  );
+
+/** `POST .../function-calls/{functionCallId}/claim` body. */
+export const claimChatFunctionBodySchema = z
+  .object({ claimRequestId: z.uuid() })
+  .strict();
+
+export const claimChatFunctionResponseSchema = z
+  .object({ claimed: z.literal(true) })
+  .strip();
+
+/** `POST .../function-calls/{functionCallId}/result` body. */
+export const resolveChatFunctionBodySchema = z
+  .object({ claimRequestId: z.uuid(), outcome: chatFunctionOutcomeSchema })
+  .strict();
+
+export const resolveChatFunctionResponseSchema = z
+  .object({ accepted: z.literal(true) })
+  .strip();
+
+/** `POST .../tool-approval-continuations/{continuationId}/resume` body. */
+export const resumeToolApprovalContinuationBodySchema = z.object({}).strict();
+
+/**
+ * `POST /v1/agents/{agentId}/sessions` (create) and
+ * `POST /v1/agents/{agentId}/sessions/{sessionId}` (resume) request body.
+ * The URL selects the mode; on create the platform mints the `ss_` id and
+ * returns it in `Location`. Exactly one of `message` or `promptId` is
+ * required, and `variables` requires `promptId`. Regenerate is resume-only,
+ * enforced by the route layer rather than this schema.
+ */
+export const chatRequestBodySchema = z
+  .object({
+    /**
+     * AI SDK owns the runtime UIMessage schema. Core keeps this wire field
+     * unknown; the HTTP boundary validates it with `safeValidateUIMessages`
+     * before treating it as a UIMessage.
+     */
+    message: z.unknown().optional(),
+    promptId: promptIdSchema.optional(),
+    variables: promptVariablesSchema.optional(),
+    trigger: chatTriggerSchema.default("submit-message"),
+    messageId: z.string().min(1).optional(),
+    version: agentVersionNumberSchema.optional(),
+    /**
+     * End-user attribution (ADR-0001), stamped on the Session at lazy
+     * materialization and on every usage row this Turn records.
+     */
+    userId: userIdSchema.default(""),
+    metadata: metadataSchema.default({}),
+    /** Caller-local functions for this invocation; handlers stay in the caller's backend. */
+    functions: chatFunctionDefinitionsSchema.optional(),
+  })
+  .strict()
+  .refine(
+    (
+      body
+    ): body is typeof body &
+      ExclusivePromptInput<{ message: null | NonNullable<unknown> }> =>
+      body.message === undefined
+        ? body.promptId !== undefined
+        : body.promptId === undefined && body.variables === undefined,
+    {
+      message:
+        "Provide either `message` or `promptId` (+`variables`); they are mutually exclusive, and `variables` is only allowed with `promptId`.",
+      path: ["message"],
+    }
+  );
+
 /**
  * `POST /v1/agents/{agentId}/generation` — the single stateless generation
  * boundary. Output selection is explicit on the wire while prompt selection
@@ -269,3 +361,15 @@ export type ChatRequestBody = z.infer<typeof chatRequestBodySchema>;
 export type GenerationRequestBody = z.infer<typeof generationRequestBodySchema>;
 export type ChatStreamErrorChunk = z.infer<typeof chatStreamErrorChunkSchema>;
 export type PromptVariables = z.infer<typeof promptVariablesSchema>;
+export type ChatFunctionDefinition = z.infer<
+  typeof chatFunctionDefinitionSchema
+>;
+export type ChatFunctionDefinitions = z.infer<
+  typeof chatFunctionDefinitionsSchema
+>;
+export type ChatFunctionCallEvent = z.infer<typeof chatFunctionCallEventSchema>;
+export type ChatFunctionOutcome = z.infer<typeof chatFunctionOutcomeSchema>;
+export type ClaimChatFunctionBody = z.infer<typeof claimChatFunctionBodySchema>;
+export type ResolveChatFunctionBody = z.infer<
+  typeof resolveChatFunctionBodySchema
+>;

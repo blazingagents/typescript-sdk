@@ -14,6 +14,7 @@ export { BlazingAgents } from "./client.ts";
 export type {
   ApprovalDecision,
   ApprovalPolicy,
+  ToolExecutionReference,
   ToolReference,
 } from "./contracts/entities/agent-approval.ts";
 export type {
@@ -134,6 +135,12 @@ export {
 } from "./direct-chat-transport.ts";
 export { BlazingAgentsError } from "./errors.ts";
 export {
+  type ChatFunction,
+  type ChatFunctionContext,
+  type ChatFunctions,
+  defineFunction,
+} from "./functions.ts";
+export {
   createChatRelay,
   createCompletionRelay,
   type RelayContext,
@@ -182,6 +189,7 @@ export type {
   ProvidersResource,
   ResourceRequestOptions,
   ResponseObservation,
+  ResumeChatInput,
   SessionsResource,
   SkillsListOptions,
   TasksResource,

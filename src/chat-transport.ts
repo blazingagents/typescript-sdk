@@ -2,6 +2,7 @@ import {
   type ChatTransport,
   DefaultChatTransport,
   type HttpChatTransportInitOptions,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
 import { sessionIdSchema } from "./contracts/ids.ts";
@@ -52,9 +53,15 @@ export class BlazingAgentsChatTransport<
         return response;
       },
       prepareSendMessagesRequest: ({ body, messageId, messages, trigger }) => {
-        const message = messages.findLast(
-          (candidate) => candidate.role === "user"
-        );
+        const approvals =
+          messages.at(-1)?.role === "assistant" &&
+          lastAssistantMessageIsCompleteWithApprovalResponses({ messages });
+        if (approvals && this.#sessionId === undefined) {
+          throw new Error("Tool approval requires an existing Session.");
+        }
+        const message = approvals
+          ? messages.at(-1)
+          : messages.findLast((candidate) => candidate.role === "user");
         if (!message) {
           throw new Error("Chat submission requires a user message.");
         }

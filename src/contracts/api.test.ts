@@ -108,6 +108,7 @@ describe("apiErrorCodeSchema", () => {
       "session_version_mismatch",
       "tool_approval_continuation_not_found",
       "tool_approval_decision_conflict",
+      "function_call_conflict",
       "skill_invalid_archive",
       "skill_invalid_markdown",
       "skill_limit_reached",

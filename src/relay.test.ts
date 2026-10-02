@@ -1,6 +1,9 @@
 import type { UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import type { BlazingAgents } from "./client.ts";
 import { BlazingAgentsError } from "./errors.ts";
+import { defineFunction } from "./functions.ts";
 import {
   createChatRelay,
   createCompletionRelay,
@@ -28,6 +31,46 @@ function request(body: unknown): Request {
   });
 }
 
+function approvalsResource(continuationId = "tac_1") {
+  return {
+    decideToolApproval: vi.fn(() =>
+      Promise.resolve({ continuationId, state: "queued" as const })
+    ),
+    joinToolApprovalContinuation: vi.fn(),
+  } as unknown as BlazingAgents["sessions"];
+}
+
+const functions = {
+  getOrder: defineFunction({
+    description: "Get an order",
+    inputSchema: z.object({ orderId: z.string() }),
+    execute: () => null,
+  }),
+};
+
+const approvalMessage: UIMessage = {
+  id: "assistant-1",
+  role: "assistant",
+  parts: [
+    { type: "step-start" },
+    {
+      type: "dynamic-tool",
+      toolName: "getOrder",
+      toolCallId: "call-1",
+      state: "approval-responded",
+      input: { orderId: "o1" },
+      approval: { id: "approval-1", approved: true },
+    },
+    {
+      type: "tool-bash",
+      toolCallId: "call-2",
+      state: "approval-responded",
+      input: { command: "rm" },
+      approval: { id: "approval-2", approved: false, reason: "No" },
+    },
+  ],
+};
+
 function sessions(owner?: string): SessionOwnershipStore {
   return {
     ownerOf: vi.fn(() => Promise.resolve(owner)),
@@ -53,7 +96,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat, completion: vi.fn() },
+      client: { chat, resumeChat: vi.fn(), sessions: approvalsResource() },
       resolveContext: () => Promise.resolve(context),
       sessions: store,
     });
@@ -96,7 +139,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat, completion: vi.fn() },
+      client: { chat, resumeChat: vi.fn(), sessions: approvalsResource() },
       resolveContext: () => Promise.resolve(context),
       sessions: store,
     });
@@ -124,7 +167,11 @@ describe("relay factories", () => {
   });
 
   it("rejects missing authentication, foreign Sessions, and invalid chat", async () => {
-    const client = { chat: vi.fn(), completion: vi.fn() };
+    const client = {
+      chat: vi.fn(),
+      resumeChat: vi.fn(),
+      sessions: approvalsResource(),
+    };
     const unauthenticated = createChatRelay({
       client,
       resolveContext: () => Promise.resolve(null),
@@ -170,7 +217,8 @@ describe("relay factories", () => {
             toResponse: () =>
               new Response(new ReadableStream({ cancel })) as Response,
           }),
-        completion: vi.fn(),
+        resumeChat: vi.fn(),
+        sessions: approvalsResource(),
       },
       resolveContext: () => Promise.resolve(context),
       sessions: store,
@@ -194,7 +242,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createCompletionRelay({
-      client: { chat: vi.fn(), completion },
+      client: { completion },
       resolveContext: () => Promise.resolve(context),
     });
 
@@ -217,7 +265,6 @@ describe("relay factories", () => {
   it("returns safe completion errors while preserving upstream status and request id", async () => {
     const relay = createCompletionRelay({
       client: {
-        chat: vi.fn(),
         completion: () =>
           Promise.reject(
             new BlazingAgentsError({
@@ -283,5 +330,137 @@ describe("relay factories", () => {
     const unavailable = await relay(request({ prompt: "Hello" }));
     expect(unavailable.status).toBe(502);
     expect(unavailable.headers.get("x-request-id")).toBe("request-4");
+  });
+
+  it("passes the request's functions to chat", async () => {
+    const chat = vi.fn(() =>
+      Promise.resolve({
+        sessionId: Promise.resolve("ss_0123456789abcdef"),
+        toStream: () => new ReadableStream<Uint8Array>(),
+        toResponse: () => new Response("chat"),
+      })
+    );
+    const relay = createChatRelay({
+      client: { chat, resumeChat: vi.fn(), sessions: approvalsResource() },
+      resolveContext: () => Promise.resolve({ ...context, functions }),
+      sessions: sessions(),
+    });
+    await relay(request({ message }));
+    expect(chat).toHaveBeenCalledWith(expect.objectContaining({ functions }));
+  });
+
+  it("decides approval responses and resumes with the request's functions", async () => {
+    const resources = approvalsResource();
+    const resumeChat = vi.fn(() =>
+      Promise.resolve({
+        sessionId: Promise.resolve("ss_0123456789abcdef"),
+        toStream: () => new ReadableStream<Uint8Array>(),
+        toResponse: () => new Response("resumed"),
+      })
+    );
+    const relay = createChatRelay({
+      client: { chat: vi.fn(), resumeChat, sessions: resources },
+      resolveContext: () => Promise.resolve({ ...context, functions }),
+      sessions: sessions("user-a"),
+    });
+
+    const response = await relay(
+      request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
+    );
+
+    expect(await response.text()).toBe("resumed");
+    const target = {
+      agentId: context.agentId,
+      sessionId: "ss_0123456789abcdef",
+      abortSignal: expect.any(AbortSignal),
+    };
+    expect(vi.mocked(resources.decideToolApproval).mock.calls).toEqual([
+      [
+        {
+          ...target,
+          approvalId: "approval-1",
+          approved: true,
+          reason: undefined,
+        },
+      ],
+      [{ ...target, approvalId: "approval-2", approved: false, reason: "No" }],
+    ]);
+    expect(resumeChat).toHaveBeenCalledWith({
+      ...target,
+      continuationId: "tac_1",
+      functions,
+    });
+    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
+  });
+
+  it("resumes as the executor even when the request has no functions", async () => {
+    const resources = approvalsResource();
+    const resumeChat = vi.fn(() =>
+      Promise.resolve({
+        sessionId: Promise.resolve("ss_0123456789abcdef"),
+        toStream: () => new ReadableStream<Uint8Array>(),
+        toResponse: () => new Response("resumed"),
+      })
+    );
+    const relay = createChatRelay({
+      client: { chat: vi.fn(), resumeChat, sessions: resources },
+      resolveContext: () => Promise.resolve(context),
+      sessions: sessions("user-a"),
+    });
+
+    const response = await relay(
+      request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
+    );
+
+    expect(await response.text()).toBe("resumed");
+    expect(resumeChat).toHaveBeenCalledWith({
+      agentId: context.agentId,
+      sessionId: "ss_0123456789abcdef",
+      abortSignal: expect.any(AbortSignal),
+      continuationId: "tac_1",
+      functions: {},
+    });
+    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
+  });
+
+  it("rejects approval relays without a Session, ownership, or responses", async () => {
+    const resources = approvalsResource();
+    const client = { chat: vi.fn(), resumeChat: vi.fn(), sessions: resources };
+    const owned = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+      sessions: sessions("user-a"),
+    });
+    const foreign = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+      sessions: sessions("user-b"),
+    });
+
+    expect((await owned(request({ message: approvalMessage }))).status).toBe(
+      400
+    );
+    expect(
+      (
+        await foreign(
+          request({
+            message: approvalMessage,
+            sessionId: "ss_0123456789abcdef",
+          })
+        )
+      ).status
+    ).toBe(403);
+    expect(
+      (
+        await owned(
+          request({
+            message: { id: "assistant-2", role: "assistant", parts: [] },
+            sessionId: "ss_0123456789abcdef",
+          })
+        )
+      ).status
+    ).toBe(400);
+    expect(resources.decideToolApproval).not.toHaveBeenCalled();
+    expect(client.chat).not.toHaveBeenCalled();
   });
 });

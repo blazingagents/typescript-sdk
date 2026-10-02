@@ -1,7 +1,9 @@
 import type { ChatTransport, UIMessage } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { BlazingAgents } from "./client.ts";
 import { BlazingAgentsDirectChatTransport } from "./direct-chat-transport.ts";
+import { defineFunction } from "./functions.ts";
 import { sseStream } from "./test/fixtures.ts";
 import {
   BASE,
@@ -406,11 +408,98 @@ describe("BlazingAgentsDirectChatTransport", () => {
         body: { approved: false, reason: "Keep it" },
       },
       {
-        url: `${base}/tool-approval-continuations/${continuationId}`,
-        body: null,
+        url: `${base}/tool-approval-continuations/${continuationId}/resume`,
+        body: {},
       },
     ]);
-    expect(getClient).toHaveBeenCalledTimes(3);
+    expect(getClient).toHaveBeenCalledOnce();
+  });
+
+  it("sends functions and resumes approved continuations with handlers", async () => {
+    const continuationId = "tool-approval:ss:assistant";
+    const requests: { method: string; url: string; body: unknown }[] = [];
+    const fetch = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(url);
+      requests.push({
+        method: init?.method ?? "GET",
+        url: path,
+        body: init?.body ? JSON.parse(String(init.body)) : null,
+      });
+      if (path.endsWith("/tool-approvals/approval-1")) {
+        return Promise.resolve(
+          Response.json({ continuationId, state: "queued" })
+        );
+      }
+      if (path.endsWith("/tool-approvals")) {
+        return Promise.resolve(
+          Response.json({
+            data: [],
+            continuation: { id: continuationId, state: "queued" },
+          })
+        );
+      }
+      return Promise.resolve(
+        new Response(sseStream(chatChunks), {
+          headers: { location: createLocation },
+        })
+      );
+    });
+    const functions = {
+      getOrder: defineFunction({
+        description: "Get an order",
+        inputSchema: z.object({ orderId: z.string() }),
+        execute: () => null,
+      }),
+    };
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      functions,
+      getClient: () => client(fetch),
+      sessionId: mintedSessionId,
+    });
+    await collect(await transport.sendMessages(input));
+    expect(requests[0].body).toMatchObject({
+      functions: { getOrder: { description: "Get an order" } },
+    });
+
+    requests.length = 0;
+    expect(
+      await collect(
+        await transport.sendMessages({
+          ...input,
+          messages: [
+            message,
+            {
+              id: "assistant-1",
+              role: "assistant",
+              parts: [
+                {
+                  type: "dynamic-tool",
+                  toolName: "getOrder",
+                  toolCallId: "call-1",
+                  state: "approval-responded",
+                  input: { orderId: "o1" },
+                  approval: { id: "approval-1", approved: true },
+                },
+              ],
+            },
+          ],
+        })
+      )
+    ).toEqual(chatChunks);
+    const base = `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`;
+    expect(requests.map(({ method, url }) => `${method} ${url}`)).toEqual([
+      `POST ${base}/tool-approvals/approval-1`,
+      `POST ${base}/tool-approval-continuations/${continuationId}/resume`,
+    ]);
+
+    requests.length = 0;
+    const stream = await transport.reconnectToStream({ chatId: "local-chat" });
+    expect(stream).not.toBeNull();
+    expect(requests.map(({ method, url }) => `${method} ${url}`)).toEqual([
+      `GET ${base}/tool-approvals`,
+      `POST ${base}/tool-approval-continuations/${continuationId}/resume`,
+    ]);
   });
 
   it("requires a Session before deciding an approval", async () => {
@@ -472,9 +561,9 @@ describe("BlazingAgentsDirectChatTransport", () => {
     }
     expect(requests).toEqual([
       `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approvals`,
-      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approval-continuations/${continuationId}`,
+      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approval-continuations/${continuationId}/resume`,
     ]);
-    expect(getClient).toHaveBeenCalledTimes(2);
+    expect(getClient).toHaveBeenCalledOnce();
   });
 
   it.each(["waiting", "succeeded", "failed", null] as const)(

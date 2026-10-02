@@ -35,8 +35,9 @@ export async function decideApprovalResponses(
 }
 
 /**
- * Streams the decided continuation. With handlers attached, the explicit
- * backend resume starts or joins it; otherwise the observer join replays it.
+ * Streams the decided continuation. A supplied registry (even empty) makes
+ * this backend the executor through the explicit resume; without one the
+ * observer join replays it.
  */
 export function continueAfterApproval(
   client: Pick<BlazingAgents, "resumeChat" | "sessions">,
@@ -46,7 +47,7 @@ export function continueAfterApproval(
     ...target
   }: ApprovalTarget & { continuationId: string; functions?: ChatFunctions }
 ): Promise<TerminalStreamResult> {
-  return functions && Object.keys(functions).length > 0
+  return functions
     ? client.resumeChat({ ...target, functions })
     : client.sessions.joinToolApprovalContinuation({
         ...target,

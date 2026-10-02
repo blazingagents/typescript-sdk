@@ -61,6 +61,7 @@ function upstream() {
     cancel,
     stream,
     push: (text: string) => controller.enqueue(encoder.encode(text)),
+    pushBytes: (bytes: Uint8Array) => controller.enqueue(bytes),
     close: () => controller.close(),
     error: (reason: unknown) => controller.error(reason),
   };
@@ -125,6 +126,11 @@ function harness(
 async function readAll(stream: ReadableStream<Uint8Array>): Promise<string> {
   return await new Response(stream).text();
 }
+
+const invalidResult = {
+  kind: "error",
+  message: "Function returned an invalid result.",
+};
 
 function orderFunctions(
   execute: (input: { orderId: string }, context: unknown) => unknown = (
@@ -191,13 +197,19 @@ describe("chat function definitions", () => {
     ).toMatchObject({ properties: { text: { type: "string" } } });
   });
 
-  it("omits an empty registry", async () => {
+  it("omits empty definitions but still owns private events", async () => {
     const source = upstream();
-    source.close();
-    const { client, calls } = harness(source.stream);
+    const { client, calls, of } = harness(source.stream);
     const result = await client.chat({ agentId, message, functions: {} });
     expect(calls[0].body).toStrictEqual({ message });
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
+    source.close();
     expect(await readAll(result.toStream())).toBe("");
+    expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
+      kind: "error",
+      message: "Function getOrder is not available.",
+    });
   });
 
   it.each([
@@ -343,9 +355,9 @@ describe("chat function dispatch", () => {
     const result = await client.chat({ agentId, message, functions });
     const second = readyEvent({ id: "fc_fedcba9876543210" });
     source.push(sse(readyEvent()) + sse(readyEvent()) + sse(second));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(2));
     source.close();
     await readAll(result.toStream());
-    await vi.waitFor(() => expect(of("/result")).toHaveLength(2));
     expect(of("/claim")).toHaveLength(2);
     expect(spy).toHaveBeenCalledTimes(2);
   });
@@ -448,6 +460,75 @@ describe("chat function dispatch", () => {
     await stream.cancel();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(of("/claim")).toHaveLength(1);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not run a handler when the claim grant is processed after the deadline", async () => {
+    const source = upstream();
+    const { client, of } = harness(source.stream, {
+      claim: [
+        () =>
+          new Promise<Response>((resolve) =>
+            setTimeout(() => resolve(ok({ claimed: true })), 300)
+          ),
+      ],
+    });
+    const { functions, spy } = orderFunctions();
+    const result = await client.chat({ agentId, message, functions });
+    source.push(
+      sse(readyEvent({ deadlineAt: new Date(Date.now() + 150).toISOString() }))
+    );
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    source.close();
+    await readAll(result.toStream());
+    expect(of("/claim")).toHaveLength(1);
+    expect(spy).not.toHaveBeenCalled();
+    expect(of("/result")).toHaveLength(0);
+  });
+
+  it("does not run a handler when the caller aborts while claiming", async () => {
+    const source = upstream();
+    const controller = new AbortController();
+    let grant!: () => void;
+    const { client, of } = harness(source.stream, {
+      claim: [
+        () =>
+          new Promise<Response>((resolve) => {
+            grant = () => resolve(ok({ claimed: true }));
+          }),
+      ],
+    });
+    const { functions, spy } = orderFunctions();
+    await client.chat({
+      agentId,
+      message,
+      functions,
+      abortSignal: controller.signal,
+    });
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(grant).toBeDefined());
+    controller.abort();
+    grant();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(spy).not.toHaveBeenCalled();
+    expect(of("/result")).toHaveLength(0);
+    source.close();
+  });
+
+  it("never claims when the caller signal was already aborted", async () => {
+    const source = upstream();
+    const { client, of } = harness(source.stream);
+    const { functions, spy } = orderFunctions();
+    const result = await client.chat({
+      agentId,
+      message,
+      functions,
+      abortSignal: AbortSignal.abort(),
+    });
+    source.push(sse({ type: "start" }) + sse(readyEvent()));
+    source.close();
+    expect(await readAll(result.toStream())).toBe(sse({ type: "start" }));
+    expect(of("/claim")).toHaveLength(0);
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -594,11 +675,29 @@ describe("chat function dispatch", () => {
         message: "Function returned an invalid result.",
       },
     ],
-    ["undefined", () => undefined, { kind: "output", value: null }],
+    ["undefined", () => undefined, invalidResult],
+    ["NaN", () => Number.NaN, invalidResult],
+    ["Infinity", () => ({ total: Number.POSITIVE_INFINITY }), invalidResult],
+    ["Dates", () => new Date("2026-10-02T00:00:00.000Z"), invalidResult],
+    ["undefined fields", () => ({ skip: undefined }), invalidResult],
+    ["class instances", () => new URL("https://example.test"), invalidResult],
     [
-      "JSON-serializable objects",
-      () => ({ at: new Date("2026-10-02T00:00:00.000Z"), skip: undefined }),
-      { kind: "output", value: { at: "2026-10-02T00:00:00.000Z" } },
+      "cyclic values",
+      () => {
+        const value: Record<string, unknown> = {};
+        value.self = value;
+        return value;
+      },
+      invalidResult,
+    ],
+    ["null", () => null, { kind: "output", value: null }],
+    [
+      "plain JSON",
+      () => ({ items: [1, "two", true, null], nested: { ok: false } }),
+      {
+        kind: "output",
+        value: { items: [1, "two", true, null], nested: { ok: false } },
+      },
     ],
   ])("sanitizes %s", async (_, execute, outcome) => {
     const source = upstream();
@@ -624,15 +723,14 @@ describe("chat function dispatch", () => {
       delta: "data-ba-function-call",
     });
     const crlf = `data: ${JSON.stringify({ type: "start" })}\r\n\r\n`;
-    const notJson = "data: {data-ba-function-call\n\n";
     const comment = ": keepalive\n\n";
-    source.push(lookalike + crlf + notJson + comment);
+    source.push(lookalike + crlf + comment);
     source.push('data: [DONE]\n\ndata: {"type":"te');
     source.push('xt"}');
     source.close();
 
     expect(await readAll(result.toStream())).toBe(
-      `${lookalike + crlf + notJson + comment}data: [DONE]\n\ndata: {"type":"text"}`
+      `${lookalike + crlf + comment}data: [DONE]\n\ndata: {"type":"text"}`
     );
     expect(of("/claim")).toHaveLength(0);
   });
@@ -640,6 +738,7 @@ describe("chat function dispatch", () => {
   it.each([
     ["non-transient", sse({ ...readyEvent(), transient: false })],
     ["malformed", `data:${JSON.stringify(readyEvent({ id: "bad" }))}\n\n`],
+    ["truncated", `data: ${JSON.stringify(readyEvent()).slice(0, 40)}\n\n`],
   ])("fails the stream on a %s ready event", async (_, text) => {
     const source = upstream();
     const { client, of } = harness(source.stream);
@@ -659,6 +758,20 @@ describe("chat function dispatch", () => {
     expect(of("/claim")).toHaveLength(0);
   });
 
+  it("forwards multibyte characters split across chunks unchanged", async () => {
+    const source = upstream();
+    const { client } = harness(source.stream);
+    const { functions } = orderFunctions();
+    const result = await client.chat({ agentId, message, functions });
+    const text = sse({ type: "text-delta", id: "t", delta: "héllo 🌏" });
+    const bytes = new TextEncoder().encode(text);
+    const split = bytes.indexOf(0xf0) + 2;
+    source.pushBytes(bytes.slice(0, split));
+    source.pushBytes(bytes.slice(split));
+    source.close();
+    expect(await readAll(result.toStream())).toBe(text);
+  });
+
   it("parses events split across chunks and multi-line data fields", async () => {
     const source = upstream();
     const { client, of } = harness(source.stream);
@@ -667,9 +780,9 @@ describe("chat function dispatch", () => {
     const text = sse(readyEvent());
     source.push(text.slice(0, 20));
     source.push(text.slice(20));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
     source.close();
     await readAll(result.toStream());
-    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
     expect(spy).toHaveBeenCalledOnce();
   });
 
@@ -854,17 +967,25 @@ describe("resumeChat", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("joins without dispatch when no handlers are supplied", async () => {
-    const { client, source } = resumeHarness({ id: "tac_1", state: "running" });
+  it("reports missing handlers when resuming with an empty registry", async () => {
+    const { client, of, source } = resumeHarness({
+      id: "tac_1",
+      state: "running",
+    });
     const result = await client.resumeChat({
       agentId,
       sessionId,
       functions: {},
       abortSignal: new AbortController().signal,
     });
-    const event = sse(readyEvent());
-    source.push(event);
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
     source.close();
-    expect(await readAll(result.toStream())).toBe(event);
+    expect(await readAll(result.toStream())).toBe("");
+    expect(of("/claim")).toHaveLength(1);
+    expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
+      kind: "error",
+      message: "Function getOrder is not available.",
+    });
   });
 });

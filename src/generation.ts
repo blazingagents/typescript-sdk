@@ -3,7 +3,6 @@ import { toolApprovalsResponseSchema } from "./contracts/entities/sessions.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import {
-  type ChatFunctions,
   dispatchChatFunctions,
   type FunctionDispatchTarget,
   toChatFunctionDefinitions,
@@ -26,9 +25,8 @@ export async function chat(
   input: ChatInput
 ): Promise<ChatResult> {
   const body = buildChatBody(input);
-  const functions = activeFunctions(input.functions);
-  if (functions) {
-    body.functions = toChatFunctionDefinitions(functions);
+  if (input.functions && Object.keys(input.functions).length > 0) {
+    body.functions = toChatFunctionDefinitions(input.functions);
   }
   /**
    * URL presence is the mode: no `sessionId` → create
@@ -48,7 +46,7 @@ export async function chat(
   });
   return buildChatResult(config, response, input.sessionId, {
     agentId: input.agentId,
-    functions,
+    functions: input.functions,
     abortSignal: input.abortSignal,
   });
 }
@@ -87,15 +85,9 @@ export async function resumeChat(
   );
   return buildChatResult(config, response, input.sessionId, {
     agentId: input.agentId,
-    functions: activeFunctions(input.functions),
+    functions: input.functions,
     abortSignal: input.abortSignal,
   });
-}
-
-function activeFunctions(
-  functions: ChatFunctions | undefined
-): ChatFunctions | undefined {
-  return functions && Object.keys(functions).length > 0 ? functions : undefined;
 }
 
 function buildChatBody(input: ChatInput): Record<string, unknown> {

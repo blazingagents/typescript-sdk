@@ -394,6 +394,29 @@ describe("relay factories", () => {
     expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
   });
 
+  it("resumes as the executor with an empty registry", async () => {
+    const resources = approvalsResource();
+    const resumeChat = vi.fn(() =>
+      Promise.resolve({
+        sessionId: Promise.resolve("ss_0123456789abcdef"),
+        toStream: () => new ReadableStream<Uint8Array>(),
+        toResponse: () => new Response("resumed"),
+      })
+    );
+    const relay = createChatRelay({
+      client: { chat: vi.fn(), resumeChat, sessions: resources },
+      resolveContext: () => Promise.resolve({ ...context, functions: {} }),
+      sessions: sessions("user-a"),
+    });
+    await relay(
+      request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
+    );
+    expect(resumeChat).toHaveBeenCalledWith(
+      expect.objectContaining({ functions: {} })
+    );
+    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
+  });
+
   it("joins the continuation when the request has no functions", async () => {
     const resources = approvalsResource();
     const resumeChat = vi.fn();

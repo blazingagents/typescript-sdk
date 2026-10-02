@@ -99,7 +99,8 @@ function functionCallFrom(
   try {
     parsed = JSON.parse(data);
   } catch {
-    return;
+    /** Unparseable frames naming the private event never reach the browser. */
+    return null;
   }
   if ((parsed as { type?: unknown } | null)?.type !== FUNCTION_CALL_TYPE) {
     return;
@@ -226,14 +227,13 @@ async function execute(
     return { kind: "error", message: "Function execution failed." };
   }
   try {
-    const serialized = JSON.stringify(value);
+    /** Only plain JSON is accepted; undefined, NaN, Dates and class instances are invalid. */
     return (
-      chatFunctionOutcomeSchema.safeParse({
-        kind: "output",
-        value: serialized === undefined ? null : JSON.parse(serialized),
-      }).data ?? invalidResult
+      chatFunctionOutcomeSchema.safeParse({ kind: "output", value }).data ??
+      invalidResult
     );
   } catch {
+    /** Cyclic values fail serialization in the size check. */
     return invalidResult;
   }
 }
@@ -259,10 +259,13 @@ export function dispatchChatFunctions(
   /** Also aborted when the stream ends: stops claims and handlers. */
   const handlers = new AbortController();
   const abort = () => stop.abort();
-  target.abortSignal?.addEventListener("abort", abort, { once: true });
   stop.signal.addEventListener("abort", () => handlers.abort(), {
     once: true,
   });
+  target.abortSignal?.addEventListener("abort", abort, { once: true });
+  if (target.abortSignal?.aborted) {
+    abort();
+  }
   const reader = body.getReader();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -292,7 +295,15 @@ export function dispatchChatFunctions(
       deadline,
       handlers.signal
     );
-    if (claim !== "accepted") {
+    /**
+     * A grant can arrive just before the deadline and be processed after it,
+     * or after abort; never start customer code then.
+     */
+    if (
+      claim !== "accepted" ||
+      handlers.signal.aborted ||
+      Date.now() >= deadline
+    ) {
       return;
     }
     const outcome = await execute(

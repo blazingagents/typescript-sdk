@@ -225,6 +225,10 @@ async function execute(
   if (fn === undefined) {
     return { kind: "error", message: `Function ${name} is not available.` };
   }
+  /** Refinements and transforms are customer code too. */
+  if (signal.aborted || Date.now() >= deadline) {
+    return;
+  }
   let parsed: Awaited<ReturnType<typeof fn.inputSchema.safeParseAsync>>;
   try {
     parsed = await fn.inputSchema.safeParseAsync(input);

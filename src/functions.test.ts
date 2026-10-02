@@ -464,6 +464,86 @@ describe("chat function dispatch", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["processed after the deadline", "late"],
+    ["processed after the caller aborts", "aborted"],
+  ] as const)(
+    "runs no schema refinement when the grant is %s",
+    async (_, mode) => {
+      const source = upstream();
+      const controller = new AbortController();
+      let grant!: () => void;
+      const { client, of } = harness(source.stream, {
+        claim: [
+          () =>
+            new Promise<Response>((resolve) => {
+              grant = () => resolve(ok({ claimed: true }));
+            }),
+        ],
+      });
+      const refinement = vi.fn(() => true);
+      const execute = vi.fn();
+      await client.chat({
+        agentId,
+        message,
+        abortSignal: controller.signal,
+        functions: {
+          getOrder: defineFunction({
+            description: "Get an order",
+            inputSchema: z.object({ orderId: z.string() }).refine(refinement),
+            execute,
+          }),
+        },
+      });
+      source.push(
+        sse(
+          readyEvent({ deadlineAt: new Date(Date.now() + 150).toISOString() })
+        )
+      );
+      await vi.waitFor(() => expect(grant).toBeDefined());
+      if (mode === "late") {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } else {
+        controller.abort();
+      }
+      grant();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(refinement).not.toHaveBeenCalled();
+      expect(execute).not.toHaveBeenCalled();
+      expect(of("/result")).toHaveLength(0);
+      source.close();
+    }
+  );
+
+  it("does not run a handler when the caller aborts during async validation", async () => {
+    const source = upstream();
+    const controller = new AbortController();
+    const { client, of } = harness(source.stream);
+    const execute = vi.fn();
+    await client.chat({
+      agentId,
+      message,
+      abortSignal: controller.signal,
+      functions: {
+        getOrder: defineFunction({
+          description: "Get an order",
+          inputSchema: z.object({ orderId: z.string() }).refine(async () => {
+            controller.abort();
+            await Promise.resolve();
+            return true;
+          }),
+          execute,
+        }),
+      },
+    });
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(controller.signal.aborted).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(execute).not.toHaveBeenCalled();
+    expect(of("/result")).toHaveLength(0);
+    source.close();
+  });
+
   it("does not run a handler when the claim grant is processed after the deadline", async () => {
     const source = upstream();
     const { client, of } = harness(source.stream, {

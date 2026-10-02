@@ -1,7 +1,5 @@
 import { isToolUIPart, type UIMessage } from "ai";
 import type { BlazingAgents } from "./client.ts";
-import type { ChatFunctions } from "./functions.ts";
-import type { TerminalStreamResult } from "./types.ts";
 
 interface ApprovalTarget {
   abortSignal?: AbortSignal;
@@ -32,25 +30,4 @@ export async function decideApprovalResponses(
     }
   }
   return continuationId;
-}
-
-/**
- * Streams the decided continuation. A supplied registry (even empty) makes
- * this backend the executor through the explicit resume; without one the
- * observer join replays it.
- */
-export function continueAfterApproval(
-  client: Pick<BlazingAgents, "resumeChat" | "sessions">,
-  {
-    continuationId,
-    functions,
-    ...target
-  }: ApprovalTarget & { continuationId: string; functions?: ChatFunctions }
-): Promise<TerminalStreamResult> {
-  return functions
-    ? client.resumeChat({ ...target, functions })
-    : client.sessions.joinToolApprovalContinuation({
-        ...target,
-        continuationId,
-      });
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BlazingAgents } from "./client.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import { type ChatFunctions, defineFunction } from "./functions.ts";
+import { createChatRelay } from "./relay.ts";
 import type { BlazingAgentsFetch } from "./types.ts";
 
 const BASE = "http://localhost:8787";
@@ -653,6 +654,76 @@ describe("chat function dispatch", () => {
 
   it.each([
     [
+      "rejecting async refinements",
+      z.object({ orderId: z.string() }).refine(async () => false),
+    ],
+    [
+      "throwing transforms",
+      z.object({
+        orderId: z.string().transform((): string => {
+          throw new Error("validator exploded");
+        }),
+      }),
+    ],
+  ])(
+    "reports %s as invalid input without failing the stream",
+    async (_, inputSchema) => {
+      const source = upstream();
+      const { client, of } = harness(source.stream);
+      const execute = vi.fn();
+      const result = await client.chat({
+        agentId,
+        message,
+        functions: {
+          getOrder: defineFunction({
+            description: "Get an order",
+            inputSchema,
+            execute,
+          }),
+        },
+      });
+      const after = sse({ type: "finish" });
+      source.push(sse(readyEvent()));
+      await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
+      source.push(after);
+      source.close();
+      expect(await readAll(result.toStream())).toBe(after);
+      expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
+        kind: "error",
+        message: "Invalid function input.",
+      });
+      expect(execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it("runs handlers whose schemas need async validation", async () => {
+    const source = upstream();
+    const { client, of } = harness(source.stream);
+    const result = await client.chat({
+      agentId,
+      message,
+      functions: {
+        getOrder: defineFunction({
+          description: "Get an order",
+          inputSchema: z
+            .object({ orderId: z.string() })
+            .refine(async ({ orderId }) => orderId.length > 0),
+          execute: ({ orderId }) => ({ orderId }),
+        }),
+      },
+    });
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
+    source.close();
+    await readAll(result.toStream());
+    expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
+      kind: "output",
+      value: { orderId: "o1" },
+    });
+  });
+
+  it.each([
+    [
       "thrown errors",
       () => {
         throw new Error("password=secret");
@@ -983,6 +1054,99 @@ describe("resumeChat", () => {
     source.close();
     expect(await readAll(result.toStream())).toBe("");
     expect(of("/claim")).toHaveLength(1);
+    expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
+      kind: "error",
+      message: "Function getOrder is not available.",
+    });
+  });
+
+  it("resumes a known continuation without listing approvals", async () => {
+    const { client, calls, source } = resumeHarness(null);
+    const { functions } = orderFunctions();
+    const result = await client.resumeChat({
+      agentId,
+      sessionId,
+      continuationId: "tac_decided",
+      functions,
+    });
+    source.close();
+    await readAll(result.toStream());
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `POST /v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/tac_decided/resume`,
+    ]);
+  });
+});
+
+describe("observer continuation join", () => {
+  it("removes private events without claiming them", async () => {
+    const source = upstream();
+    const { client, of } = harness(source.stream, {
+      other: () =>
+        new Response(source.stream, {
+          headers: { "content-type": "text/event-stream" },
+        }),
+    });
+    const result = await client.sessions.joinToolApprovalContinuation({
+      agentId,
+      sessionId,
+      continuationId: "tac_1",
+    });
+    const text = sse({ type: "text-delta", id: "t", delta: "hi" });
+    source.push(sse(readyEvent()) + text);
+    source.close();
+    expect(await readAll(result.toStream())).toBe(text);
+    expect(of("/claim")).toHaveLength(0);
+  });
+});
+
+describe("approval relay without a registry", () => {
+  it("resumes as executor and reports the missing handler", async () => {
+    const source = upstream();
+    const { client, calls, of } = harness(source.stream, {
+      other: (call) =>
+        call.path.endsWith("/tool-approvals/approval-1")
+          ? ok({ continuationId: "tac_1", state: "queued" })
+          : new Response(source.stream, {
+              headers: { "content-type": "text/event-stream" },
+            }),
+    });
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve({ agentId, userId: "user-a" }),
+      sessions: {
+        ownerOf: () => Promise.resolve("user-a"),
+        recordOwner: () => Promise.resolve(),
+      },
+    });
+    const response = await relay(
+      new Request("http://example.test/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          sessionId,
+          message: {
+            id: "assistant-1",
+            role: "assistant",
+            parts: [
+              {
+                type: "dynamic-tool",
+                toolName: "getOrder",
+                toolCallId: "call-1",
+                state: "approval-responded",
+                input: { orderId: "o1" },
+                approval: { id: "approval-1", approved: true },
+              },
+            ],
+          },
+        }),
+      })
+    );
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
+    source.close();
+    expect(await response.text()).toBe("");
+    expect(calls[1].path).toBe(
+      `/v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/tac_1/resume`
+    );
     expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
       kind: "error",
       message: "Function getOrder is not available.",

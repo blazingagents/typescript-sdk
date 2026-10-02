@@ -170,7 +170,6 @@ export const jsonSchemaShapeSchema = z.custom<ConvertibleJsonSchema>(
   { message: "schema contains an unsupported or invalid JSON Schema feature" }
 );
 
-/** Provisional v1 bounds for caller-local chat functions. */
 export const MAX_CHAT_FUNCTIONS = 32;
 export const MAX_CHAT_FUNCTION_DEFINITIONS_BYTES = 64 * 1024;
 export const MAX_CHAT_FUNCTION_PAYLOAD_BYTES = 256 * 1024;

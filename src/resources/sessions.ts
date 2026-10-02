@@ -5,7 +5,8 @@ import {
   toolApprovalDecisionResponseSchema,
   toolApprovalsResponseSchema,
 } from "../contracts/entities/sessions.ts";
-import { buildTerminalStreamResult } from "../generation.ts";
+import { stripFunctionEvents } from "../functions.ts";
+import { buildTerminalStreamResult, withFilteredBody } from "../generation.ts";
 import { requestJson, requestStream } from "../http.ts";
 import type { HttpConfig, SessionsResource } from "../types.ts";
 
@@ -97,7 +98,11 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         `/v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/${continuationId}`,
         { signal: abortSignal }
       );
-      return buildTerminalStreamResult(response, "continuation");
+      /** Observers never execute calls; private events are removed unclaimed. */
+      return buildTerminalStreamResult(
+        withFilteredBody(response, stripFunctionEvents),
+        "continuation"
+      );
     },
     async toolApprovals({ agentId, sessionId, abortSignal }) {
       return await requestJson(

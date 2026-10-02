@@ -32,8 +32,7 @@ export interface ChatFunction<
   inputSchema: Schema;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: handler inputs vary per function
-export type ChatFunctions = Record<string, ChatFunction<any>>;
+export type ChatFunctions = Record<string, ChatFunction>;
 
 /** Declares a caller-local function whose handler input is inferred from its Zod schema. */
 export function defineFunction<Schema extends z.ZodType, Output>(
@@ -42,7 +41,6 @@ export function defineFunction<Schema extends z.ZodType, Output>(
   return definition;
 }
 
-/** Converts handlers to the wire definitions: descriptions and input JSON Schema only. */
 export function toChatFunctionDefinitions(
   functions: ChatFunctions
 ): ChatFunctionDefinitions {
@@ -119,7 +117,6 @@ function retryAfterMs(headers: Headers | undefined): number | undefined {
   return Number.isNaN(ms) ? undefined : Math.max(0, ms);
 }
 
-/** The delay before retrying, or `undefined` for a permanent failure. */
 function retryDelayMs(
   { code, headers, status }: BlazingAgentsError,
   attempt: number
@@ -182,24 +179,34 @@ async function postWithRetry(
       );
       return "accepted";
     } catch (caught) {
-      /** `requestJson` reports every failure as a BlazingAgentsError. */
-      const error = caught as BlazingAgentsError;
-      if (error.status === 409) {
-        return "conflict";
+      const next = afterFailure(caught, attempt, until, signal);
+      if (typeof next === "string") {
+        return next;
       }
-      if (signal.aborted || Date.now() >= until) {
-        return "expired";
-      }
-      const delay = retryDelayMs(error, attempt);
-      if (delay === undefined) {
-        throw error;
-      }
-      if (Date.now() + delay >= until) {
-        return "expired";
-      }
-      await sleep(delay, signal);
+      await sleep(next, signal);
     }
   }
+}
+
+/** Classifies a failed attempt as a lost race, an exhausted budget, or the delay before retrying; permanent failures rethrow. */
+function afterFailure(
+  caught: unknown,
+  attempt: number,
+  until: number,
+  signal: AbortSignal
+): "conflict" | "expired" | number {
+  const error = BlazingAgentsError.isInstance(caught) ? caught : undefined;
+  if (error?.status === 409) {
+    return "conflict";
+  }
+  if (signal.aborted || Date.now() >= until) {
+    return "expired";
+  }
+  const delay = error && retryDelayMs(error, attempt);
+  if (delay === undefined) {
+    throw caught;
+  }
+  return Date.now() + delay >= until ? "expired" : delay;
 }
 
 const invalidResult: ChatFunctionOutcome = {
@@ -207,18 +214,29 @@ const invalidResult: ChatFunctionOutcome = {
   message: "Function returned an invalid result.",
 };
 
+/** Resolves `undefined` when the call became late or aborted before customer code could start. */
 async function execute(
   functions: ChatFunctions,
   { id, name, input }: ChatFunctionCallEvent["data"],
+  deadline: number,
   signal: AbortSignal
-): Promise<ChatFunctionOutcome> {
+): Promise<ChatFunctionOutcome | undefined> {
   const fn = Object.hasOwn(functions, name) ? functions[name] : undefined;
   if (fn === undefined) {
     return { kind: "error", message: `Function ${name} is not available.` };
   }
-  const parsed = fn.inputSchema.safeParse(input);
+  let parsed: Awaited<ReturnType<typeof fn.inputSchema.safeParseAsync>>;
+  try {
+    parsed = await fn.inputSchema.safeParseAsync(input);
+  } catch {
+    /** Zod rethrows errors thrown inside refinements and transforms. */
+    return { kind: "error", message: "Invalid function input." };
+  }
   if (!parsed.success) {
     return { kind: "error", message: "Invalid function input." };
+  }
+  if (signal.aborted || Date.now() >= deadline) {
+    return;
   }
   let value: unknown;
   try {
@@ -245,31 +263,27 @@ export interface FunctionDispatchTarget {
   sessionId: string;
 }
 
+interface FunctionEventHandlers {
+  onCall?(
+    call: ChatFunctionCallEvent["data"],
+    fail: (error: unknown) => void
+  ): void;
+  onCancel?(): void;
+  onEnd?(): void;
+}
+
 /**
- * Reads the chat SSE eagerly, executes claimed function calls without
- * blocking the read loop, and returns the remaining SSE bytes unchanged.
+ * Reads native SSE eagerly and returns it without private function events,
+ * so slow consumers never delay a call. A recognized but malformed event
+ * fails the stream.
  */
-export function dispatchChatFunctions(
-  config: HttpConfig,
-  target: FunctionDispatchTarget,
-  body: ReadableStream<Uint8Array>
+export function stripFunctionEvents(
+  body: ReadableStream<Uint8Array>,
+  { onCall, onCancel, onEnd }: FunctionEventHandlers = {}
 ): ReadableStream<Uint8Array> {
-  /** Caller abort or consumer cancellation: stops every retry. */
-  const stop = new AbortController();
-  /** Also aborted when the stream ends: stops claims and handlers. */
-  const handlers = new AbortController();
-  const abort = () => stop.abort();
-  stop.signal.addEventListener("abort", () => handlers.abort(), {
-    once: true,
-  });
-  target.abortSignal?.addEventListener("abort", abort, { once: true });
-  if (target.abortSignal?.aborted) {
-    abort();
-  }
   const reader = body.getReader();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-  const dispatched = new Set<string>();
   let output!: ReadableStreamDefaultController<Uint8Array>;
   let finished = false;
 
@@ -279,49 +293,7 @@ export function dispatchChatFunctions(
     }
     finished = true;
     output.error(error);
-    handlers.abort();
     reader.cancel(error).catch(() => undefined);
-  };
-
-  const runCall = async (call: ChatFunctionCallEvent["data"]) => {
-    const path = `/v1/agents/${target.agentId}/sessions/${target.sessionId}/function-calls/${call.id}`;
-    const claimRequestId = crypto.randomUUID();
-    const deadline = Date.parse(call.deadlineAt);
-    const claim = await postWithRetry(
-      config,
-      `${path}/claim`,
-      { claimRequestId },
-      claimChatFunctionResponseSchema,
-      deadline,
-      handlers.signal
-    );
-    /**
-     * A grant can arrive just before the deadline and be processed after it,
-     * or after abort; never start customer code then.
-     */
-    if (
-      claim !== "accepted" ||
-      handlers.signal.aborted ||
-      Date.now() >= deadline
-    ) {
-      return;
-    }
-    const outcome = await execute(
-      target.functions,
-      call,
-      AbortSignal.any([
-        handlers.signal,
-        AbortSignal.timeout(Math.max(0, deadline - Date.now())),
-      ])
-    );
-    await postWithRetry(
-      config,
-      `${path}/result`,
-      { claimRequestId, outcome },
-      resolveChatFunctionResponseSchema,
-      deadline + RESULT_RETRY_GRACE_MS,
-      stop.signal
-    );
   };
 
   const handleBlock = (block: string, raw: string) => {
@@ -337,9 +309,8 @@ export function dispatchChatFunctions(
           message: "The server sent a malformed function call event.",
         })
       );
-    } else if (!dispatched.has(call.data.id)) {
-      dispatched.add(call.data.id);
-      runCall(call.data).catch(fail);
+    } else {
+      onCall?.(call.data, fail);
     }
   };
 
@@ -370,8 +341,7 @@ export function dispatchChatFunctions(
     } catch (error) {
       fail(error);
     } finally {
-      handlers.abort();
-      target.abortSignal?.removeEventListener("abort", abort);
+      onEnd?.();
     }
   };
 
@@ -382,8 +352,84 @@ export function dispatchChatFunctions(
     },
     async cancel(reason) {
       finished = true;
-      stop.abort();
+      onCancel?.();
       await reader.cancel(reason);
+    },
+  });
+}
+
+/** Strips private function events and executes claimed calls without blocking the read loop. */
+export function dispatchChatFunctions(
+  config: HttpConfig,
+  target: FunctionDispatchTarget,
+  body: ReadableStream<Uint8Array>
+): ReadableStream<Uint8Array> {
+  /** Caller abort or consumer cancellation: stops every retry. */
+  const stop = new AbortController();
+  /** Also aborted when the stream ends: stops claims and handlers. */
+  const handlers = new AbortController();
+  const abort = () => stop.abort();
+  stop.signal.addEventListener("abort", () => handlers.abort(), {
+    once: true,
+  });
+  target.abortSignal?.addEventListener("abort", abort, { once: true });
+  if (target.abortSignal?.aborted) {
+    abort();
+  }
+  const dispatched = new Set<string>();
+
+  const runCall = async (call: ChatFunctionCallEvent["data"]) => {
+    const path = `/v1/agents/${target.agentId}/sessions/${target.sessionId}/function-calls/${call.id}`;
+    const claimRequestId = crypto.randomUUID();
+    const deadline = Date.parse(call.deadlineAt);
+    const claim = await postWithRetry(
+      config,
+      `${path}/claim`,
+      { claimRequestId },
+      claimChatFunctionResponseSchema,
+      deadline,
+      handlers.signal
+    );
+    if (claim !== "accepted") {
+      return;
+    }
+    /**
+     * A grant can arrive just before the deadline and be processed after it,
+     * or after abort; `execute` rechecks immediately before customer code.
+     */
+    const outcome = await execute(
+      target.functions,
+      call,
+      deadline,
+      AbortSignal.any([
+        handlers.signal,
+        AbortSignal.timeout(Math.max(0, deadline - Date.now())),
+      ])
+    );
+    if (outcome === undefined) {
+      return;
+    }
+    await postWithRetry(
+      config,
+      `${path}/result`,
+      { claimRequestId, outcome },
+      resolveChatFunctionResponseSchema,
+      deadline + RESULT_RETRY_GRACE_MS,
+      stop.signal
+    );
+  };
+
+  return stripFunctionEvents(body, {
+    onCall(call, fail) {
+      if (!dispatched.has(call.id)) {
+        dispatched.add(call.id);
+        runCall(call).catch(fail);
+      }
+    },
+    onCancel: abort,
+    onEnd() {
+      handlers.abort();
+      target.abortSignal?.removeEventListener("abort", abort);
     },
   });
 }

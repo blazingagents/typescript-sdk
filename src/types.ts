@@ -276,6 +276,8 @@ export type ChatInput = ChatMessageInput | ChatPromptInput;
 export interface ResumeChatInput extends CorrelatedRequestInput {
   abortSignal?: AbortSignal;
   agentId: string;
+  /** The decided continuation; omitted, the Session's queued or running one is resumed. */
+  continuationId?: string;
   functions: ChatFunctions;
   sessionId: string;
 }

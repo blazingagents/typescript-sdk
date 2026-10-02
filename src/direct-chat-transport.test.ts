@@ -408,8 +408,8 @@ describe("BlazingAgentsDirectChatTransport", () => {
         body: { approved: false, reason: "Keep it" },
       },
       {
-        url: `${base}/tool-approval-continuations/${continuationId}`,
-        body: null,
+        url: `${base}/tool-approval-continuations/${continuationId}/resume`,
+        body: {},
       },
     ]);
     expect(getClient).toHaveBeenCalledOnce();
@@ -490,7 +490,6 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const base = `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`;
     expect(requests.map(({ method, url }) => `${method} ${url}`)).toEqual([
       `POST ${base}/tool-approvals/approval-1`,
-      `GET ${base}/tool-approvals`,
       `POST ${base}/tool-approval-continuations/${continuationId}/resume`,
     ]);
 
@@ -498,7 +497,6 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const stream = await transport.reconnectToStream({ chatId: "local-chat" });
     expect(stream).not.toBeNull();
     expect(requests.map(({ method, url }) => `${method} ${url}`)).toEqual([
-      `GET ${base}/tool-approvals`,
       `GET ${base}/tool-approvals`,
       `POST ${base}/tool-approval-continuations/${continuationId}/resume`,
     ]);
@@ -563,7 +561,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     }
     expect(requests).toEqual([
       `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approvals`,
-      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approval-continuations/${continuationId}`,
+      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approval-continuations/${continuationId}/resume`,
     ]);
     expect(getClient).toHaveBeenCalledOnce();
   });

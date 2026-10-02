@@ -36,12 +36,7 @@ function approvalsResource(continuationId = "tac_1") {
     decideToolApproval: vi.fn(() =>
       Promise.resolve({ continuationId, state: "queued" as const })
     ),
-    joinToolApprovalContinuation: vi.fn(() =>
-      Promise.resolve({
-        toStream: () => new ReadableStream<Uint8Array>(),
-        toResponse: () => new Response("joined"),
-      })
-    ),
+    joinToolApprovalContinuation: vi.fn(),
   } as unknown as BlazingAgents["sessions"];
 }
 
@@ -390,11 +385,15 @@ describe("relay factories", () => {
       ],
       [{ ...target, approvalId: "approval-2", approved: false, reason: "No" }],
     ]);
-    expect(resumeChat).toHaveBeenCalledWith({ ...target, functions });
+    expect(resumeChat).toHaveBeenCalledWith({
+      ...target,
+      continuationId: "tac_1",
+      functions,
+    });
     expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
   });
 
-  it("resumes as the executor with an empty registry", async () => {
+  it("resumes as the executor even when the request has no functions", async () => {
     const resources = approvalsResource();
     const resumeChat = vi.fn(() =>
       Promise.resolve({
@@ -405,23 +404,6 @@ describe("relay factories", () => {
     );
     const relay = createChatRelay({
       client: { chat: vi.fn(), resumeChat, sessions: resources },
-      resolveContext: () => Promise.resolve({ ...context, functions: {} }),
-      sessions: sessions("user-a"),
-    });
-    await relay(
-      request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
-    );
-    expect(resumeChat).toHaveBeenCalledWith(
-      expect.objectContaining({ functions: {} })
-    );
-    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
-  });
-
-  it("joins the continuation when the request has no functions", async () => {
-    const resources = approvalsResource();
-    const resumeChat = vi.fn();
-    const relay = createChatRelay({
-      client: { chat: vi.fn(), resumeChat, sessions: resources },
       resolveContext: () => Promise.resolve(context),
       sessions: sessions("user-a"),
     });
@@ -430,14 +412,15 @@ describe("relay factories", () => {
       request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
     );
 
-    expect(await response.text()).toBe("joined");
-    expect(resources.joinToolApprovalContinuation).toHaveBeenCalledWith({
+    expect(await response.text()).toBe("resumed");
+    expect(resumeChat).toHaveBeenCalledWith({
       agentId: context.agentId,
       sessionId: "ss_0123456789abcdef",
       abortSignal: expect.any(AbortSignal),
       continuationId: "tac_1",
+      functions: {},
     });
-    expect(resumeChat).not.toHaveBeenCalled();
+    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
   });
 
   it("rejects approval relays without a Session, ownership, or responses", async () => {

@@ -4,7 +4,7 @@ import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import { continueAfterApproval, decideApprovalResponses } from "./approvals.ts";
+import { decideApprovalResponses } from "./approvals.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import type { ChatFunctions } from "./functions.ts";
@@ -127,11 +127,11 @@ export class BlazingAgentsDirectChatTransport<
     if (continuation?.state !== "queued" && continuation?.state !== "running") {
       return null;
     }
-    const result = await continueAfterApproval(client, {
+    const result = await client.resumeChat({
       agentId: this.#options.agentId,
       sessionId: this.#sessionId,
       continuationId: continuation.id,
-      functions: this.#options.functions,
+      functions: this.#options.functions ?? {},
     });
     return this.processResponseStream(result.toStream());
   }
@@ -156,10 +156,10 @@ export class BlazingAgentsDirectChatTransport<
     if (continuationId === undefined) {
       throw new Error("Tool approval response is missing an approval.");
     }
-    const continuation = await continueAfterApproval(client, {
+    const continuation = await client.resumeChat({
       ...target,
       continuationId,
-      functions: this.#options.functions,
+      functions: this.#options.functions ?? {},
     });
     return this.processResponseStream(continuation.toStream());
   }

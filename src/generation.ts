@@ -51,31 +51,16 @@ export async function chat(
   });
 }
 
-/**
- * Reattaches handlers to a tool-approval continuation that waits for them.
- * Locates the Session's active continuation and starts or joins it through
- * the explicit backend resume operation.
- */
 export async function resumeChat(
   config: HttpConfig,
   input: ResumeChatInput
 ): Promise<ChatResult> {
   const sessionPath = `/v1/agents/${input.agentId}/sessions/${input.sessionId}`;
-  const { continuation } = await requestJson(
-    config,
-    `${sessionPath}/tool-approvals`,
-    { signal: input.abortSignal },
-    toolApprovalsResponseSchema
-  );
-  if (continuation?.state !== "queued" && continuation?.state !== "running") {
-    throw new BlazingAgentsError({
-      code: "not_found",
-      message: "The Session has no tool approval continuation to resume.",
-    });
-  }
+  const continuationId =
+    input.continuationId ?? (await activeContinuationId(config, input));
   const response = await requestStream(
     config,
-    `${sessionPath}/tool-approval-continuations/${continuation.id}/resume`,
+    `${sessionPath}/tool-approval-continuations/${continuationId}/resume`,
     {
       json: {},
       method: "POST",
@@ -87,6 +72,43 @@ export async function resumeChat(
     agentId: input.agentId,
     functions: input.functions,
     abortSignal: input.abortSignal,
+  });
+}
+
+async function activeContinuationId(
+  config: HttpConfig,
+  { agentId, sessionId, abortSignal }: ResumeChatInput
+): Promise<string> {
+  const { continuation } = await requestJson(
+    config,
+    `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`,
+    { signal: abortSignal },
+    toolApprovalsResponseSchema
+  );
+  if (continuation?.state !== "queued" && continuation?.state !== "running") {
+    throw new BlazingAgentsError({
+      code: "not_found",
+      message: "The Session has no tool approval continuation to resume.",
+    });
+  }
+  return continuation.id;
+}
+
+/**
+ * Keeps status and headers while filtering the SSE body. Missing or locked
+ * bodies pass through so the stream result reports them as `stream_error`.
+ */
+export function withFilteredBody(
+  response: Response,
+  filter: (body: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>
+): Response {
+  if (!response.body || response.body.locked) {
+    return response;
+  }
+  return new Response(filter(response.body), {
+    headers: response.headers,
+    status: response.status,
+    statusText: response.statusText,
   });
 }
 
@@ -195,19 +217,15 @@ function buildChatResult(
   sessionIdPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
   });
+  const { functions } = dispatch;
   const streamResponse =
-    dispatch.functions && sessionId !== undefined && response.body
-      ? new Response(
+    functions && sessionId !== undefined
+      ? withFilteredBody(response, (body) =>
           dispatchChatFunctions(
             config,
-            { ...dispatch, functions: dispatch.functions, sessionId },
-            response.body
-          ),
-          {
-            headers: response.headers,
-            status: response.status,
-            statusText: response.statusText,
-          }
+            { ...dispatch, functions, sessionId },
+            body
+          )
         )
       : response;
 

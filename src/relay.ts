@@ -1,6 +1,6 @@
 import { safeValidateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
-import { continueAfterApproval, decideApprovalResponses } from "./approvals.ts";
+import { decideApprovalResponses } from "./approvals.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
@@ -153,10 +153,11 @@ async function relayApprovalResponses(
       "The message has no tool approval responses."
     );
   }
-  const continuation = await continueAfterApproval(client, {
+  /** An absent registry still resumes, so missing handlers become tool errors instead of a stalled observer. */
+  const continuation = await client.resumeChat({
     ...target,
     continuationId,
-    functions,
+    functions: functions ?? {},
   });
   return continuation.toResponse();
 }

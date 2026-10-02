@@ -84,6 +84,7 @@ export const promptIdSchema = z.string().regex(/^prompt_[0-9A-Za-z]{16}$/);
 export const requestIdSchema = z.string().regex(/^req_[0-9A-Za-z]{16}$/);
 export const checkoutAttemptIdSchema = z.string().regex(/^ca_[0-9A-Za-z]{16}$/);
 export const turnIdSchema = z.string().regex(/^turn_[0-9A-Za-z]{16}$/);
+export const functionCallIdSchema = z.string().regex(/^fc_[0-9A-Za-z]{16}$/);
 
 export const skillIdSchema = z.string().regex(/^skill_[0-9A-Za-z]{16}$/);
 

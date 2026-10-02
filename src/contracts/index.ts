@@ -32,15 +32,37 @@ export {
   attributionCreateInputSchema,
   metadataSchema,
 } from "./entities/attribution.ts";
-export type { PromptVariables, UsageSummary } from "./entities/chat.ts";
+export type {
+  ChatFunctionCallEvent,
+  ChatFunctionDefinition,
+  ChatFunctionDefinitions,
+  ChatFunctionOutcome,
+  ClaimChatFunctionBody,
+  PromptVariables,
+  ResolveChatFunctionBody,
+  UsageSummary,
+} from "./entities/chat.ts";
 export {
   blazingAgentsChatMessageMetadataSchema,
+  chatFunctionCallEventSchema,
+  chatFunctionDefinitionSchema,
+  chatFunctionDefinitionsSchema,
+  chatFunctionNameSchema,
+  chatFunctionOutcomeSchema,
   chatModeSchema,
   chatRequestBodySchema,
   chatTriggerSchema,
+  claimChatFunctionBodySchema,
+  claimChatFunctionResponseSchema,
   generationRequestBodySchema,
   jsonSchemaShapeSchema,
+  MAX_CHAT_FUNCTION_DEFINITIONS_BYTES,
+  MAX_CHAT_FUNCTION_PAYLOAD_BYTES,
+  MAX_CHAT_FUNCTIONS,
   promptVariablesSchema,
+  resolveChatFunctionBodySchema,
+  resolveChatFunctionResponseSchema,
+  resumeToolApprovalContinuationBodySchema,
   usageSummarySchema,
 } from "./entities/chat.ts";
 export {
@@ -208,6 +230,7 @@ export {
 export {
   agentIdSchema,
   apiKeyTokenSchema,
+  functionCallIdSchema,
   isAdminAgentId,
   promptIdSchema,
   sessionIdSchema,

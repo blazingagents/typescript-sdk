@@ -54,6 +54,8 @@ describe("session input contracts", () => {
     {},
     { requestId: "a" },
     { requestId: "", message },
+    { requestId: ".", message },
+    { requestId: "..", message },
     { requestId: "a".repeat(129), message },
     { requestId: "a", message, whenBusy: "followUp" },
     { requestId: "a", message, promptId: "prompt_0123456789abcdef" },
@@ -61,6 +63,15 @@ describe("session input contracts", () => {
   ])("rejects an invalid submission %j", (body) => {
     expect(submitSessionInputBodySchema.safeParse(body).success).toBe(false);
   });
+
+  it.each(["...", "a.b", "%2E", "a/b?c#d", "空白"])(
+    "preserves the non-dot request identity %s",
+    (requestId) => {
+      expect(
+        submitSessionInputBodySchema.parse({ requestId, message }).requestId
+      ).toBe(requestId);
+    }
+  );
 
   it("retains native message fields and consumed effects on cancelled receipts", () => {
     const data = {

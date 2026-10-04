@@ -61,10 +61,13 @@ describe("BlazingAgentsDirectChatTransport", () => {
         getClient: () => client(fetch),
       });
       const abortSignal = new AbortController().signal;
-      const stream = await transport[method]({
-        turnId: "turn_0123456789abcdef",
-        abortSignal,
-      });
+      const stream =
+        method === "joinInputTurn"
+          ? await transport.joinInputTurn({
+              turnId: "turn_0123456789abcdef",
+              abortSignal,
+            })
+          : await transport.runInputs({ abortSignal });
       expect(await collect(stream)).toEqual(chatChunks);
       const expectedPath =
         method === "joinInputTurn"
@@ -85,9 +88,11 @@ describe("BlazingAgentsDirectChatTransport", () => {
         agentId,
         getClient,
       });
-      await expect(
-        transport[method]({ turnId: "turn_0123456789abcdef" })
-      ).rejects.toThrow("requires an existing Session");
+      const result =
+        method === "joinInputTurn"
+          ? transport.joinInputTurn({ turnId: "turn_0123456789abcdef" })
+          : transport.runInputs();
+      await expect(result).rejects.toThrow("requires an existing Session");
       expect(getClient).not.toHaveBeenCalled();
     }
   );

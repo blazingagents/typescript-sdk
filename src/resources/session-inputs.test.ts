@@ -205,11 +205,11 @@ describe("input Turn streams", () => {
         stream: sseStream([...chunks, functionEvent]),
       });
       const abortSignal = new AbortController().signal;
-      const result = await client(fetch).sessions[method]({
-        ...target,
-        turnId,
-        abortSignal,
-      });
+      const sessions = client(fetch).sessions;
+      const result =
+        method === "joinInputTurn"
+          ? await sessions.joinInputTurn({ ...target, turnId, abortSignal })
+          : await sessions.runInputs({ ...target, abortSignal });
       const output = result.toResponse();
       expect(output.headers.get("x-vercel-ai-ui-message-stream")).toBe("v1");
       const text = await output.text();
@@ -273,11 +273,11 @@ describe("input Turn streams", () => {
         }
         return await streamed.fetch(url, init);
       };
-      const result = await client(fetch).sessions[method]({
-        ...target,
-        turnId,
-        functions,
-      });
+      const sessions = client(fetch).sessions;
+      const result =
+        method === "joinInputTurn"
+          ? await sessions.joinInputTurn({ ...target, turnId, functions })
+          : await sessions.runInputs({ ...target, functions });
       const text = await result.toResponse().text();
       expect(text).toContain('"delta":"Hello"');
       expect(text).not.toContain("data-ba-function-call");

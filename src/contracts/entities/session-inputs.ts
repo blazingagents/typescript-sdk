@@ -13,7 +13,13 @@ export const sessionInputStateSchema = z.enum([
 ]);
 
 export const sessionInputModeSchema = z.enum(["queue", "steer"]);
-export const sessionInputRequestIdSchema = z.string().min(1).max(128);
+export const sessionInputRequestIdSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .refine((requestId) => requestId !== "." && requestId !== "..", {
+    message: "requestId must not be a URL dot segment.",
+  });
 
 export const sessionInputSchema = z
   .object({

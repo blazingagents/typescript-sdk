@@ -104,6 +104,14 @@ it("uses the installed queue contracts and receives live SSE before settlement",
     expect(await client.sessions.submitInput(input)).toEqual(
       sessionInputResponseSchema.parse(receipt)
     );
+    expect(
+      submitSessionInputBodySchema.safeParse({ requestId: ".", message })
+        .success
+    ).toBe(false);
+    expect(
+      submitSessionInputBodySchema.safeParse({ requestId: "..", message })
+        .success
+    ).toBe(false);
     expect(submitSessionInputBodySchema.parse(requests[0].body).whenBusy).toBe(
       "queue"
     );

@@ -24,6 +24,8 @@ export type ApiErrorIssue = z.infer<typeof apiErrorIssueSchema>;
 export const apiErrorCodeSchema = z.enum([
   "invalid_request",
   "idempotency_conflict",
+  "input_idempotency_conflict",
+  "input_not_pending",
   "validation_failed",
   "unauthorized",
   "forbidden",

@@ -62,6 +62,8 @@ describe("apiErrorCodeSchema", () => {
     const codes = [
       "invalid_request",
       "idempotency_conflict",
+      "input_idempotency_conflict",
+      "input_not_pending",
       "validation_failed",
       "unauthorized",
       "forbidden",

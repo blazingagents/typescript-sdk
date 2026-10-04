@@ -14,6 +14,11 @@ import {
   toolApprovalsResponseSchema,
 } from "../contracts/entities/sessions.ts";
 import {
+  agentIdSchema,
+  sessionIdSchema,
+  turnIdSchema,
+} from "../contracts/ids.ts";
+import {
   dispatchChatFunctions,
   stripFunctionEvents,
   toChatFunctionDefinitions,
@@ -40,7 +45,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     }) {
       const response = await requestStream(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/input-turns/${turnId}`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/input-turns/${turnIdSchema.parse(turnId)}`,
         { signal: abortSignal }
       );
       return buildTerminalStreamResult(response, "input Turn", (body) =>
@@ -56,7 +61,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async runInputs({ agentId, sessionId, functions, abortSignal }) {
       const response = await requestStream(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/run`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/run`,
         {
           method: "POST",
           json:
@@ -79,7 +84,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async submitInput({ agentId, sessionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
         { method: "POST", json: body, signal: abortSignal },
         sessionInputResponseSchema
       );
@@ -87,7 +92,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async inputs({ agentId, sessionId, abortSignal, ...query }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
         { query, signal: abortSignal },
         sessionInputsResponseSchema
       );
@@ -96,7 +101,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
       const inputId = sessionInputRequestIdSchema.parse(requestId);
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/${encodeURIComponent(inputId)}/promote`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/${encodeURIComponent(inputId)}/promote`,
         { method: "POST", signal: abortSignal },
         sessionInputResponseSchema
       );
@@ -105,7 +110,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
       const inputId = sessionInputRequestIdSchema.parse(requestId);
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/${encodeURIComponent(inputId)}`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/${encodeURIComponent(inputId)}`,
         { method: "DELETE", signal: abortSignal },
         sessionInputResponseSchema
       );
@@ -113,15 +118,19 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async stop({ agentId, sessionId, turnId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/stop`,
-        { method: "POST", json: { turnId }, signal: abortSignal },
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/stop`,
+        {
+          method: "POST",
+          json: { turnId: turnIdSchema.parse(turnId) },
+          signal: abortSignal,
+        },
         stopSessionResponseSchema
       );
     },
     async resumeInputs({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/resume`,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/resume`,
         { method: "POST", signal: abortSignal },
         resumeSessionInputsResponseSchema
       );

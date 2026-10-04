@@ -40,6 +40,23 @@ async function collect(stream: ReadableStream) {
 describe("BlazingAgentsDirectChatTransport", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("rejects Turn traversal through the real SDK before native fetch", async () => {
+    const fetch = vi.fn(() =>
+      Promise.resolve(new Response(sseStream(chatChunks)))
+    );
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      sessionId: mintedSessionId,
+      getClient: () => client(fetch),
+    });
+    for (const turnId of ["..", "../tool-approvals", "%2e%2e"]) {
+      await expect(transport.joinInputTurn({ turnId })).rejects.toBeInstanceOf(
+        z.ZodError
+      );
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it.each(["joinInputTurn", "runInputs"] as const)(
     "%s decodes input SSE using native streaming fetch",
     async (method) => {

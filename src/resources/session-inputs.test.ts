@@ -135,6 +135,31 @@ describe("durable session inputs", () => {
     }
   );
 
+  it.each(["promoteInput", "deleteInput"] as const)(
+    "%s rejects URL dot segments before any request",
+    async (method) => {
+      const { fetch, calls } = createMockFetch({ body: response });
+      for (const requestId of [".", ".."]) {
+        await expect(
+          client(fetch).sessions[method]({ ...target, requestId })
+        ).rejects.toThrow("URL dot segment");
+      }
+      expect(calls).toHaveLength(0);
+    }
+  );
+
+  it.each(["promoteInput", "deleteInput"] as const)(
+    "%s double-encodes literal percent-encoded dots",
+    async (method) => {
+      const { fetch, calls } = createMockFetch({ body: response });
+      await client(fetch).sessions[method]({ ...target, requestId: "%2E%2E" });
+      expect(calls[0].url).toBe(
+        `${path}/inputs/%252E%252E${method === "promoteInput" ? "/promote" : ""}`
+      );
+      expect(new URL(calls[0].url).pathname).toContain("/inputs/%252E%252E");
+    }
+  );
+
   it("fences Stop to one Turn while reporting its running successor", async () => {
     const body = {
       stoppedTurnId: turnId,

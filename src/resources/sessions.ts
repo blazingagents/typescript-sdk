@@ -1,5 +1,6 @@
 import {
   resumeSessionInputsResponseSchema,
+  sessionInputRequestIdSchema,
   sessionInputResponseSchema,
   sessionInputsResponseSchema,
   stopSessionResponseSchema,
@@ -92,17 +93,19 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
       );
     },
     async promoteInput({ agentId, sessionId, requestId, abortSignal }) {
+      const inputId = sessionInputRequestIdSchema.parse(requestId);
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/${encodeURIComponent(requestId)}/promote`,
+        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/${encodeURIComponent(inputId)}/promote`,
         { method: "POST", signal: abortSignal },
         sessionInputResponseSchema
       );
     },
     async deleteInput({ agentId, sessionId, requestId, abortSignal }) {
+      const inputId = sessionInputRequestIdSchema.parse(requestId);
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/${encodeURIComponent(requestId)}`,
+        `/v1/agents/${agentId}/sessions/${sessionId}/inputs/${encodeURIComponent(inputId)}`,
         { method: "DELETE", signal: abortSignal },
         sessionInputResponseSchema
       );

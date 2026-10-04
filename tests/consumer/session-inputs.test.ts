@@ -118,6 +118,15 @@ it("uses the installed queue contracts and receives live SSE before settlement",
     expect(await client.sessions.inputs(target)).toEqual(
       sessionInputsResponseSchema.parse(page)
     );
+    const beforeInvalid = requests.length;
+    for (const method of ["promoteInput", "deleteInput"] as const) {
+      for (const requestId of [".", ".."]) {
+        await expect(
+          client.sessions[method]({ ...target, requestId })
+        ).rejects.toThrow("URL dot segment");
+      }
+    }
+    expect(requests).toHaveLength(beforeInvalid);
     await client.sessions.promoteInput({
       ...target,
       requestId: receipt.data.requestId,

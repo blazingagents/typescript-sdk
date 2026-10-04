@@ -40,6 +40,70 @@ async function collect(stream: ReadableStream) {
 describe("BlazingAgentsDirectChatTransport", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each(["joinInputTurn", "runInputs"] as const)(
+    "%s decodes input SSE using native streaming fetch",
+    async (method) => {
+      const NativeResponse = globalThis.Response;
+      const fetch = vi.fn(() =>
+        Promise.resolve(new NativeResponse(sseStream(chatChunks)))
+      );
+      vi.stubGlobal(
+        "Response",
+        class {
+          constructor() {
+            throw new Error("Native Response cannot wrap a stream");
+          }
+        }
+      );
+      const transport = new BlazingAgentsDirectChatTransport({
+        agentId,
+        sessionId: mintedSessionId,
+        getClient: () => client(fetch),
+      });
+      const abortSignal = new AbortController().signal;
+      const stream = await transport[method]({
+        turnId: "turn_0123456789abcdef",
+        abortSignal,
+      });
+      expect(await collect(stream)).toEqual(chatChunks);
+      const expectedPath =
+        method === "joinInputTurn"
+          ? "input-turns/turn_0123456789abcdef"
+          : "inputs/run";
+      expect(fetch).toHaveBeenCalledWith(
+        `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/${expectedPath}`,
+        expect.objectContaining({ signal: abortSignal })
+      );
+    }
+  );
+
+  it.each(["joinInputTurn", "runInputs"] as const)(
+    "%s requires a materialized Session",
+    async (method) => {
+      const getClient = vi.fn();
+      const transport = new BlazingAgentsDirectChatTransport({
+        agentId,
+        getClient,
+      });
+      await expect(
+        transport[method]({ turnId: "turn_0123456789abcdef" })
+      ).rejects.toThrow("requires an existing Session");
+      expect(getClient).not.toHaveBeenCalled();
+    }
+  );
+
+  it("admits an input batch with default direct transport options", async () => {
+    const fetch = vi.fn(() =>
+      Promise.resolve(new Response(sseStream(chatChunks)))
+    );
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      sessionId: mintedSessionId,
+      getClient: () => client(fetch),
+    });
+    expect(await collect(await transport.runInputs())).toEqual(chatChunks);
+  });
+
   it("decodes native SSE without constructing Response and retains early Session identity", async () => {
     const NativeResponse = globalThis.Response;
     const requests: { url: string; body: unknown; signal: unknown }[] = [];

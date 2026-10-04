@@ -68,6 +68,15 @@ import type {
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 import type {
+  ResumeSessionInputsResponse,
+  SessionInputResponse,
+  SessionInputsQuery,
+  SessionInputsResponse,
+  StopSessionBody,
+  StopSessionResponse,
+  SubmitSessionInputBody,
+} from "./contracts/entities/session-inputs.ts";
+import type {
   DecideToolApprovalBody,
   LatestSessionsListResponse,
   SessionMessagesResponse,
@@ -583,9 +592,30 @@ export interface SessionsResource {
       deleteArtifacts: boolean;
     } & ResourceRequestOptions
   ): Promise<void>;
+  deleteInput(
+    input: {
+      agentId: string;
+      sessionId: string;
+      requestId: string;
+    } & ResourceRequestOptions
+  ): Promise<SessionInputResponse>;
   get(
     input: { agentId: string; sessionId: string } & ResourceRequestOptions
   ): Promise<SessionResponse>;
+  /** Poll from the first page for state changes; cursor only paginates receipts. */
+  inputs(
+    input: { agentId: string; sessionId: string } & SessionInputsQuery &
+      ResourceRequestOptions
+  ): Promise<SessionInputsResponse>;
+  /** Replays an admitted input Turn. Supplying functions opts into executor claims. */
+  joinInputTurn(
+    input: {
+      agentId: string;
+      sessionId: string;
+      turnId: string;
+      functions?: ChatFunctions;
+    } & ResourceRequestOptions
+  ): Promise<TerminalStreamResult>;
   joinToolApprovalContinuation(
     input: {
       agentId: string;
@@ -607,6 +637,38 @@ export interface SessionsResource {
   messages(
     input: { agentId: string; sessionId: string } & SessionMessagesOptions
   ): Promise<SessionMessagesResponse>;
+  promoteInput(
+    input: {
+      agentId: string;
+      sessionId: string;
+      requestId: string;
+    } & ResourceRequestOptions
+  ): Promise<SessionInputResponse>;
+  /** Resume accepted inputs after a pause. Uncertain inputs are never replayed. */
+  resumeInputs(
+    input: { agentId: string; sessionId: string } & ResourceRequestOptions
+  ): Promise<ResumeSessionInputsResponse>;
+  /** Admits the pending batch without resubmitting its messages. */
+  runInputs(
+    input: {
+      agentId: string;
+      sessionId: string;
+      functions?: ChatFunctions;
+    } & ResourceRequestOptions
+  ): Promise<TerminalStreamResult>;
+  /** Wait for settlement of the named Turn. A queued Turn may already be running. */
+  stop(
+    input: { agentId: string; sessionId: string } & StopSessionBody &
+      ResourceRequestOptions
+  ): Promise<StopSessionResponse>;
+  /** Retry an uncertain acknowledgement with the same requestId and payload. */
+  submitInput(
+    input: Omit<SubmitSessionInputBody, "message"> & {
+      agentId: string;
+      sessionId: string;
+      message: UIMessage;
+    } & ResourceRequestOptions
+  ): Promise<SessionInputResponse>;
   toolApprovals(
     input: { agentId: string; sessionId: string } & ResourceRequestOptions
   ): Promise<ToolApprovalsResponse>;

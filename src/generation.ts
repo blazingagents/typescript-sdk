@@ -233,7 +233,8 @@ function buildChatResult(
 
 export function buildTerminalStreamResult(
   response: Response,
-  resourceName: string
+  resourceName: string,
+  filter?: (body: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>
 ): TerminalStreamResult {
   const requestId = response.headers.get("x-request-id") ?? undefined;
   const location = response.headers.get("location");
@@ -252,8 +253,9 @@ export function buildTerminalStreamResult(
       );
     }
     bodyClaimed = true;
+    const body = responseBodyStream(response, requestId, resourceName);
     return normalizeStreamErrors(
-      responseBodyStream(response, requestId, resourceName),
+      filter ? filter(body) : body,
       requestId,
       `The ${resourceName} response stream failed.`
     );

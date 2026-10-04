@@ -1,4 +1,11 @@
 import {
+  resumeSessionInputsResponseSchema,
+  sessionInputRequestIdSchema,
+  sessionInputResponseSchema,
+  sessionInputsResponseSchema,
+  stopSessionResponseSchema,
+} from "../contracts/entities/session-inputs.ts";
+import {
   latestSessionsListResponseSchema,
   sessionMessagesResponseSchema,
   sessionResponseSchema,
@@ -6,7 +13,16 @@ import {
   toolApprovalDecisionResponseSchema,
   toolApprovalsResponseSchema,
 } from "../contracts/entities/sessions.ts";
-import { stripFunctionEvents } from "../functions.ts";
+import {
+  agentIdSchema,
+  sessionIdSchema,
+  turnIdSchema,
+} from "../contracts/ids.ts";
+import {
+  dispatchChatFunctions,
+  stripFunctionEvents,
+  toChatFunctionDefinitions,
+} from "../functions.ts";
 import { buildTerminalStreamResult, withFilteredBody } from "../generation.ts";
 import { requestJson, requestStream } from "../http.ts";
 import type { HttpConfig, SessionsResource } from "../types.ts";
@@ -20,6 +36,105 @@ import type { HttpConfig, SessionsResource } from "../types.ts";
 
 export function createSessionsResource(config: HttpConfig): SessionsResource {
   return {
+    async joinInputTurn({
+      agentId,
+      sessionId,
+      turnId,
+      functions,
+      abortSignal,
+    }) {
+      const response = await requestStream(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/input-turns/${turnIdSchema.parse(turnId)}`,
+        { signal: abortSignal }
+      );
+      return buildTerminalStreamResult(response, "input Turn", (body) =>
+        functions
+          ? dispatchChatFunctions(
+              config,
+              { agentId, sessionId, functions, abortSignal },
+              body
+            )
+          : stripFunctionEvents(body)
+      );
+    },
+    async runInputs({ agentId, sessionId, functions, abortSignal }) {
+      const response = await requestStream(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/run`,
+        {
+          method: "POST",
+          json:
+            functions === undefined
+              ? {}
+              : { functions: toChatFunctionDefinitions(functions) },
+          signal: abortSignal,
+        }
+      );
+      return buildTerminalStreamResult(response, "input Turn", (body) =>
+        functions
+          ? dispatchChatFunctions(
+              config,
+              { agentId, sessionId, functions, abortSignal },
+              body
+            )
+          : stripFunctionEvents(body)
+      );
+    },
+    async submitInput({ agentId, sessionId, abortSignal, ...body }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
+        { method: "POST", json: body, signal: abortSignal },
+        sessionInputResponseSchema
+      );
+    },
+    async inputs({ agentId, sessionId, abortSignal, ...query }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
+        { query, signal: abortSignal },
+        sessionInputsResponseSchema
+      );
+    },
+    async promoteInput({ agentId, sessionId, requestId, abortSignal }) {
+      const inputId = sessionInputRequestIdSchema.parse(requestId);
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/${encodeURIComponent(inputId)}/promote`,
+        { method: "POST", signal: abortSignal },
+        sessionInputResponseSchema
+      );
+    },
+    async deleteInput({ agentId, sessionId, requestId, abortSignal }) {
+      const inputId = sessionInputRequestIdSchema.parse(requestId);
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/${encodeURIComponent(inputId)}`,
+        { method: "DELETE", signal: abortSignal },
+        sessionInputResponseSchema
+      );
+    },
+    async stop({ agentId, sessionId, turnId, abortSignal }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/stop`,
+        {
+          method: "POST",
+          json: { turnId: turnIdSchema.parse(turnId) },
+          signal: abortSignal,
+        },
+        stopSessionResponseSchema
+      );
+    },
+    async resumeInputs({ agentId, sessionId, abortSignal }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs/resume`,
+        { method: "POST", signal: abortSignal },
+        resumeSessionInputsResponseSchema
+      );
+    },
     async get({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,

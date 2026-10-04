@@ -153,6 +153,35 @@ export {
   updateProviderBodySchema,
 } from "./entities/providers.ts";
 export type {
+  ResumeSessionInputsResponse,
+  RunSessionInputsBody,
+  SessionActivity,
+  SessionInput,
+  SessionInputMode,
+  SessionInputResponse,
+  SessionInputState,
+  SessionInputsQuery,
+  SessionInputsResponse,
+  StopSessionBody,
+  StopSessionResponse,
+  SubmitSessionInputBody,
+} from "./entities/session-inputs.ts";
+export {
+  resumeSessionInputsResponseSchema,
+  runSessionInputsBodySchema,
+  sessionActivitySchema,
+  sessionInputModeSchema,
+  sessionInputRequestIdSchema,
+  sessionInputResponseSchema,
+  sessionInputSchema,
+  sessionInputStateSchema,
+  sessionInputsQuerySchema,
+  sessionInputsResponseSchema,
+  stopSessionBodySchema,
+  stopSessionResponseSchema,
+  submitSessionInputBodySchema,
+} from "./entities/session-inputs.ts";
+export type {
   ToolApprovalDecisionResponse,
   ToolApprovalsResponse,
 } from "./entities/sessions.ts";

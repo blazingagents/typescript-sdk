@@ -99,6 +99,20 @@ export type {
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 export type {
+  ResumeSessionInputsResponse,
+  RunSessionInputsBody,
+  SessionActivity,
+  SessionInput,
+  SessionInputMode,
+  SessionInputResponse,
+  SessionInputState,
+  SessionInputsQuery,
+  SessionInputsResponse,
+  StopSessionBody,
+  StopSessionResponse,
+  SubmitSessionInputBody,
+} from "./contracts/entities/session-inputs.ts";
+export type {
   SessionResponse,
   ToolApprovalDecisionResponse,
   ToolApprovalState,

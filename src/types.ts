@@ -68,7 +68,6 @@ import type {
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 import type {
-  ResumeSessionInputsResponse,
   SessionInputResponse,
   SessionInputsQuery,
   SessionInputsResponse,
@@ -77,12 +76,11 @@ import type {
   SubmitSessionInputBody,
 } from "./contracts/entities/session-inputs.ts";
 import type {
-  DecideToolApprovalBody,
   LatestSessionsListResponse,
   SessionMessagesResponse,
   SessionResponse,
   SessionsListResponse,
-  ToolApprovalDecisionResponse,
+  ToolApprovalDecision,
   ToolApprovalsResponse,
 } from "./contracts/entities/sessions.ts";
 import type {
@@ -195,10 +193,10 @@ export interface UserClient {
   readonly artifacts: ArtifactsResource;
   chat(input: ChatInput): Promise<ChatResult>;
   completion(input: CompletionInput): Promise<CompletionResult>;
+  continueChat(input: ContinueChatInput): Promise<ChatResult>;
   readonly memories: MemoriesResource;
   object(input: ObjectInput): Promise<ObjectResult>;
   readonly prompts: PromptsResource;
-  resumeChat(input: ResumeChatInput): Promise<ChatResult>;
   readonly sessions: SessionsResource;
   readonly tasks: TasksResource;
   readonly usage: Pick<UsageResource, "get" | "sessions">;
@@ -257,6 +255,7 @@ interface ChatMessageContentInput
   functions?: ChatFunctions;
   message: UIMessage;
   messageId?: string;
+  messages?: never;
   promptId?: never;
   variables?: never;
 }
@@ -270,21 +269,25 @@ interface ChatPromptContentInput
   functions?: ChatFunctions;
   message?: never;
   messageId?: string;
+  messages?: never;
   promptId: string;
   variables?: Record<string, string>;
 }
 
 export type ChatMessageInput = ChatMessageContentInput & ChatSessionInput;
 export type ChatPromptInput = ChatPromptContentInput & ChatSessionInput;
-export type ChatInput = ChatMessageInput | ChatPromptInput;
+export type ChatMessagesInput = Omit<
+  ChatMessageContentInput,
+  "message" | "messages"
+> & { message?: never; messages: UIMessage[] } & ChatSessionInput;
+export type ChatInput = ChatMessageInput | ChatMessagesInput | ChatPromptInput;
 
-/** Reattaches handlers to a Session's tool-approval continuation. */
-export interface ResumeChatInput extends CorrelatedRequestInput {
+/** Records the complete approval round and streams the continuation. */
+export interface ContinueChatInput extends CorrelatedRequestInput {
   abortSignal?: AbortSignal;
   agentId: string;
-  /** The decided continuation; omitted, the Session's queued or running one is resumed. */
-  continuationId?: string;
-  functions: ChatFunctions;
+  decisions: ToolApprovalDecision[];
+  functions?: ChatFunctions;
   sessionId: string;
 }
 
@@ -578,13 +581,6 @@ export interface SessionMessagesOptions extends ResourceRequestOptions {
 }
 
 export interface SessionsResource {
-  decideToolApproval(
-    input: DecideToolApprovalBody & {
-      agentId: string;
-      sessionId: string;
-      approvalId: string;
-    } & ResourceRequestOptions
-  ): Promise<ToolApprovalDecisionResponse>;
   delete(
     input: {
       agentId: string;
@@ -592,13 +588,6 @@ export interface SessionsResource {
       deleteArtifacts: boolean;
     } & ResourceRequestOptions
   ): Promise<void>;
-  deleteInput(
-    input: {
-      agentId: string;
-      sessionId: string;
-      requestId: string;
-    } & ResourceRequestOptions
-  ): Promise<SessionInputResponse>;
   get(
     input: { agentId: string; sessionId: string } & ResourceRequestOptions
   ): Promise<SessionResponse>;
@@ -607,13 +596,6 @@ export interface SessionsResource {
     input: { agentId: string; sessionId: string } & SessionInputsQuery &
       ResourceRequestOptions
   ): Promise<SessionInputsResponse>;
-  joinToolApprovalContinuation(
-    input: {
-      agentId: string;
-      sessionId: string;
-      continuationId: string;
-    } & ResourceRequestOptions
-  ): Promise<TerminalStreamResult>;
   list(
     input: { agentId: string } & SessionsListOptions
   ): Promise<SessionsListResponse>;
@@ -628,26 +610,7 @@ export interface SessionsResource {
   messages(
     input: { agentId: string; sessionId: string } & SessionMessagesOptions
   ): Promise<SessionMessagesResponse>;
-  promoteInput(
-    input: {
-      agentId: string;
-      sessionId: string;
-      requestId: string;
-    } & ResourceRequestOptions
-  ): Promise<SessionInputResponse>;
-  /** Resume accepted inputs after a pause. Uncertain inputs are never replayed. */
-  resumeInputs(
-    input: { agentId: string; sessionId: string } & ResourceRequestOptions
-  ): Promise<ResumeSessionInputsResponse>;
-  /** Runs the pending batch and streams its output without resubmitting messages. */
-  runInputs(
-    input: {
-      agentId: string;
-      sessionId: string;
-      functions?: ChatFunctions;
-    } & ResourceRequestOptions
-  ): Promise<TerminalStreamResult>;
-  /** Wait for settlement of the named Turn. A queued Turn may already be running. */
+  /** Records cancellation for the named Turn without waiting for settlement. */
   stop(
     input: { agentId: string; sessionId: string } & StopSessionBody &
       ResourceRequestOptions

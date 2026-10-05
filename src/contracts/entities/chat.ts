@@ -254,14 +254,11 @@ export const resolveChatFunctionResponseSchema = z
   .object({ accepted: z.literal(true) })
   .strip();
 
-/** `POST .../tool-approval-continuations/{continuationId}/resume` body. */
-export const resumeToolApprovalContinuationBodySchema = z.object({}).strict();
-
 /**
  * `POST /v1/agents/{agentId}/sessions` (create) and
  * `POST /v1/agents/{agentId}/sessions/{sessionId}` (resume) request body.
  * The URL selects the mode; on create the platform mints the `ss_` id and
- * returns it in `Location`. Exactly one of `message` or `promptId` is
+ * returns it in `Location`. Exactly one of `messages` or `promptId` is
  * required, and `variables` requires `promptId`. Regenerate is resume-only,
  * enforced by the route layer rather than this schema.
  */
@@ -272,7 +269,7 @@ export const chatRequestBodySchema = z
      * unknown; the HTTP boundary validates it with `safeValidateUIMessages`
      * before treating it as a UIMessage.
      */
-    message: z.unknown().optional(),
+    messages: z.array(z.unknown()).min(1).optional(),
     promptId: promptIdSchema.optional(),
     variables: promptVariablesSchema.optional(),
     trigger: chatTriggerSchema.default("submit-message"),
@@ -290,15 +287,14 @@ export const chatRequestBodySchema = z
   .refine(
     (
       body
-    ): body is typeof body &
-      ExclusivePromptInput<{ message: null | NonNullable<unknown> }> =>
-      body.message === undefined
+    ): body is typeof body & ExclusivePromptInput<{ messages: unknown[] }> =>
+      body.messages === undefined
         ? body.promptId !== undefined
         : body.promptId === undefined && body.variables === undefined,
     {
       message:
-        "Provide either `message` or `promptId` (+`variables`); they are mutually exclusive, and `variables` is only allowed with `promptId`.",
-      path: ["message"],
+        "Provide either `messages` or `promptId` (+`variables`); they are mutually exclusive, and `variables` is only allowed with `promptId`.",
+      path: ["messages"],
     }
   );
 

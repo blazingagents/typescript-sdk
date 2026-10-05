@@ -8,6 +8,7 @@ import {
 import { toolExecutionReferenceSchema } from "./agent-approval.ts";
 import { agentConfigSchema, agentSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
+import { chatFunctionDefinitionsSchema } from "./chat.ts";
 
 /**
  * `GET /v1/agents/{agentId}/sessions` list item. `agentId`/`tenantId` never
@@ -108,9 +109,10 @@ export const sessionMessagesQuerySchema = z
     path: ["after"],
   });
 
-/** Decision-only input for one server-owned Tool approval. */
-export const decideToolApprovalBodySchema = z
+/** One decision in the current Tool approval round. */
+export const toolApprovalDecisionSchema = z
   .object({
+    approvalId: z.string().min(1),
     approved: z.boolean(),
     reason: z.string().trim().min(1).max(1000).optional(),
   })
@@ -118,7 +120,6 @@ export const decideToolApprovalBodySchema = z
 
 export const toolApprovalContinuationStateSchema = z.enum([
   "waiting",
-  "queued",
   "running",
   "succeeded",
   "failed",
@@ -153,12 +154,20 @@ export const toolApprovalsResponseSchema = z
   })
   .strip();
 
-export const toolApprovalDecisionResponseSchema = z
+export const continueToolApprovalsBodySchema = z
   .object({
-    continuationId: z.string().min(1),
-    state: toolApprovalContinuationStateSchema,
+    decisions: z
+      .array(toolApprovalDecisionSchema)
+      .min(1)
+      .refine(
+        (decisions) =>
+          new Set(decisions.map((decision) => decision.approvalId)).size ===
+          decisions.length,
+        { message: "Approval IDs must be distinct." }
+      ),
+    functions: chatFunctionDefinitionsSchema.optional(),
   })
-  .strip();
+  .strict();
 
 export type SessionListItem = z.infer<typeof sessionListItemSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
@@ -172,14 +181,12 @@ export type SessionMessagesResponse = z.infer<
   typeof sessionMessagesResponseSchema
 >;
 export type SessionMessagesQuery = z.infer<typeof sessionMessagesQuerySchema>;
-export type DecideToolApprovalBody = z.infer<
-  typeof decideToolApprovalBodySchema
+export type ToolApprovalDecision = z.infer<typeof toolApprovalDecisionSchema>;
+export type ContinueToolApprovalsBody = z.infer<
+  typeof continueToolApprovalsBodySchema
 >;
 export type ToolApprovalContinuationState = z.infer<
   typeof toolApprovalContinuationStateSchema
 >;
 export type ToolApprovalState = z.infer<typeof toolApprovalStateSchema>;
 export type ToolApprovalsResponse = z.infer<typeof toolApprovalsResponseSchema>;
-export type ToolApprovalDecisionResponse = z.infer<
-  typeof toolApprovalDecisionResponseSchema
->;

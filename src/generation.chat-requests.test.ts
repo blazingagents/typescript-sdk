@@ -25,11 +25,13 @@ describe("client.chat requests", () => {
     expect(calls[0].init?.method).toBe("POST");
     const body = JSON.parse(calls[0].init?.body as string);
     expect(body).toMatchObject({
-      message: {
-        id: "msg_user_1",
-        role: "user",
-        parts: [{ type: "text", text: "hi" }],
-      },
+      messages: [
+        {
+          id: "msg_user_1",
+          role: "user",
+          parts: [{ type: "text", text: "hi" }],
+        },
+      ],
     });
     expect(body.id).toBeUndefined();
     expect(body.mode).toBeUndefined();
@@ -67,11 +69,13 @@ describe("client.chat requests", () => {
     );
     const body = JSON.parse(calls[0].init?.body as string);
     expect(body).toMatchObject({
-      message: {
-        id: "msg_user_1",
-        role: "user",
-        parts: [{ type: "text", text: "hi" }],
-      },
+      messages: [
+        {
+          id: "msg_user_1",
+          role: "user",
+          parts: [{ type: "text", text: "hi" }],
+        },
+      ],
     });
     expect(body.id).toBeUndefined();
     expect(body.mode).toBeUndefined();

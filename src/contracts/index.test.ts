@@ -57,7 +57,6 @@ const publicContractNames = [
   "createTaskRunBodySchema",
   "createTaskRunResponseSchema",
   "createWorkspaceBodySchema",
-  "decideToolApprovalBodySchema",
   "functionCallIdSchema",
   "generationRequestBodySchema",
   "isAdminAgentId",
@@ -116,13 +115,12 @@ const publicContractNames = [
   "renderPromptTemplate",
   "resolveChatFunctionBodySchema",
   "resolveChatFunctionResponseSchema",
-  "resumeSessionInputsResponseSchema",
-  "resumeToolApprovalContinuationBodySchema",
+  "chatSteerConsumedEventSchema",
+  "continueToolApprovalsBodySchema",
+  "toolApprovalDecisionSchema",
   "rotateChatConnectionBodySchema",
-  "runSessionInputsBodySchema",
   "sessionActivitySchema",
   "sessionIdSchema",
-  "sessionInputModeSchema",
   "sessionInputRequestIdSchema",
   "sessionInputResponseSchema",
   "sessionInputSchema",
@@ -164,7 +162,6 @@ const publicContractNames = [
   "tenantSettingsResponseSchema",
   "thinkingLevelsResponseSchema",
   "toolApprovalContinuationStateSchema",
-  "toolApprovalDecisionResponseSchema",
   "toolApprovalStateSchema",
   "toolApprovalsResponseSchema",
   "toolExecutionReferenceSchema",
@@ -191,7 +188,9 @@ const publicContractNames = [
 
 describe("public contracts", () => {
   it("exports the explicit runtime schema surface", () => {
-    expect(Object.keys(contracts).sort()).toEqual(publicContractNames);
+    expect(Object.keys(contracts).sort()).toEqual(
+      [...publicContractNames].sort()
+    );
   });
 
   it("validates public resource ids", () => {

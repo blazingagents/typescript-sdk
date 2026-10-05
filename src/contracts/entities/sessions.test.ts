@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { agentConfigFixture } from "../test/fixtures/tasks.ts";
 
 import {
-  decideToolApprovalBodySchema,
   latestSessionListItemSchema,
   latestSessionsListResponseSchema,
   sessionListItemSchema,
@@ -10,7 +9,7 @@ import {
   sessionMessagesResponseSchema,
   sessionResponseSchema,
   sessionsListResponseSchema,
-  toolApprovalDecisionResponseSchema,
+  toolApprovalDecisionSchema,
   toolApprovalsResponseSchema,
 } from "./sessions.ts";
 
@@ -241,22 +240,25 @@ describe("sessionMessagesQuerySchema", () => {
 describe("Tool approval contracts", () => {
   it("accepts only an approve or deny decision with an optional reason", () => {
     expect(
-      decideToolApprovalBodySchema.parse({
+      toolApprovalDecisionSchema.parse({
+        approvalId: "approval-1",
         approved: false,
         reason: "The change is not intended.",
       })
     ).toStrictEqual({
+      approvalId: "approval-1",
       approved: false,
       reason: "The change is not intended.",
     });
     expect(
-      decideToolApprovalBodySchema.safeParse({
+      toolApprovalDecisionSchema.safeParse({
+        approvalId: "approval-1",
         approved: true,
         toolName: "agents",
       }).success
     ).toBe(false);
     expect(
-      decideToolApprovalBodySchema.safeParse({ approved: "yes" }).success
+      toolApprovalDecisionSchema.safeParse({ approved: "yes" }).success
     ).toBe(false);
   });
 
@@ -284,17 +286,5 @@ describe("Tool approval contracts", () => {
         data: [{ ...response.data[0], signature: "secret-binding" }],
       })
     ).not.toHaveProperty("data.0.signature");
-  });
-
-  it("returns the stable continuation after every accepted decision", () => {
-    expect(
-      toolApprovalDecisionResponseSchema.parse({
-        continuationId: "tool-approval:message-1",
-        state: "queued",
-      })
-    ).toStrictEqual({
-      continuationId: "tool-approval:message-1",
-      state: "queued",
-    });
   });
 });

@@ -120,10 +120,10 @@ export async function publicApiConsumer() {
     skillId: "skill_0123456789abcdef",
     to: { agentIds: ["ag_fedcba9876543210"] },
   });
-  const continuation = await client.sessions.joinToolApprovalContinuation({
+  const continuation = await client.continueChat({
     agentId: "ag_0123456789abcdef",
     sessionId: "ss_0123456789abcdef",
-    continuationId: "continuation-1",
+    decisions: [{ approvalId: "approval-1", approved: true }],
     ...readOptions,
   });
   const message: BlazingAgentsUIMessage = {

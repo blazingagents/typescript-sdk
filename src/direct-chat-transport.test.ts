@@ -40,7 +40,7 @@ async function collect(stream: ReadableStream) {
 describe("BlazingAgentsDirectChatTransport", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("runInputs decodes input SSE using native streaming fetch", async () => {
+  it("sendUserMessages decodes chat SSE using native streaming fetch", async () => {
     const NativeResponse = globalThis.Response;
     const fetch = vi.fn(() =>
       Promise.resolve(new NativeResponse(sseStream(chatChunks)))
@@ -59,39 +59,19 @@ describe("BlazingAgentsDirectChatTransport", () => {
       getClient: () => client(fetch),
     });
     const abortSignal = new AbortController().signal;
-    const stream = await transport.runInputs({ abortSignal });
+    const stream = await transport.sendUserMessages({
+      messages: [message],
+      abortSignal,
+    });
     expect(await collect(stream)).toEqual(chatChunks);
     expect(fetch).toHaveBeenCalledWith(
-      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/inputs/run`,
+      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`,
       expect.objectContaining({
         method: "POST",
-        body: "{}",
+        body: JSON.stringify({ messages: [message] }),
         signal: abortSignal,
       })
     );
-  });
-
-  it("runInputs requires a materialized Session", async () => {
-    const getClient = vi.fn();
-    const transport = new BlazingAgentsDirectChatTransport({
-      agentId,
-      getClient,
-    });
-    const result = transport.runInputs();
-    await expect(result).rejects.toThrow("requires an existing Session");
-    expect(getClient).not.toHaveBeenCalled();
-  });
-
-  it("admits an input batch with default direct transport options", async () => {
-    const fetch = vi.fn(() =>
-      Promise.resolve(new Response(sseStream(chatChunks)))
-    );
-    const transport = new BlazingAgentsDirectChatTransport({
-      agentId,
-      sessionId: mintedSessionId,
-      getClient: () => client(fetch),
-    });
-    expect(await collect(await transport.runInputs())).toEqual(chatChunks);
   });
 
   it("decodes native SSE without constructing Response and retains early Session identity", async () => {
@@ -153,13 +133,13 @@ describe("BlazingAgentsDirectChatTransport", () => {
     expect(requests).toEqual([
       {
         url: `http://localhost:8787/v1/agents/${agentId}/sessions`,
-        body: { message, trigger: "submit-message" },
+        body: { messages: [message], trigger: "submit-message" },
         signal: controller.signal,
       },
       {
         url: `http://localhost:8787/v1/agents/${agentId}/sessions/${mintedSessionId}`,
         body: {
-          message,
+          messages: [message],
           messageId: "assistant-1",
           trigger: "regenerate-message",
         },
@@ -169,11 +149,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
     await expect(
       transport.reconnectToStream({ chatId: "local-chat" })
     ).resolves.toBeNull();
-    expect(requests[2]).toEqual({
-      url: `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approvals`,
-      body: null,
-      signal: undefined,
-    });
+    expect(requests).toHaveLength(2);
   });
 
   it.each([chatErrorChunks, chatAbortChunks])(
@@ -329,7 +305,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
         url: `${BASE}/v1/agents/${agentId}/sessions`,
         authorization: "Bearer first",
         body: {
-          message,
+          messages: [message],
           trigger: "submit-message",
           userId: "user-1",
           metadata: { source: "playground" },
@@ -338,7 +314,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
       {
         url: `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`,
         authorization: "Bearer second",
-        body: { message, trigger: "submit-message" },
+        body: { messages: [message], trigger: "submit-message" },
       },
     ]);
   });
@@ -373,23 +349,12 @@ describe("BlazingAgentsDirectChatTransport", () => {
 
   it("decides approval responses in order and streams the continuation", async () => {
     const requests: { url: string; body: unknown }[] = [];
-    const continuationId = "tool-approval:ss:assistant";
     const fetch = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       const path = String(url);
       requests.push({
         url: path,
         body: init?.body ? JSON.parse(String(init.body)) : null,
       });
-      if (path.endsWith("/tool-approvals/approval-1")) {
-        return Promise.resolve(
-          Response.json({ continuationId, state: "waiting" })
-        );
-      }
-      if (path.endsWith("/tool-approvals/approval-2")) {
-        return Promise.resolve(
-          Response.json({ continuationId, state: "queued" })
-        );
-      }
       return Promise.resolve(new Response(sseStream(chatChunks)));
     });
     const getClient = vi.fn(() => client(fetch));
@@ -452,23 +417,20 @@ describe("BlazingAgentsDirectChatTransport", () => {
     const base = `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`;
     expect(requests).toEqual([
       {
-        url: `${base}/tool-approvals/approval-1`,
-        body: { approved: true },
-      },
-      {
-        url: `${base}/tool-approvals/approval-2`,
-        body: { approved: false, reason: "Keep it" },
-      },
-      {
-        url: `${base}/tool-approval-continuations/${continuationId}/resume`,
-        body: {},
+        url: `${base}/tool-approvals/continue`,
+        body: {
+          functions: {},
+          decisions: [
+            { approvalId: "approval-1", approved: true },
+            { approvalId: "approval-2", approved: false, reason: "Keep it" },
+          ],
+        },
       },
     ]);
     expect(getClient).toHaveBeenCalledOnce();
   });
 
   it("sends functions and resumes approved continuations with handlers", async () => {
-    const continuationId = "tool-approval:ss:assistant";
     const requests: { method: string; url: string; body: unknown }[] = [];
     const fetch = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       const path = String(url);
@@ -477,19 +439,6 @@ describe("BlazingAgentsDirectChatTransport", () => {
         url: path,
         body: init?.body ? JSON.parse(String(init.body)) : null,
       });
-      if (path.endsWith("/tool-approvals/approval-1")) {
-        return Promise.resolve(
-          Response.json({ continuationId, state: "queued" })
-        );
-      }
-      if (path.endsWith("/tool-approvals")) {
-        return Promise.resolve(
-          Response.json({
-            data: [],
-            continuation: { id: continuationId, state: "queued" },
-          })
-        );
-      }
       return Promise.resolve(
         new Response(sseStream(chatChunks), {
           headers: { location: createLocation },
@@ -541,17 +490,13 @@ describe("BlazingAgentsDirectChatTransport", () => {
     ).toEqual(chatChunks);
     const base = `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`;
     expect(requests.map(({ method, url }) => `${method} ${url}`)).toEqual([
-      `POST ${base}/tool-approvals/approval-1`,
-      `POST ${base}/tool-approval-continuations/${continuationId}/resume`,
+      `POST ${base}/tool-approvals/continue`,
     ]);
 
     requests.length = 0;
     const stream = await transport.reconnectToStream({ chatId: "local-chat" });
-    expect(stream).not.toBeNull();
-    expect(requests.map(({ method, url }) => `${method} ${url}`)).toEqual([
-      `GET ${base}/tool-approvals`,
-      `POST ${base}/tool-approval-continuations/${continuationId}/resume`,
-    ]);
+    expect(stream).toBeNull();
+    expect(requests).toHaveLength(0);
   });
 
   it("requires a Session before deciding an approval", async () => {
@@ -585,66 +530,18 @@ describe("BlazingAgentsDirectChatTransport", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("reconnects to a pending approval continuation after reload", async () => {
-    const continuationId = "tool-approval:ss:assistant";
-    const requests: string[] = [];
-    const getClient = vi.fn(() =>
-      client((url) => {
-        requests.push(String(url));
-        return Promise.resolve(
-          String(url).endsWith("/tool-approvals")
-            ? Response.json({
-                data: [],
-                continuation: { id: continuationId, state: "running" },
-              })
-            : new Response(sseStream(chatChunks))
-        );
-      })
-    );
+  it("does not acquire a client or fetch when reconnecting", async () => {
+    const fetch = vi.fn();
+    const getClient = vi.fn(() => client(fetch));
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,
       getClient,
       sessionId: mintedSessionId,
     });
-    const stream = await transport.reconnectToStream({ chatId: "local-chat" });
-    expect(stream).not.toBeNull();
-    if (stream) {
-      expect(await collect(stream)).toEqual(chatChunks);
-    }
-    expect(requests).toEqual([
-      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approvals`,
-      `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approval-continuations/${continuationId}/resume`,
-    ]);
-    expect(getClient).toHaveBeenCalledOnce();
+    await expect(
+      transport.reconnectToStream({ chatId: "local-chat" })
+    ).resolves.toBeNull();
+    expect(getClient).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
   });
-
-  it.each(["waiting", "succeeded", "failed", null] as const)(
-    "does not reconnect to a %s continuation",
-    async (state) => {
-      const requests: string[] = [];
-      const transport = new BlazingAgentsDirectChatTransport({
-        agentId,
-        getClient: async () =>
-          client((url) => {
-            requests.push(String(url));
-            return Promise.resolve(
-              Response.json({
-                data: [],
-                continuation:
-                  state === null
-                    ? null
-                    : { id: "tool-approval:ss:assistant", state },
-              })
-            );
-          }),
-        sessionId: mintedSessionId,
-      });
-      await expect(
-        transport.reconnectToStream({ chatId: "local-chat" })
-      ).resolves.toBeNull();
-      expect(requests).toEqual([
-        `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}/tool-approvals`,
-      ]);
-    }
-  );
 });

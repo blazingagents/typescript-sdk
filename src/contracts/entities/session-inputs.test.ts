@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { apiErrorCodeSchema } from "../api.ts";
 import {
-  runSessionInputsBodySchema,
-  sessionActivitySchema,
   sessionInputResponseSchema,
   sessionInputsQuerySchema,
   sessionInputsResponseSchema,
-  stopSessionBodySchema,
   submitSessionInputBodySchema,
 } from "./session-inputs.ts";
 
@@ -18,38 +14,19 @@ const message = {
 const activity = {
   state: "running",
   turnId: "turn_0123456789abcdef",
-  reason: null,
 };
 const receipt = {
   requestId: "draft/one?two#three",
   sequence: 1,
   message,
-  mode: "queue",
   state: "accepted",
-  turnId: null,
+  turnId: activity.turnId,
   createdAt: "2026-10-04T10:00:00Z",
   updatedAt: "2026-10-04T10:00:00Z",
-  consumedAt: null,
   reason: null,
 };
 
 describe("session input contracts", () => {
-  it("defaults submissions to queue without changing caller identity or message", () => {
-    expect(
-      submitSessionInputBodySchema.parse({
-        requestId: receipt.requestId,
-        message,
-      })
-    ).toEqual({ requestId: receipt.requestId, message, whenBusy: "queue" });
-    expect(
-      submitSessionInputBodySchema.parse({
-        requestId: "steer",
-        message,
-        whenBusy: "steer",
-      }).whenBusy
-    ).toBe("steer");
-  });
-
   it.each([
     {},
     { requestId: "a" },
@@ -73,11 +50,10 @@ describe("session input contracts", () => {
     }
   );
 
-  it("retains native message fields and consumed effects on cancelled receipts", () => {
+  it("retains native message fields and message contents on not-placed receipts", () => {
     const data = {
       ...receipt,
-      state: "cancelled",
-      consumedAt: receipt.createdAt,
+      state: "not_placed",
       reason: "stopped",
       message: {
         ...message,
@@ -96,23 +72,19 @@ describe("session input contracts", () => {
     ).toEqual({ data, activity });
   });
 
-  it.each([
-    "accepted",
-    "delivered",
-    "consumed",
-    "committed",
-    "cancelled",
-    "uncertain",
-  ])("parses %s without rewriting its lifecycle", (state) => {
-    const data = [{ ...receipt, state }];
-    expect(
-      sessionInputsResponseSchema.parse({
-        data,
-        nextCursor: "opaque",
-        activity,
-      })
-    ).toEqual({ data, nextCursor: "opaque", activity });
-  });
+  it.each(["accepted", "delivered", "committed", "not_placed", "uncertain"])(
+    "parses %s without rewriting its lifecycle",
+    (state) => {
+      const data = [{ ...receipt, state }];
+      expect(
+        sessionInputsResponseSchema.parse({
+          data,
+          nextCursor: "opaque",
+          activity,
+        })
+      ).toEqual({ data, nextCursor: "opaque", activity });
+    }
+  );
 
   it.each([
     { ...receipt, sequence: 0 },
@@ -121,23 +93,6 @@ describe("session input contracts", () => {
   ])("rejects malformed receipts %j", (data) => {
     expect(
       sessionInputResponseSchema.safeParse({ data, activity }).success
-    ).toBe(false);
-  });
-
-  it("preserves paused executor state and requires the Stop Turn fence", () => {
-    expect(
-      sessionActivitySchema.parse({
-        state: "paused",
-        turnId: null,
-        reason: "function_executor_required",
-      }).reason
-    ).toBe("function_executor_required");
-    expect(stopSessionBodySchema.parse({ turnId: activity.turnId })).toEqual({
-      turnId: activity.turnId,
-    });
-    expect(stopSessionBodySchema.safeParse({}).success).toBe(false);
-    expect(
-      stopSessionBodySchema.safeParse({ turnId: "tr_0123456789abcdef" }).success
     ).toBe(false);
   });
 
@@ -159,21 +114,5 @@ describe("session input contracts", () => {
     expect(
       sessionInputsQuerySchema.safeParse({ after: "opaque" }).success
     ).toBe(false);
-  });
-
-  it("admits only function definitions in explicit batch execution", () => {
-    expect(runSessionInputsBodySchema.parse({})).toEqual({});
-    expect(runSessionInputsBodySchema.parse({ functions: {} })).toEqual({
-      functions: {},
-    });
-    expect(runSessionInputsBodySchema.safeParse({ message }).success).toBe(
-      false
-    );
-    expect(apiErrorCodeSchema.parse("input_idempotency_conflict")).toBe(
-      "input_idempotency_conflict"
-    );
-    expect(apiErrorCodeSchema.parse("input_not_pending")).toBe(
-      "input_not_pending"
-    );
   });
 });

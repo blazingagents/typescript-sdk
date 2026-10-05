@@ -10,6 +10,7 @@ import type {
 import {
   apiKeyTokenSchema,
   approvalPolicySchema,
+  type ContinueToolApprovalsBody,
   createChatConnectionBodySchema,
   isAdminAgentId,
   jsonSchemaShapeSchema,
@@ -17,7 +18,6 @@ import {
   promptIdSchema,
   promptVariablesSchema,
   sessionIdSchema,
-  type ToolApprovalDecisionResponse,
   type ToolApprovalsResponse,
   toolReferenceSchema,
   type UsageOverviewResponse,
@@ -80,16 +80,15 @@ describe("installed SDK contracts", () => {
       continuation: null,
     } satisfies ToolApprovalsResponse;
     const decision = {
-      continuationId: "tool-approval:message-1",
-      state: "queued",
-    } satisfies ToolApprovalDecisionResponse;
+      decisions: [{ approvalId: "approval-1", approved: true }],
+    } satisfies ContinueToolApprovalsBody;
     type HasUsageAgentId = UsageSummary extends { agentId: string }
       ? true
       : false;
     const hasUsageAgentId: HasUsageAgentId = true;
 
     expect(approvals.data).toEqual([]);
-    expect(decision.state).toBe("queued");
+    expect(decision.decisions[0].approved).toBe(true);
     expect(hasUsageAgentId).toBe(true);
   });
 

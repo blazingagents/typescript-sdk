@@ -7,7 +7,8 @@ import {
   type StopSessionResponse,
 } from "@blazingagents/sdk";
 import {
-  runSessionInputsBodySchema,
+  chatRequestBodySchema,
+  continueToolApprovalsBodySchema,
   sessionInputResponseSchema,
   sessionInputsResponseSchema,
   stopSessionBodySchema,
@@ -15,29 +16,28 @@ import {
 } from "@blazingagents/sdk/contracts";
 import { expect, it } from "vitest";
 
-it("uses the installed queue contracts and receives live SSE before settlement", async () => {
+it("uses installed steer receipts and streams explicit batches and one-call approvals", async () => {
   const target = {
     agentId: "ag_0123456789abcdef",
     sessionId: "ss_0123456789abcdef",
   };
   const turnId = "turn_0123456789abcdef";
-  const activity = { state: "running" as const, turnId, reason: null };
+  const activity = { state: "running" as const, turnId };
   const message = {
     id: "user-1",
     role: "user" as const,
     parts: [{ type: "text" as const, text: "Compare" }],
   };
+  const second = { ...message, id: "user-2" };
   const receipt: SessionInputResponse = {
     data: {
       requestId: "draft/1",
       sequence: 1,
       message,
-      mode: "queue",
       state: "accepted",
-      turnId: null,
+      turnId,
       createdAt: "2026-10-04T10:00:00Z",
       updatedAt: "2026-10-04T10:00:00Z",
-      consumedAt: null,
       reason: null,
     },
     activity,
@@ -49,7 +49,7 @@ it("uses the installed queue contracts and receives live SSE before settlement",
   };
   const stopped: StopSessionResponse = {
     stoppedTurnId: turnId,
-    activity: { state: "idle", turnId: null, reason: null },
+    activity: { state: "stopping", turnId },
   };
   const requests: {
     url: string | undefined;
@@ -57,6 +57,7 @@ it("uses the installed queue contracts and receives live SSE before settlement",
     body: unknown;
   }[] = [];
   const release = Promise.withResolvers<void>();
+  const sessionPath = `/v1/agents/${target.agentId}/sessions/${target.sessionId}`;
   const server = createServer(async (request, response) => {
     let raw = "";
     for await (const chunk of request) {
@@ -64,8 +65,14 @@ it("uses the installed queue contracts and receives live SSE before settlement",
     }
     const body: unknown = raw ? JSON.parse(raw) : undefined;
     requests.push({ url: request.url, method: request.method, body });
-    if (request.url?.endsWith("/inputs/run")) {
-      response.writeHead(200, { "content-type": "text/event-stream" });
+    if (
+      request.url === sessionPath ||
+      request.url?.endsWith("/tool-approvals/continue")
+    ) {
+      response.writeHead(200, {
+        "content-type": "text/event-stream",
+        "x-request-id": "consumer-stream",
+      });
       response.write('data: {"type":"start","messageId":"assistant-1"}\n\n');
       await release.promise;
       response.end('data: {"type":"finish"}\n\ndata: [DONE]\n\n');
@@ -74,8 +81,6 @@ it("uses the installed queue contracts and receives live SSE before settlement",
     let result: unknown = receipt;
     if (request.url?.endsWith("/stop")) {
       result = stopped;
-    } else if (request.url?.endsWith("/inputs/resume")) {
-      result = { activity };
     } else if (request.method === "GET") {
       result = page;
     }
@@ -97,60 +102,50 @@ it("uses the installed queue contracts and receives live SSE before settlement",
       apiKey: "ba_test",
       baseUrl: `http://127.0.0.1:${address.port}`,
     });
-    const input = { ...target, requestId: receipt.data.requestId, message };
-    expect(await client.sessions.submitInput(input)).toEqual(
-      sessionInputResponseSchema.parse(receipt)
-    );
     expect(
-      submitSessionInputBodySchema.safeParse({ requestId: ".", message })
-        .success
-    ).toBe(false);
+      await client.sessions.submitInput({
+        ...target,
+        requestId: receipt.data.requestId,
+        message,
+      })
+    ).toEqual(sessionInputResponseSchema.parse(receipt));
+    expect(submitSessionInputBodySchema.parse(requests[0].body)).toEqual({
+      requestId: "draft/1",
+      message,
+    });
     expect(
-      submitSessionInputBodySchema.safeParse({ requestId: "..", message })
-        .success
+      submitSessionInputBodySchema.safeParse({
+        requestId: "draft/1",
+        message,
+        whenBusy: "queue",
+      }).success
     ).toBe(false);
-    expect(submitSessionInputBodySchema.parse(requests[0].body).whenBusy).toBe(
-      "queue"
-    );
     expect(await client.sessions.inputs(target)).toEqual(
       sessionInputsResponseSchema.parse(page)
     );
-    const beforeInvalid = requests.length;
-    for (const method of ["promoteInput", "deleteInput"] as const) {
-      for (const requestId of [".", ".."]) {
-        await expect(
-          client.sessions[method]({ ...target, requestId })
-        ).rejects.toThrow("URL dot segment");
-      }
-    }
-    expect(requests).toHaveLength(beforeInvalid);
-    await client.sessions.promoteInput({
-      ...target,
-      requestId: receipt.data.requestId,
-    });
-    await client.sessions.deleteInput({
-      ...target,
-      requestId: receipt.data.requestId,
-    });
-    expect(requests[2].url).toContain("/inputs/draft%2F1/promote");
-    expect(requests[3].url).toContain("/inputs/draft%2F1");
-    expect(await client.sessions.stop({ ...target, turnId })).toEqual(stopped);
-    expect(stopSessionBodySchema.parse(requests[4].body)).toEqual({ turnId });
-    expect(await client.sessions.resumeInputs(target)).toEqual({ activity });
 
     const transport = new BlazingAgentsDirectChatTransport({
       ...target,
       getClient: () => client,
     });
-    const reader = (await transport.runInputs()).getReader();
+    const reader = (
+      await transport.sendUserMessages({ messages: [message, second] })
+    ).getReader();
     expect(requests.at(-1)).toEqual({
-      url: `/v1/agents/${target.agentId}/sessions/${target.sessionId}/inputs/run`,
+      url: sessionPath,
       method: "POST",
-      body: {},
+      body: { messages: [message, second] },
     });
+    expect(chatRequestBodySchema.parse(requests.at(-1)?.body).messages).toEqual(
+      [message, second]
+    );
     expect(await reader.read()).toEqual({
       done: false,
       value: { type: "start", messageId: "assistant-1" },
+    });
+    expect(await client.sessions.stop({ ...target, turnId })).toEqual(stopped);
+    expect(stopSessionBodySchema.parse(requests.at(-1)?.body)).toEqual({
+      turnId,
     });
     release.resolve();
     expect(await reader.read()).toEqual({
@@ -158,18 +153,25 @@ it("uses the installed queue contracts and receives live SSE before settlement",
       value: { type: "finish" },
     });
     expect((await reader.read()).done).toBe(true);
-
-    const run = await client.sessions.runInputs(target);
-    expect(await run.toResponse().text()).toContain(
+    const decisions = [{ approvalId: "approval-1", approved: true }];
+    const continued = await client.continueChat({ ...target, decisions });
+    expect(continued.requestId).toBe("consumer-stream");
+    expect(await continued.toResponse().text()).toContain(
       '"messageId":"assistant-1"'
     );
-    expect(runSessionInputsBodySchema.parse(requests.at(-1)?.body)).toEqual({});
     expect(
-      requests.filter(
-        (request) =>
-          request.method === "POST" && request.url?.endsWith("/inputs")
+      continueToolApprovalsBodySchema.parse(requests.at(-1)?.body)
+    ).toEqual({ decisions });
+    expect(
+      requests.filter((request) =>
+        request.url?.endsWith("/tool-approvals/continue")
       )
     ).toHaveLength(1);
+    const count = requests.length;
+    expect(
+      await transport.reconnectToStream({ chatId: "consumer" })
+    ).toBeNull();
+    expect(requests).toHaveLength(count);
   } finally {
     release.resolve();
     server.closeAllConnections();

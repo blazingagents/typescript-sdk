@@ -63,7 +63,6 @@ export {
   promptVariablesSchema,
   resolveChatFunctionBodySchema,
   resolveChatFunctionResponseSchema,
-  resumeToolApprovalContinuationBodySchema,
   usageSummarySchema,
 } from "./entities/chat.ts";
 export {
@@ -153,11 +152,9 @@ export {
   updateProviderBodySchema,
 } from "./entities/providers.ts";
 export type {
-  ResumeSessionInputsResponse,
-  RunSessionInputsBody,
+  ChatSteerConsumedEvent,
   SessionActivity,
   SessionInput,
-  SessionInputMode,
   SessionInputResponse,
   SessionInputState,
   SessionInputsQuery,
@@ -167,10 +164,8 @@ export type {
   SubmitSessionInputBody,
 } from "./entities/session-inputs.ts";
 export {
-  resumeSessionInputsResponseSchema,
-  runSessionInputsBodySchema,
+  chatSteerConsumedEventSchema,
   sessionActivitySchema,
-  sessionInputModeSchema,
   sessionInputRequestIdSchema,
   sessionInputResponseSchema,
   sessionInputSchema,
@@ -182,11 +177,13 @@ export {
   submitSessionInputBodySchema,
 } from "./entities/session-inputs.ts";
 export type {
-  ToolApprovalDecisionResponse,
+  ContinueToolApprovalsBody,
+  ToolApprovalContinuationState,
+  ToolApprovalDecision,
   ToolApprovalsResponse,
 } from "./entities/sessions.ts";
 export {
-  decideToolApprovalBodySchema,
+  continueToolApprovalsBodySchema,
   latestSessionListItemSchema,
   latestSessionsListResponseSchema,
   sessionListItemSchema,
@@ -195,7 +192,7 @@ export {
   sessionResponseSchema,
   sessionsListResponseSchema,
   toolApprovalContinuationStateSchema,
-  toolApprovalDecisionResponseSchema,
+  toolApprovalDecisionSchema,
   toolApprovalStateSchema,
   toolApprovalsResponseSchema,
 } from "./entities/sessions.ts";

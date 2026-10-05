@@ -1,5 +1,4 @@
 import { createTextStreamResponse, parsePartialJson } from "ai";
-import { toolApprovalsResponseSchema } from "./contracts/entities/sessions.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import {
@@ -7,16 +6,16 @@ import {
   type FunctionDispatchTarget,
   toChatFunctionDefinitions,
 } from "./functions.ts";
-import { requestJson, requestStream } from "./http.ts";
+import { requestStream } from "./http.ts";
 import type {
   ChatInput,
   ChatResult,
   CompletionInput,
   CompletionResult,
+  ContinueChatInput,
   HttpConfig,
   ObjectInput,
   ObjectResult,
-  ResumeChatInput,
   TerminalStreamResult,
 } from "./types.ts";
 
@@ -51,21 +50,23 @@ export async function chat(
   });
 }
 
-export async function resumeChat(
+export async function continueChat(
   config: HttpConfig,
-  input: ResumeChatInput
+  input: ContinueChatInput
 ): Promise<ChatResult> {
-  const sessionPath = `/v1/agents/${input.agentId}/sessions/${input.sessionId}`;
-  const continuationId =
-    input.continuationId ?? (await activeContinuationId(config, input));
   const response = await requestStream(
     config,
-    `${sessionPath}/tool-approval-continuations/${continuationId}/resume`,
+    `/v1/agents/${input.agentId}/sessions/${input.sessionId}/tool-approvals/continue`,
     {
-      json: {},
+      json: {
+        decisions: input.decisions,
+        ...(input.functions === undefined
+          ? {}
+          : { functions: toChatFunctionDefinitions(input.functions) }),
+      },
       method: "POST",
       clientRequestId: input.clientRequestId,
-      ...(input.abortSignal ? { signal: input.abortSignal } : {}),
+      signal: input.abortSignal,
     }
   );
   return buildChatResult(config, response, input.sessionId, {
@@ -73,25 +74,6 @@ export async function resumeChat(
     functions: input.functions,
     abortSignal: input.abortSignal,
   });
-}
-
-async function activeContinuationId(
-  config: HttpConfig,
-  { agentId, sessionId, abortSignal }: ResumeChatInput
-): Promise<string> {
-  const { continuation } = await requestJson(
-    config,
-    `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`,
-    { signal: abortSignal },
-    toolApprovalsResponseSchema
-  );
-  if (continuation?.state !== "queued" && continuation?.state !== "running") {
-    throw new BlazingAgentsError({
-      code: "not_found",
-      message: "The Session has no tool approval continuation to resume.",
-    });
-  }
-  return continuation.id;
 }
 
 /**
@@ -123,7 +105,9 @@ function buildChatBody(input: ChatInput): Record<string, unknown> {
     base.messageId = input.messageId;
   }
   if ("message" in input) {
-    base.message = input.message;
+    base.messages = [input.message];
+  } else if ("messages" in input) {
+    base.messages = input.messages;
   } else {
     base.promptId = input.promptId;
     // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined variables.

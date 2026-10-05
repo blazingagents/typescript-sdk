@@ -36,28 +36,6 @@ import type { HttpConfig, SessionsResource } from "../types.ts";
 
 export function createSessionsResource(config: HttpConfig): SessionsResource {
   return {
-    async joinInputTurn({
-      agentId,
-      sessionId,
-      turnId,
-      functions,
-      abortSignal,
-    }) {
-      const response = await requestStream(
-        config,
-        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/input-turns/${turnIdSchema.parse(turnId)}`,
-        { signal: abortSignal }
-      );
-      return buildTerminalStreamResult(response, "input Turn", (body) =>
-        functions
-          ? dispatchChatFunctions(
-              config,
-              { agentId, sessionId, functions, abortSignal },
-              body
-            )
-          : stripFunctionEvents(body)
-      );
-    },
     async runInputs({ agentId, sessionId, functions, abortSignal }) {
       const response = await requestStream(
         config,

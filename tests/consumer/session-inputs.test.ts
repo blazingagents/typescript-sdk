@@ -64,10 +64,7 @@ it("uses the installed queue contracts and receives live SSE before settlement",
     }
     const body: unknown = raw ? JSON.parse(raw) : undefined;
     requests.push({ url: request.url, method: request.method, body });
-    if (
-      request.url?.includes("/input-turns/") ||
-      request.url?.endsWith("/inputs/run")
-    ) {
+    if (request.url?.endsWith("/inputs/run")) {
       response.writeHead(200, { "content-type": "text/event-stream" });
       response.write('data: {"type":"start","messageId":"assistant-1"}\n\n');
       await release.promise;
@@ -145,7 +142,12 @@ it("uses the installed queue contracts and receives live SSE before settlement",
       ...target,
       getClient: () => client,
     });
-    const reader = (await transport.joinInputTurn({ turnId })).getReader();
+    const reader = (await transport.runInputs()).getReader();
+    expect(requests.at(-1)).toEqual({
+      url: `/v1/agents/${target.agentId}/sessions/${target.sessionId}/inputs/run`,
+      method: "POST",
+      body: {},
+    });
     expect(await reader.read()).toEqual({
       done: false,
       value: { type: "start", messageId: "assistant-1" },

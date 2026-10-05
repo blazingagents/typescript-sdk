@@ -607,15 +607,6 @@ export interface SessionsResource {
     input: { agentId: string; sessionId: string } & SessionInputsQuery &
       ResourceRequestOptions
   ): Promise<SessionInputsResponse>;
-  /** Replays an admitted input Turn. Supplying functions opts into executor claims. */
-  joinInputTurn(
-    input: {
-      agentId: string;
-      sessionId: string;
-      turnId: string;
-      functions?: ChatFunctions;
-    } & ResourceRequestOptions
-  ): Promise<TerminalStreamResult>;
   joinToolApprovalContinuation(
     input: {
       agentId: string;
@@ -648,7 +639,7 @@ export interface SessionsResource {
   resumeInputs(
     input: { agentId: string; sessionId: string } & ResourceRequestOptions
   ): Promise<ResumeSessionInputsResponse>;
-  /** Admits the pending batch without resubmitting its messages. */
+  /** Runs the pending batch and streams its output without resubmitting messages. */
   runInputs(
     input: {
       agentId: string;

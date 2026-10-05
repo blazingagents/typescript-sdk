@@ -84,6 +84,7 @@ describe("apiErrorCodeSchema", () => {
       "artifact_session_cap_reached",
       "invalid_cursor",
       "message_not_found",
+      "message_id_conflict",
       "prompt_variable_missing",
       "prompt_variable_unknown",
       "provider_in_use",

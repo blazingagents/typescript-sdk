@@ -60,7 +60,6 @@ describe("durable session inputs", () => {
     "deleteInput",
     "stop",
     "resumeInputs",
-    "joinInputTurn",
     "runInputs",
   ] as const)(
     "%s rejects unsafe Agent and Session IDs before fetch",
@@ -95,28 +94,25 @@ describe("durable session inputs", () => {
     }
   );
 
-  it.each(["joinInputTurn", "stop"] as const)(
-    "%s rejects unsafe Turn IDs before fetch",
-    async (method) => {
-      const { fetch, calls } = createMockFetch({ body: response });
-      for (const value of [
-        "",
-        ".",
-        "..",
-        "%2e%2e",
-        "../tool-approvals",
-        "turn_0123456789abcdef?query",
-        "turn_0123456789abcdef#fragment",
-        "turn_short",
-        target.sessionId,
-      ]) {
-        await expect(
-          client(fetch).sessions[method]({ ...target, turnId: value })
-        ).rejects.toBeInstanceOf(z.ZodError);
-      }
-      expect(calls).toHaveLength(0);
+  it("stop rejects unsafe Turn IDs before fetch", async () => {
+    const { fetch, calls } = createMockFetch({ body: response });
+    for (const value of [
+      "",
+      ".",
+      "..",
+      "%2e%2e",
+      "../tool-approvals",
+      "turn_0123456789abcdef?query",
+      "turn_0123456789abcdef#fragment",
+      "turn_short",
+      target.sessionId,
+    ]) {
+      await expect(
+        client(fetch).sessions.stop({ ...target, turnId: value })
+      ).rejects.toBeInstanceOf(z.ZodError);
     }
-  );
+    expect(calls).toHaveLength(0);
+  });
 
   it("accepts the authoritative Admin Agent ID shape", async () => {
     const { fetch, calls } = createMockFetch({ body: response });
@@ -302,113 +298,93 @@ describe("durable session inputs", () => {
 });
 
 describe("input Turn streams", () => {
-  it.each(["joinInputTurn", "runInputs"] as const)(
-    "%s streams observer output and removes private function events",
-    async (method) => {
-      const { fetch, calls } = createMockFetch({
-        stream: sseStream([...chunks, functionEvent]),
-      });
-      const abortSignal = new AbortController().signal;
-      const sessions = client(fetch).sessions;
-      const result =
-        method === "joinInputTurn"
-          ? await sessions.joinInputTurn({ ...target, turnId, abortSignal })
-          : await sessions.runInputs({ ...target, abortSignal });
-      const output = result.toResponse();
-      expect(output.headers.get("x-vercel-ai-ui-message-stream")).toBe("v1");
-      const text = await output.text();
-      expect(text).toContain('"messageId":"assistant-1"');
-      expect(text).toContain('"delta":"Hello"');
-      expect(text).not.toContain("data-ba-function-call");
-      expect(calls).toHaveLength(1);
-      expect(calls[0].url).toBe(
-        `${path}/${method === "joinInputTurn" ? `input-turns/${turnId}` : "inputs/run"}`
-      );
-      expect(calls[0].init?.method).toBe(
-        method === "joinInputTurn" ? "GET" : "POST"
-      );
-      expect(calls[0].init?.body).toBe(
-        method === "joinInputTurn" ? null : "{}"
-      );
-      expect(calls[0].init?.signal).toBe(abortSignal);
-      expect(() => result.toStream()).toThrow("already been claimed");
-    }
-  );
+  it("runInputs streams batch output and removes private function events", async () => {
+    const { fetch, calls } = createMockFetch({
+      stream: sseStream([...chunks, functionEvent]),
+    });
+    const abortSignal = new AbortController().signal;
+    const sessions = client(fetch).sessions;
+    const result = await sessions.runInputs({ ...target, abortSignal });
+    const output = result.toResponse();
+    expect(output.headers.get("x-vercel-ai-ui-message-stream")).toBe("v1");
+    const text = await output.text();
+    expect(text).toContain('"messageId":"assistant-1"');
+    expect(text).toContain('"delta":"Hello"');
+    expect(text).not.toContain("data-ba-function-call");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${path}/inputs/run`);
+    expect(calls[0].init?.method).toBe("POST");
+    expect(calls[0].init?.body).toBe("{}");
+    expect(calls[0].init?.signal).toBe(abortSignal);
+    expect(() => result.toStream()).toThrow("already been claimed");
+  });
 
-  it.each(["joinInputTurn", "runInputs"] as const)(
-    "%s executes caller functions through the existing claim/result protocol",
-    async (method) => {
-      const execute = vi.fn(() => ({ found: true }));
-      const functions = {
-        lookup: defineFunction({
-          description: "Lookup",
-          inputSchema: z.object({ query: z.string() }),
-          execute,
-        }),
-      };
-      const pending = Promise.withResolvers<void>();
-      const stream = new ReadableStream<Uint8Array>({
-        async start(controller) {
-          const encoder = new TextEncoder();
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(functionEvent)}\n\n`)
-          );
-          await pending.promise;
-          for await (const chunk of sseStream(chunks)) {
-            controller.enqueue(chunk);
-          }
-          controller.close();
-        },
-      });
-      const streamed = createMockFetch({ stream });
-      const claimed = createMockFetch({ body: { claimed: true } });
-      const resolved = createMockFetch({ body: { accepted: true } });
-      const fetch: ReturnType<typeof createMockFetch>["fetch"] = async (
-        url,
-        init
-      ) => {
-        if (url.endsWith("/claim")) {
-          return await claimed.fetch(url, init);
+  it("runInputs executes caller functions through the existing claim/result protocol", async () => {
+    const execute = vi.fn(() => ({ found: true }));
+    const functions = {
+      lookup: defineFunction({
+        description: "Lookup",
+        inputSchema: z.object({ query: z.string() }),
+        execute,
+      }),
+    };
+    const pending = Promise.withResolvers<void>();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(functionEvent)}\n\n`)
+        );
+        await pending.promise;
+        for await (const chunk of sseStream(chunks)) {
+          controller.enqueue(chunk);
         }
-        if (url.endsWith("/result")) {
-          const accepted = await resolved.fetch(url, init);
-          pending.resolve();
-          return accepted;
-        }
-        return await streamed.fetch(url, init);
-      };
-      const sessions = client(fetch).sessions;
-      const result =
-        method === "joinInputTurn"
-          ? await sessions.joinInputTurn({ ...target, turnId, functions })
-          : await sessions.runInputs({ ...target, functions });
-      const text = await result.toResponse().text();
-      expect(text).toContain('"delta":"Hello"');
-      expect(text).not.toContain("data-ba-function-call");
-      expect(execute).toHaveBeenCalledOnce();
-      expect(execute).toHaveBeenCalledWith(
-        { query: "costs" },
-        expect.objectContaining({ idempotencyKey: "fc_0123456789abcdef" })
-      );
-      expect(claimed.calls).toHaveLength(1);
-      expect(resolved.calls).toHaveLength(1);
-      expect(JSON.parse(String(resolved.calls[0].init?.body))).toMatchObject({
-        outcome: { kind: "output", value: { found: true } },
-      });
-      if (method === "runInputs") {
-        expect(JSON.parse(String(streamed.calls[0].init?.body))).toEqual({
-          functions: {
-            lookup: {
-              description: "Lookup",
-              inputSchema: {
-                type: "object",
-                properties: { query: { type: "string" } },
-                required: ["query"],
-              },
-            },
-          },
-        });
+        controller.close();
+      },
+    });
+    const streamed = createMockFetch({ stream });
+    const claimed = createMockFetch({ body: { claimed: true } });
+    const resolved = createMockFetch({ body: { accepted: true } });
+    const fetch: ReturnType<typeof createMockFetch>["fetch"] = async (
+      url,
+      init
+    ) => {
+      if (url.endsWith("/claim")) {
+        return await claimed.fetch(url, init);
       }
-    }
-  );
+      if (url.endsWith("/result")) {
+        const accepted = await resolved.fetch(url, init);
+        pending.resolve();
+        return accepted;
+      }
+      return await streamed.fetch(url, init);
+    };
+    const sessions = client(fetch).sessions;
+    const result = await sessions.runInputs({ ...target, functions });
+    const text = await result.toResponse().text();
+    expect(text).toContain('"delta":"Hello"');
+    expect(text).not.toContain("data-ba-function-call");
+    expect(execute).toHaveBeenCalledOnce();
+    expect(execute).toHaveBeenCalledWith(
+      { query: "costs" },
+      expect.objectContaining({ idempotencyKey: "fc_0123456789abcdef" })
+    );
+    expect(claimed.calls).toHaveLength(1);
+    expect(resolved.calls).toHaveLength(1);
+    expect(JSON.parse(String(resolved.calls[0].init?.body))).toMatchObject({
+      outcome: { kind: "output", value: { found: true } },
+    });
+    expect(JSON.parse(String(streamed.calls[0].init?.body))).toEqual({
+      functions: {
+        lookup: {
+          description: "Lookup",
+          inputSchema: {
+            type: "object",
+            properties: { query: { type: "string" } },
+            required: ["query"],
+          },
+        },
+      },
+    });
+  });
 });

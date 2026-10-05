@@ -41,20 +41,6 @@ export class BlazingAgentsDirectChatTransport<
         : sessionIdSchema.parse(options.sessionId);
   }
 
-  async joinInputTurn(input: { turnId: string; abortSignal?: AbortSignal }) {
-    if (this.#sessionId === undefined) {
-      throw new Error("Input Turn attachment requires an existing Session.");
-    }
-    const client = await this.#options.getClient();
-    const result = await client.sessions.joinInputTurn({
-      ...input,
-      agentId: this.#options.agentId,
-      sessionId: this.#sessionId,
-      functions: this.#options.functions,
-    });
-    return this.processResponseStream(result.toStream());
-  }
-
   async runInputs(input: { abortSignal?: AbortSignal } = {}) {
     if (this.#sessionId === undefined) {
       throw new Error("Input batch admission requires an existing Session.");

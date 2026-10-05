@@ -2,8 +2,8 @@ import { z } from "zod";
 import {
   chat,
   completion,
+  continueChat,
   objectGeneration,
-  resumeChat,
 } from "./generation.ts";
 import { createAgentsResource } from "./resources/agents.ts";
 import { createArtifactsResource } from "./resources/artifacts.ts";
@@ -34,6 +34,7 @@ import type {
   ChatResult,
   CompletionInput,
   CompletionResult,
+  ContinueChatInput,
   HttpConfig,
   McpConnectionsResource,
   MemoriesResource,
@@ -44,7 +45,6 @@ import type {
   ObjectResult,
   PromptsResource,
   ProvidersResource,
-  ResumeChatInput,
   SessionsResource,
   TasksResource,
   TenantResource,
@@ -78,7 +78,7 @@ function createUserClient(config: HttpConfig): UserClient {
     chat: (input) => chat(config, input),
     completion: (input) => completion(config, input),
     object: (input) => objectGeneration(config, input),
-    resumeChat: (input) => resumeChat(config, input),
+    continueChat: (input) => continueChat(config, input),
     withOptions: (options) =>
       createUserClient({ ...config, clientRequestId: options.clientRequestId }),
   };
@@ -157,11 +157,11 @@ export class BlazingAgents {
   }
 
   /**
-   * Reattaches function handlers after human tool approval and starts or
-   * joins the Session's continuation. Returns the continuation SSE relay.
+   * Records a complete Tool approval round and streams its continuation.
+   * Caller-local function handlers apply only to this invocation.
    */
-  resumeChat(input: ResumeChatInput): Promise<ChatResult> {
-    return resumeChat(this.config, input);
+  continueChat(input: ContinueChatInput): Promise<ChatResult> {
+    return continueChat(this.config, input);
   }
 
   /**

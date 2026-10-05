@@ -14,7 +14,6 @@ import {
   MAX_CHAT_FUNCTIONS,
   resolveChatFunctionBodySchema,
   resolveChatFunctionResponseSchema,
-  resumeToolApprovalContinuationBodySchema,
 } from "./chat.ts";
 
 const objectSchema = {
@@ -116,7 +115,7 @@ describe("chatFunctionDefinitionsSchema", () => {
   });
 
   it("is an optional chat request field", () => {
-    const body = { message: { id: "m", role: "user", parts: [] } };
+    const body = { messages: [{ id: "m", role: "user", parts: [] }] };
     expect(chatRequestBodySchema.parse(body).functions).toBeUndefined();
     expect(
       chatRequestBodySchema.parse({
@@ -217,7 +216,7 @@ describe("claim, result, and resume bodies", () => {
     ).toBe(false);
   });
 
-  it("parses acknowledgements and the empty resume body", () => {
+  it("parses acknowledgements ", () => {
     expect(claimChatFunctionResponseSchema.parse({ claimed: true })).toEqual({
       claimed: true,
     });
@@ -227,10 +226,5 @@ describe("claim, result, and resume bodies", () => {
     expect(resolveChatFunctionResponseSchema.parse({ accepted: true })).toEqual(
       { accepted: true }
     );
-    expect(resumeToolApprovalContinuationBodySchema.parse({})).toEqual({});
-    expect(
-      resumeToolApprovalContinuationBodySchema.safeParse({ functions: {} })
-        .success
-    ).toBe(false);
   });
 });

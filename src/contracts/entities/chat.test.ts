@@ -103,21 +103,23 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
 
 describe("chatRequestBodySchema", () => {
   const baseBody = {
-    message: {
-      id: "msg_1",
-      role: "user",
-      parts: [{ type: "text", text: "hi" }],
-    },
+    messages: [
+      {
+        id: "msg_1",
+        role: "user",
+        parts: [{ type: "text", text: "hi" }],
+      },
+    ],
   };
 
   it("represents literal and stored Prompt inputs as exclusive types", () => {
     type Common = Pick<ChatRequestBody, "metadata" | "trigger" | "userId">;
     interface Literal {
-      message: {
+      messages: {
         id: string;
         parts: { text: string; type: "text" }[];
         role: "user";
-      };
+      }[];
     }
     interface Stored {
       promptId: string;

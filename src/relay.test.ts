@@ -1,7 +1,6 @@
 import type { UIMessage } from "ai";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import type { BlazingAgents } from "./client.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import { defineFunction } from "./functions.ts";
 import {
@@ -28,15 +27,6 @@ function request(body: unknown): Request {
     headers: { "content-type": "application/json" },
     method: "POST",
   });
-}
-
-function approvalsResource(continuationId = "tac_1") {
-  return {
-    decideToolApproval: vi.fn(() =>
-      Promise.resolve({ continuationId, state: "queued" as const })
-    ),
-    joinToolApprovalContinuation: vi.fn(),
-  } as unknown as BlazingAgents["sessions"];
 }
 
 const functions = {
@@ -95,7 +85,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat, resumeChat: vi.fn(), sessions: approvalsResource() },
+      client: { chat, continueChat: vi.fn() },
       resolveContext: () => Promise.resolve(context),
       sessions: store,
     });
@@ -136,7 +126,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat, resumeChat: vi.fn(), sessions: approvalsResource() },
+      client: { chat, continueChat: vi.fn() },
       resolveContext: () => Promise.resolve(context),
       sessions: store,
     });
@@ -166,8 +156,7 @@ describe("relay factories", () => {
   it("rejects missing authentication, foreign Sessions, and invalid chat", async () => {
     const client = {
       chat: vi.fn(),
-      resumeChat: vi.fn(),
-      sessions: approvalsResource(),
+      continueChat: vi.fn(),
     };
     const unauthenticated = createChatRelay({
       client,
@@ -214,8 +203,7 @@ describe("relay factories", () => {
             toResponse: () =>
               new Response(new ReadableStream({ cancel })) as Response,
           }),
-        resumeChat: vi.fn(),
-        sessions: approvalsResource(),
+        continueChat: vi.fn(),
       },
       resolveContext: () => Promise.resolve(context),
       sessions: store,
@@ -337,7 +325,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat, resumeChat: vi.fn(), sessions: approvalsResource() },
+      client: { chat, continueChat: vi.fn() },
       resolveContext: () => Promise.resolve({ ...context, functions }),
       sessions: sessions(),
     });
@@ -346,8 +334,7 @@ describe("relay factories", () => {
   });
 
   it("decides approval responses and resumes with the request's functions", async () => {
-    const resources = approvalsResource();
-    const resumeChat = vi.fn(() =>
+    const continueChat = vi.fn(() =>
       Promise.resolve({
         sessionId: Promise.resolve("ss_0123456789abcdef"),
         toStream: () => new ReadableStream<Uint8Array>(),
@@ -355,7 +342,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat: vi.fn(), resumeChat, sessions: resources },
+      client: { chat: vi.fn(), continueChat },
       resolveContext: () => Promise.resolve({ ...context, functions }),
       sessions: sessions("user-a"),
     });
@@ -370,28 +357,18 @@ describe("relay factories", () => {
       sessionId: "ss_0123456789abcdef",
       abortSignal: expect.any(AbortSignal),
     };
-    expect(vi.mocked(resources.decideToolApproval).mock.calls).toEqual([
-      [
-        {
-          ...target,
-          approvalId: "approval-1",
-          approved: true,
-          reason: undefined,
-        },
-      ],
-      [{ ...target, approvalId: "approval-2", approved: false, reason: "No" }],
-    ]);
-    expect(resumeChat).toHaveBeenCalledWith({
+    expect(continueChat).toHaveBeenCalledWith({
       ...target,
-      continuationId: "tac_1",
+      decisions: [
+        { approvalId: "approval-1", approved: true },
+        { approvalId: "approval-2", approved: false, reason: "No" },
+      ],
       functions,
     });
-    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
   });
 
   it("resumes as the executor even when the request has no functions", async () => {
-    const resources = approvalsResource();
-    const resumeChat = vi.fn(() =>
+    const continueChat = vi.fn(() =>
       Promise.resolve({
         sessionId: Promise.resolve("ss_0123456789abcdef"),
         toStream: () => new ReadableStream<Uint8Array>(),
@@ -399,7 +376,7 @@ describe("relay factories", () => {
       })
     );
     const relay = createChatRelay({
-      client: { chat: vi.fn(), resumeChat, sessions: resources },
+      client: { chat: vi.fn(), continueChat },
       resolveContext: () => Promise.resolve(context),
       sessions: sessions("user-a"),
     });
@@ -409,19 +386,20 @@ describe("relay factories", () => {
     );
 
     expect(await response.text()).toBe("resumed");
-    expect(resumeChat).toHaveBeenCalledWith({
+    expect(continueChat).toHaveBeenCalledWith({
       agentId: context.agentId,
       sessionId: "ss_0123456789abcdef",
       abortSignal: expect.any(AbortSignal),
-      continuationId: "tac_1",
+      decisions: [
+        { approvalId: "approval-1", approved: true },
+        { approvalId: "approval-2", approved: false, reason: "No" },
+      ],
       functions: {},
     });
-    expect(resources.joinToolApprovalContinuation).not.toHaveBeenCalled();
   });
 
   it("rejects approval relays without a Session, ownership, or responses", async () => {
-    const resources = approvalsResource();
-    const client = { chat: vi.fn(), resumeChat: vi.fn(), sessions: resources };
+    const client = { chat: vi.fn(), continueChat: vi.fn() };
     const owned = createChatRelay({
       client,
       resolveContext: () => Promise.resolve(context),
@@ -456,7 +434,28 @@ describe("relay factories", () => {
         )
       ).status
     ).toBe(400);
-    expect(resources.decideToolApproval).not.toHaveBeenCalled();
     expect(client.chat).not.toHaveBeenCalled();
   });
+});
+
+it("rejects a system message without starting a Turn", async () => {
+  const chat = vi.fn();
+  const continueChat = vi.fn();
+  const relay = createChatRelay({
+    client: { chat, continueChat },
+    resolveContext: () => Promise.resolve(context),
+    sessions: sessions(),
+  });
+  const response = await relay(
+    request({
+      message: {
+        id: "system",
+        role: "system",
+        parts: [{ type: "text", text: "System" }],
+      },
+    })
+  );
+  expect(response.status).toBe(400);
+  expect(chat).not.toHaveBeenCalled();
+  expect(continueChat).not.toHaveBeenCalled();
 });

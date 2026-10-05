@@ -295,11 +295,11 @@ sdk.tasks
   }));
 // @ts-expect-error unknown task fields are rejected
 sdk.tasks.update({ taskId: "tk_0123456789abcdef", unknown: true });
-sdk.sessions
-  .joinToolApprovalContinuation({
+sdk
+  .continueChat({
     agentId: "ag_0123456789abcdef",
     sessionId: "ss_0123456789abcdef",
-    continuationId: "continuation-1",
+    decisions: [{ approvalId: "approval-1", approved: true }],
   })
   .then((result) => result.requestId?.toUpperCase());
 
@@ -404,13 +404,14 @@ export const chatWithFunctions = sdk.chat({
   message: { id: "m", role: "user", parts: [] },
   functions: typedFunctions,
 });
-export const resumedWithFunctions = sdk.forUser("user-a").resumeChat({
+export const resumedWithFunctions = sdk.forUser("user-a").continueChat({
   agentId: "ag_0123456789abcdef",
   sessionId: "ss_0123456789abcdef",
   functions: typedFunctions,
+  decisions: [{ approvalId: "approval-1", approved: true }],
 });
-// @ts-expect-error resumeChat requires handlers
-export const resumedWithoutFunctions = sdk.resumeChat({
+// @ts-expect-error continueChat requires decisions
+export const resumedWithoutFunctions = sdk.continueChat({
   agentId: "ag_0123456789abcdef",
   sessionId: "ss_0123456789abcdef",
 });

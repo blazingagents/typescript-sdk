@@ -161,7 +161,7 @@ describe("chat function definitions", () => {
     await readAll(result.toStream());
 
     expect(calls[0].body).toStrictEqual({
-      message,
+      messages: [message],
       functions: {
         getOrder: {
           description: "Get an order",
@@ -202,7 +202,7 @@ describe("chat function definitions", () => {
     const source = upstream();
     const { client, calls, of } = harness(source.stream);
     const result = await client.chat({ agentId, message, functions: {} });
-    expect(calls[0].body).toStrictEqual({ message });
+    expect(calls[0].body).toStrictEqual({ messages: [message] });
     source.push(sse(readyEvent()));
     await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
     source.close();
@@ -781,7 +781,7 @@ describe("chat function dispatch", () => {
     const { client, of } = harness(source.stream);
     const result = await client.chat({
       agentId,
-      message,
+      messages: [message],
       functions: {
         getOrder: defineFunction({
           description: "Get an order",
@@ -1062,7 +1062,7 @@ describe("chat function dispatch", () => {
   });
 });
 
-describe("resumeChat", () => {
+describe("continueChat", () => {
   const approvalsPath = `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`;
 
   function resumeHarness(continuation: unknown) {
@@ -1078,44 +1078,33 @@ describe("resumeChat", () => {
     return { ...h, source };
   }
 
-  it.each(["queued", "running"])(
-    "starts or joins a %s continuation with handlers attached",
-    async (state) => {
-      const { client, calls, of, source } = resumeHarness({
-        id: "tac_1",
-        state,
-      });
-      const { functions, spy } = orderFunctions();
-      const result = await client
-        .forUser("user-a")
-        .resumeChat({ agentId, sessionId, functions });
-      expect(await result.sessionId).toBe(sessionId);
-      source.push(sse(readyEvent()));
-      await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
-      source.close();
-      await readAll(result.toStream());
+  it("streams a continuation with fresh handlers attached in one call", async () => {
+    const { client, calls, of, source } = resumeHarness({
+      id: "tac_1",
+      state: "waiting",
+    });
+    const { functions, spy } = orderFunctions();
+    const result = await client.forUser("user-a").continueChat({
+      agentId,
+      sessionId,
+      functions,
+      decisions: [{ approvalId: "approval-1", approved: true }],
+    });
+    expect(await result.sessionId).toBe(sessionId);
+    source.push(sse(readyEvent()));
+    await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
+    source.close();
+    await readAll(result.toStream());
 
-      expect(calls[1]).toMatchObject({
-        method: "POST",
-        path: `/v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/tac_1/resume`,
-        body: {},
-      });
-      expect(spy).toHaveBeenCalledOnce();
-    }
-  );
-
-  it.each([
-    null,
-    { id: "tac_1", state: "waiting" },
-    { id: "tac_1", state: "succeeded" },
-  ])("refuses when no continuation can resume (%o)", async (continuation) => {
-    const { client, calls } = resumeHarness(continuation);
-    const { functions } = orderFunctions();
-    const error = await client
-      .resumeChat({ agentId, sessionId, functions })
-      .catch((e: unknown) => e);
-    expect((error as BlazingAgentsError).code).toBe("not_found");
-    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      method: "POST",
+      path: `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/continue`,
+      body: {
+        decisions: [{ approvalId: "approval-1", approved: true }],
+        functions: expect.objectContaining({ getOrder: expect.anything() }),
+      },
+    });
+    expect(spy).toHaveBeenCalledOnce();
   });
 
   it("reports missing handlers when resuming with an empty registry", async () => {
@@ -1123,10 +1112,11 @@ describe("resumeChat", () => {
       id: "tac_1",
       state: "running",
     });
-    const result = await client.resumeChat({
+    const result = await client.continueChat({
       agentId,
       sessionId,
       functions: {},
+      decisions: [{ approvalId: "approval-1", approved: true }],
       abortSignal: new AbortController().signal,
     });
     source.push(sse(readyEvent()));
@@ -1143,39 +1133,17 @@ describe("resumeChat", () => {
   it("resumes a known continuation without listing approvals", async () => {
     const { client, calls, source } = resumeHarness(null);
     const { functions } = orderFunctions();
-    const result = await client.resumeChat({
+    const result = await client.continueChat({
       agentId,
       sessionId,
-      continuationId: "tac_decided",
+      decisions: [{ approvalId: "approval-1", approved: true }],
       functions,
     });
     source.close();
     await readAll(result.toStream());
     expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
-      `POST /v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/tac_decided/resume`,
+      `POST /v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/continue`,
     ]);
-  });
-});
-
-describe("observer continuation join", () => {
-  it("removes private events without claiming them", async () => {
-    const source = upstream();
-    const { client, of } = harness(source.stream, {
-      other: () =>
-        new Response(source.stream, {
-          headers: { "content-type": "text/event-stream" },
-        }),
-    });
-    const result = await client.sessions.joinToolApprovalContinuation({
-      agentId,
-      sessionId,
-      continuationId: "tac_1",
-    });
-    const text = sse({ type: "text-delta", id: "t", delta: "hi" });
-    source.push(sse(readyEvent()) + text);
-    source.close();
-    expect(await readAll(result.toStream())).toBe(text);
-    expect(of("/claim")).toHaveLength(0);
   });
 });
 
@@ -1183,12 +1151,10 @@ describe("approval relay without a registry", () => {
   it("resumes as executor and reports the missing handler", async () => {
     const source = upstream();
     const { client, calls, of } = harness(source.stream, {
-      other: (call) =>
-        call.path.endsWith("/tool-approvals/approval-1")
-          ? ok({ continuationId: "tac_1", state: "queued" })
-          : new Response(source.stream, {
-              headers: { "content-type": "text/event-stream" },
-            }),
+      other: () =>
+        new Response(source.stream, {
+          headers: { "content-type": "text/event-stream" },
+        }),
     });
     const relay = createChatRelay({
       client,
@@ -1224,8 +1190,8 @@ describe("approval relay without a registry", () => {
     await vi.waitFor(() => expect(of("/result")).toHaveLength(1));
     source.close();
     expect(await response.text()).toBe("");
-    expect(calls[1].path).toBe(
-      `/v1/agents/${agentId}/sessions/${sessionId}/tool-approval-continuations/tac_1/resume`
+    expect(calls[0].path).toBe(
+      `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/continue`
     );
     expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
       kind: "error",

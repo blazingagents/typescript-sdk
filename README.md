@@ -17,7 +17,8 @@ requires Node.js 24 or newer.
 
 - Typed clients for Agents, Workspaces, Skills, Providers, Prompts, Tasks,
   Sessions, Artifacts, Slack and Telegram Chat Connections, usage, Tenant settings, and merchant monetization.
-- Stateful chat and stateless text or structured-object generation.
+- Stateful chat with explicit message batches, steer receipts, and one-call Tool approvals.
+- Stateless text or structured-object generation.
 - Public Zod contracts for validating API requests and responses.
 - Cursor pagination and binary transfers.
 - Request correlation and a typed, forward-compatible error model.
@@ -49,6 +50,21 @@ const result = await client.completion({
 });
 
 console.log(await result.text);
+```
+
+For stateful chat, pass one user message or an ordered batch.
+
+```ts
+const chat = await client.chat({
+  agentId: "ag_...",
+  messages: [
+    { id: "first", role: "user", parts: [{ type: "text", text: "Compare the plans." }] },
+    { id: "second", role: "user", parts: [{ type: "text", text: "Include annual pricing." }] },
+  ],
+});
+
+const sessionId = await chat.sessionId;
+return chat.toResponse();
 ```
 
 Keep API keys on the server. For browser chat applications, relay `chat()`

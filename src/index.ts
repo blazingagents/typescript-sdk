@@ -99,11 +99,9 @@ export type {
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 export type {
-  ResumeSessionInputsResponse,
-  RunSessionInputsBody,
+  ChatSteerConsumedEvent,
   SessionActivity,
   SessionInput,
-  SessionInputMode,
   SessionInputResponse,
   SessionInputState,
   SessionInputsQuery,
@@ -113,8 +111,9 @@ export type {
   SubmitSessionInputBody,
 } from "./contracts/entities/session-inputs.ts";
 export type {
+  ContinueToolApprovalsBody,
   SessionResponse,
-  ToolApprovalDecisionResponse,
+  ToolApprovalDecision,
   ToolApprovalState,
   ToolApprovalsResponse,
 } from "./contracts/entities/sessions.ts";
@@ -178,6 +177,7 @@ export type {
   ChatDeliveriesResource,
   ChatInput,
   ChatMessageInput,
+  ChatMessagesInput,
   ChatPromptInput,
   ChatResult,
   ChatTrigger,
@@ -185,6 +185,7 @@ export type {
   CompletionPromptIdInput,
   CompletionPromptInput,
   CompletionResult,
+  ContinueChatInput,
   KnownBlazingAgentsErrorCode,
   LatestSessionsListOptions,
   McpConnectionsResource,
@@ -203,7 +204,6 @@ export type {
   ProvidersResource,
   ResourceRequestOptions,
   ResponseObservation,
-  ResumeChatInput,
   SessionsResource,
   SkillsListOptions,
   TasksResource,

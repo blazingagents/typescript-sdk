@@ -151,27 +151,6 @@ const requests: [
         ...o,
       }),
   ],
-  [
-    "sessions.decideToolApproval",
-    (c, o) =>
-      c.sessions.decideToolApproval({
-        agentId: "agent",
-        sessionId: "session",
-        approvalId: "approval",
-        approved: true,
-        ...o,
-      }),
-  ],
-  [
-    "sessions.joinToolApprovalContinuation",
-    (c, o) =>
-      c.sessions.joinToolApprovalContinuation({
-        agentId: "agent",
-        sessionId: "session",
-        continuationId: "continuation",
-        ...o,
-      }),
-  ],
   ["workspaces.create", (c, o) => c.workspaces.create(o)],
   [
     "workspaces.update",

@@ -1,18 +1,15 @@
 import { z } from "zod";
 import { turnIdSchema } from "../ids.ts";
-import { chatFunctionDefinitionsSchema } from "./chat.ts";
 import { sessionMessageSchema } from "./sessions.ts";
 
 export const sessionInputStateSchema = z.enum([
   "accepted",
   "delivered",
-  "consumed",
   "committed",
-  "cancelled",
+  "not_placed",
   "uncertain",
 ]);
 
-export const sessionInputModeSchema = z.enum(["queue", "steer"]);
 export const sessionInputRequestIdSchema = z
   .string()
   .min(1)
@@ -26,23 +23,20 @@ export const sessionInputSchema = z
     requestId: sessionInputRequestIdSchema,
     sequence: z.number().int().positive(),
     message: sessionMessageSchema.extend({ role: z.literal("user") }),
-    mode: sessionInputModeSchema,
     state: sessionInputStateSchema,
-    turnId: turnIdSchema.nullable(),
+    turnId: turnIdSchema,
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
-    consumedAt: z.iso.datetime({ offset: true }).nullable(),
-    reason: z.enum(["stopped", "failed", "owner_lost", "deleted"]).nullable(),
+    reason: z
+      .enum(["stopped", "failed", "owner_lost", "turn_finished"])
+      .nullable(),
   })
   .strip();
 
 export const sessionActivitySchema = z
   .object({
-    state: z.enum(["idle", "running", "stopping", "approval", "paused"]),
+    state: z.enum(["idle", "running", "stopping", "approval"]),
     turnId: turnIdSchema.nullable(),
-    reason: z
-      .enum(["failed", "owner_lost", "function_executor_required"])
-      .nullable(),
   })
   .strip();
 
@@ -63,7 +57,6 @@ export const submitSessionInputBodySchema = z
     requestId: sessionInputRequestIdSchema,
     /** The HTTP boundary validates the user message with AI SDK. */
     message: z.unknown().refine((message) => message !== undefined),
-    whenBusy: sessionInputModeSchema.default("queue"),
   })
   .strict();
 
@@ -83,12 +76,7 @@ export const stopSessionResponseSchema = z
   .object({ stoppedTurnId: turnIdSchema, activity: sessionActivitySchema })
   .strip();
 
-export const resumeSessionInputsResponseSchema = z
-  .object({ activity: sessionActivitySchema })
-  .strip();
-
 export type SessionInputState = z.infer<typeof sessionInputStateSchema>;
-export type SessionInputMode = z.infer<typeof sessionInputModeSchema>;
 export type SessionInput = z.infer<typeof sessionInputSchema>;
 export type SessionActivity = z.infer<typeof sessionActivitySchema>;
 export type SessionInputResponse = z.infer<typeof sessionInputResponseSchema>;
@@ -99,11 +87,20 @@ export type SubmitSessionInputBody = z.input<
 export type SessionInputsQuery = z.input<typeof sessionInputsQuerySchema>;
 export type StopSessionBody = z.infer<typeof stopSessionBodySchema>;
 export type StopSessionResponse = z.infer<typeof stopSessionResponseSchema>;
-export type ResumeSessionInputsResponse = z.infer<
-  typeof resumeSessionInputsResponseSchema
->;
 
-export const runSessionInputsBodySchema = z
-  .object({ functions: chatFunctionDefinitionsSchema.optional() })
-  .strict();
-export type RunSessionInputsBody = z.infer<typeof runSessionInputsBodySchema>;
+/** Provisional placement observation emitted on the owning Turn stream. */
+export const chatSteerConsumedEventSchema = z
+  .object({
+    type: z.literal("data-ba-steer-consumed"),
+    transient: z.literal(true),
+    data: sessionInputSchema.pick({
+      requestId: true,
+      turnId: true,
+      sequence: true,
+      message: true,
+    }),
+  })
+  .strip();
+export type ChatSteerConsumedEvent = z.infer<
+  typeof chatSteerConsumedEventSchema
+>;

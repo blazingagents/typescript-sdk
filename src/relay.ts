@@ -1,6 +1,6 @@
 import { safeValidateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
-import { decideApprovalResponses } from "./approvals.ts";
+import { extractApprovalDecisions } from "./approvals.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
@@ -8,7 +8,7 @@ import type { ChatFunctions } from "./functions.ts";
 
 export interface RelayContext {
   agentId: string;
-  /** Handlers for this authenticated request; they also resume approved continuations. */
+  /** Handlers for this authenticated request and its approved continuation. */
   functions?: ChatFunctions;
   metadata?: Record<string, unknown>;
   userId: string;
@@ -37,10 +37,10 @@ const completionBodySchema = z.object({ prompt: z.string().trim().min(1) });
 
 /**
  * Relays useChat submissions. An assistant message carrying approval
- * responses records each decision and then streams the continuation.
+ * responses submits the complete round and streams the continuation.
  */
 export function createChatRelay(
-  options: RelayOptions<"chat" | "resumeChat" | "sessions"> & {
+  options: RelayOptions<"chat" | "continueChat"> & {
     sessions: SessionOwnershipStore;
   }
 ): (request: Request) => Promise<Response> {
@@ -72,6 +72,13 @@ export function createChatRelay(
           request,
           sessionId: body.sessionId,
         });
+      }
+      if (message.role !== "user") {
+        return errorResponse(
+          400,
+          "invalid_request",
+          "Chat submission requires a user message."
+        );
       }
       const chatInput = {
         agentId: context.agentId,
@@ -114,7 +121,7 @@ export function createChatRelay(
 }
 
 async function relayApprovalResponses(
-  client: Pick<BlazingAgents, "resumeChat" | "sessions">,
+  client: Pick<BlazingAgents, "continueChat">,
   {
     functions,
     message,
@@ -140,21 +147,17 @@ async function relayApprovalResponses(
     sessionId: input.sessionId,
     abortSignal: request.signal,
   };
-  const continuationId = await decideApprovalResponses(client, {
-    ...target,
-    message,
-  });
-  if (continuationId === undefined) {
+  const decisions = extractApprovalDecisions(message);
+  if (decisions.length === 0) {
     return errorResponse(
       400,
       "invalid_request",
       "The message has no tool approval responses."
     );
   }
-  /** An absent registry still resumes, so missing handlers become tool errors instead of a stalled observer. */
-  const continuation = await client.resumeChat({
+  const continuation = await client.continueChat({
     ...target,
-    continuationId,
+    decisions,
     functions: functions ?? {},
   });
   return continuation.toResponse();

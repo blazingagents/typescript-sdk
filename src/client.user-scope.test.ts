@@ -93,10 +93,10 @@ describe("forUser", () => {
     const continued = createMockFetch({ stream: sseStream([]) });
     await new BlazingAgents({ apiKey: "ba_test", fetch: continued.fetch })
       .forUser("user-42")
-      .sessions.joinToolApprovalContinuation({
+      .continueChat({
         agentId,
         sessionId,
-        continuationId: "continue-1",
+        decisions: [{ approvalId: "approval-1", approved: true }],
       });
     expect(
       new Headers(continued.calls[0].init?.headers).get("X-BA-User-Id")

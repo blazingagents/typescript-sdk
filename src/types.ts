@@ -588,6 +588,15 @@ export interface SessionsResource {
       deleteArtifacts: boolean;
     } & ResourceRequestOptions
   ): Promise<void>;
+  /** Retry an uncertain acknowledgement with the same explicit idempotencyKey. */
+  fork(
+    input: {
+      agentId: string;
+      sessionId: string;
+      messageId: string;
+      idempotencyKey: string;
+    } & ResourceRequestOptions
+  ): Promise<SessionResponse>;
   get(
     input: { agentId: string; sessionId: string } & ResourceRequestOptions
   ): Promise<SessionResponse>;

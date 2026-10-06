@@ -62,6 +62,8 @@ describe("apiErrorCodeSchema", () => {
     const codes = [
       "invalid_request",
       "idempotency_conflict",
+      "session_fork_deleted",
+      "session_fork_unavailable",
       "input_idempotency_conflict",
       "steer_not_available",
       "validation_failed",

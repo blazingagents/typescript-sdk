@@ -127,6 +127,7 @@ const publicContractNames = [
   "sessionInputStateSchema",
   "sessionInputsQuerySchema",
   "sessionInputsResponseSchema",
+  "sessionForkedFromSchema",
   "sessionListItemSchema",
   "sessionMessageSchema",
   "sessionMessagesResponseSchema",

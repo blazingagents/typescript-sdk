@@ -212,3 +212,18 @@ export async function listChatDeliveries() {
     nextCursor: page.nextCursor,
   };
 }
+
+export function requiredSessionForkArguments() {
+  // @ts-expect-error fork requires the caller's explicit retry key
+  client.sessions.fork({
+    agentId: "ag_0123456789abcdef",
+    sessionId: "ss_0123456789abcdef",
+    messageId: "assistant-1",
+  });
+  // @ts-expect-error fork requires a selected message
+  client.sessions.fork({
+    agentId: "ag_0123456789abcdef",
+    sessionId: "ss_0123456789abcdef",
+    idempotencyKey: "retry-key",
+  });
+}

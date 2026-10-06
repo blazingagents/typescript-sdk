@@ -46,6 +46,7 @@ const session: SessionResponse = sessionResponseSchema.parse({
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   agentConfig: config,
+  forkedFrom: null,
 });
 sdk.sessions.get({ agentId: "ag_0123456789abcdef", sessionId: session.id });
 export const directTransport = new BlazingAgentsDirectChatTransport({
@@ -414,4 +415,23 @@ export const resumedWithFunctions = sdk.forUser("user-a").continueChat({
 export const resumedWithoutFunctions = sdk.continueChat({
   agentId: "ag_0123456789abcdef",
   sessionId: "ss_0123456789abcdef",
+});
+
+sdk.sessions.fork({
+  agentId: "ag_0123456789abcdef",
+  sessionId: session.id,
+  messageId: "assistant",
+  idempotencyKey: "retry-key",
+});
+// @ts-expect-error fork requires an explicit key
+sdk.sessions.fork({
+  agentId: "ag_0123456789abcdef",
+  sessionId: session.id,
+  messageId: "assistant",
+});
+// @ts-expect-error fork requires a selected message
+sdk.sessions.fork({
+  agentId: "ag_0123456789abcdef",
+  sessionId: session.id,
+  idempotencyKey: "retry-key",
 });

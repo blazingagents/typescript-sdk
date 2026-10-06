@@ -30,8 +30,18 @@ export const sessionsListResponseSchema = paginatedResponseSchema(
   sessionListItemSchema
 );
 
+export const sessionForkedFromSchema = z
+  .object({
+    sessionId: sessionIdSchema,
+    messageId: z.string().min(1),
+  })
+  .strip();
+
 export const sessionResponseSchema = sessionListItemSchema
-  .extend({ agentConfig: agentConfigSchema })
+  .extend({
+    agentConfig: agentConfigSchema,
+    forkedFrom: sessionForkedFromSchema.nullable(),
+  })
   .strip();
 
 /**
@@ -62,6 +72,7 @@ export const sessionMessageSchema = z
   .object({
     id: z.string().min(1),
     role: z.enum(["system", "user", "assistant"]),
+    branchable: z.boolean(),
     parts: z
       .array(
         z
@@ -170,6 +181,7 @@ export const continueToolApprovalsBodySchema = z
   .strict();
 
 export type SessionListItem = z.infer<typeof sessionListItemSchema>;
+export type SessionForkedFrom = z.infer<typeof sessionForkedFromSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
 export type LatestSessionListItem = z.infer<typeof latestSessionListItemSchema>;

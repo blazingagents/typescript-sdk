@@ -112,6 +112,7 @@ export type {
 } from "./contracts/entities/session-inputs.ts";
 export type {
   ContinueToolApprovalsBody,
+  SessionForkedFrom,
   SessionResponse,
   ToolApprovalDecision,
   ToolApprovalState,

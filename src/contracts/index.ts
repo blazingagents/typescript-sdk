@@ -178,6 +178,7 @@ export {
 } from "./entities/session-inputs.ts";
 export type {
   ContinueToolApprovalsBody,
+  SessionForkedFrom,
   ToolApprovalContinuationState,
   ToolApprovalDecision,
   ToolApprovalsResponse,
@@ -186,6 +187,7 @@ export {
   continueToolApprovalsBodySchema,
   latestSessionListItemSchema,
   latestSessionsListResponseSchema,
+  sessionForkedFromSchema,
   sessionListItemSchema,
   sessionMessageSchema,
   sessionMessagesResponseSchema,

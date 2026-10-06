@@ -16,6 +16,7 @@ const sessionListItem = {
 const sessionMessage = {
   id: "msg_1",
   role: "user",
+  branchable: false,
   parts: [{ type: "text", text: "hi" }],
 };
 
@@ -25,7 +26,11 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 
 describe("client.sessions", () => {
   it("gets a Session with its saved Agent config", async () => {
-    const response = { ...sessionListItem, agentConfig: agentConfigFixture };
+    const response = {
+      ...sessionListItem,
+      agentConfig: agentConfigFixture,
+      forkedFrom: null,
+    };
     const { fetch, calls } = createMockFetch({ body: response });
 
     await expect(
@@ -230,5 +235,67 @@ describe("client.sessions", () => {
     await expect(
       client(fetch).sessions.list({ agentId: "ag_0123456789abcdef" })
     ).rejects.toBeDefined();
+  });
+});
+
+describe("Session fork protocol", () => {
+  it.each([200, 201])(
+    "parses child details on %i and reuses the explicit key",
+    async (status) => {
+      const body = {
+        ...sessionListItem,
+        id: "ss_child01234567890",
+        agentConfig: agentConfigFixture,
+        forkedFrom: { sessionId: sessionListItem.id, messageId: "assistant-1" },
+      };
+      const { fetch, calls } = createMockFetch({ status, body });
+      const sdk = new BlazingAgents({
+        apiKey: "ba_test",
+        baseUrl: BASE,
+        fetch,
+      }).forUser("end-user");
+      const controller = new AbortController();
+      const input = {
+        agentId: "ag_0123456789abcdef",
+        sessionId: sessionListItem.id,
+        messageId: "assistant-1",
+        idempotencyKey: "retry-key",
+        abortSignal: controller.signal,
+      };
+      await expect(sdk.sessions.fork(input)).resolves.toEqual(body);
+      await expect(sdk.sessions.fork(input)).resolves.toEqual(body);
+      for (const call of calls) {
+        expect(call.url).toBe(
+          `${BASE}/v1/agents/${input.agentId}/sessions/${input.sessionId}/fork`
+        );
+        expect(call.init?.method).toBe("POST");
+        expect(JSON.parse(String(call.init?.body))).toEqual({
+          messageId: input.messageId,
+        });
+        const headers = new Headers(call.init?.headers);
+        expect(headers.get("Idempotency-Key")).toBe("retry-key");
+        expect(headers.get("Authorization")).toBe("Bearer ba_test");
+        expect(headers.get("X-BA-User-Id")).toBe("end-user");
+        expect(call.init?.signal).toBe(controller.signal);
+      }
+    }
+  );
+  it.each([
+    { status: 409, code: "idempotency_conflict" },
+    { status: 409, code: "session_fork_unavailable" },
+    { status: 410, code: "session_fork_deleted" },
+  ])("preserves $status $code", async ({ status, code }) => {
+    const { fetch } = createMockFetch({
+      status,
+      body: { error: { code, message: "Fork failed" } },
+    });
+    await expect(
+      client(fetch).sessions.fork({
+        agentId: "ag_0123456789abcdef",
+        sessionId: sessionListItem.id,
+        messageId: "assistant-1",
+        idempotencyKey: "key",
+      })
+    ).rejects.toMatchObject({ status, code });
   });
 });

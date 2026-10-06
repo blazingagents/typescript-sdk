@@ -22,7 +22,9 @@ export const sessionInputSchema = z
   .object({
     requestId: sessionInputRequestIdSchema,
     sequence: z.number().int().positive(),
-    message: sessionMessageSchema.extend({ role: z.literal("user") }),
+    message: sessionMessageSchema
+      .omit({ branchable: true })
+      .extend({ role: z.literal("user") }),
     state: sessionInputStateSchema,
     turnId: turnIdSchema,
     createdAt: z.iso.datetime({ offset: true }),

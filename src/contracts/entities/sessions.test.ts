@@ -33,12 +33,18 @@ describe("sessionResponseSchema", () => {
       sessionResponseSchema.parse({
         ...baseSession,
         agentConfig: agentConfigFixture,
+        forkedFrom: null,
       })
-    ).toEqual({ ...baseSession, agentConfig: agentConfigFixture });
+    ).toEqual({
+      ...baseSession,
+      agentConfig: agentConfigFixture,
+      forkedFrom: null,
+    });
     expect(
       sessionListItemSchema.parse({
         ...baseSession,
         agentConfig: agentConfigFixture,
+        forkedFrom: null,
       })
     ).toEqual(baseSession);
   });
@@ -172,6 +178,7 @@ describe("sessionMessagesResponseSchema", () => {
           {
             id: "msg_1",
             role: "user",
+            branchable: false,
             parts: [{ type: "text", text: "hi" }],
           },
         ],
@@ -184,7 +191,7 @@ describe("sessionMessagesResponseSchema", () => {
   it("rejects a row with no parts", () => {
     expect(
       sessionMessagesResponseSchema.safeParse({
-        data: [{ id: "msg_1", role: "user", parts: [] }],
+        data: [{ id: "msg_1", role: "user", branchable: false, parts: [] }],
         nextCursor: null,
         latestCursor: null,
       }).success
@@ -287,4 +294,42 @@ describe("Tool approval contracts", () => {
       })
     ).not.toHaveProperty("data.0.signature");
   });
+});
+
+it("requires nullable provenance and a server eligibility boolean", () => {
+  const detail = { ...baseSession, agentConfig: agentConfigFixture };
+  expect(sessionResponseSchema.safeParse(detail).success).toBe(false);
+  expect(
+    sessionResponseSchema.parse({
+      ...detail,
+      forkedFrom: { sessionId, messageId: "assistant" },
+    }).forkedFrom
+  ).toEqual({ sessionId, messageId: "assistant" });
+  expect(
+    sessionListItemSchema.parse({ ...baseSession, forkedFrom: null })
+  ).not.toHaveProperty("forkedFrom");
+  const page = {
+    data: [
+      {
+        id: "assistant",
+        role: "assistant",
+        parts: [{ type: "text", text: "hello" }],
+      },
+    ],
+    nextCursor: null,
+    latestCursor: null,
+  };
+  expect(sessionMessagesResponseSchema.safeParse(page).success).toBe(false);
+  expect(
+    sessionMessagesResponseSchema.parse({
+      ...page,
+      data: [{ ...page.data[0], branchable: true }],
+    }).data[0].branchable
+  ).toBe(true);
+  expect(
+    sessionMessagesResponseSchema.safeParse({
+      ...page,
+      data: [{ ...page.data[0], branchable: "true" }],
+    }).success
+  ).toBe(false);
 });

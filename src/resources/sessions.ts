@@ -55,6 +55,19 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         stopSessionResponseSchema
       );
     },
+    async fork({ agentId, sessionId, messageId, idempotencyKey, abortSignal }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/fork`,
+        {
+          method: "POST",
+          json: { messageId },
+          headers: { "Idempotency-Key": idempotencyKey },
+          signal: abortSignal,
+        },
+        sessionResponseSchema
+      );
+    },
     async get({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,

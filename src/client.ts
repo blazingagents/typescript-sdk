@@ -61,6 +61,9 @@ const scopedUserIdSchema = z
   .max(256)
   .regex(/^[\x21-\x7E](?:[\x20-\x7E]*[\x21-\x7E])?$/);
 
+/**
+ * Builds a client whose requests share the configured user scope.
+ */
 function createUserClient(config: HttpConfig): UserClient {
   const usage = createUsageResource(config);
   return {
@@ -72,13 +75,19 @@ function createUserClient(config: HttpConfig): UserClient {
     workspaces: createWorkspacesResource(config),
     memories: createMemoriesResource(config),
     usage: { get: usage.get, sessions: usage.sessions },
+    /** Returns Skill operations for the selected Agent. */
     agent: ({ agentId }) => ({
       skills: createAgentSkillsResource(config, agentId),
     }),
+    /** Starts a chat using the scoped client configuration. */
     chat: (input) => chat(config, input),
+    /** Starts text generation using the scoped client configuration. */
     completion: (input) => completion(config, input),
+    /** Starts JSON generation using the scoped client configuration. */
     object: (input) => objectGeneration(config, input),
+    /** Continues an approval round using the scoped client configuration. */
     continueChat: (input) => continueChat(config, input),
+    /** Creates a scoped client view with the supplied correlation ID. */
     withOptions: (options) =>
       createUserClient({ ...config, clientRequestId: options.clientRequestId }),
   };
@@ -104,6 +113,10 @@ export class BlazingAgents {
   readonly merchantBindings: MerchantBindingsResource;
   readonly merchantUsageEvents: MerchantUsageEventsResource;
 
+  /**
+   * Creates a client. Defaults to the hosted API and removes trailing base URL slashes.
+   * @param options - Configuration for this operation.
+   */
   constructor(options: BlazingAgentsOptions) {
     this.config = {
       apiKey: options.apiKey,
@@ -135,11 +148,20 @@ export class BlazingAgents {
     this.merchantUsageEvents = createMerchantUsageEventsResource(this.config);
   }
 
+  /**
+   * Returns the Skill operations for the selected Agent.
+   * @returns The selected Agent Skill client.
+   */
   agent({ agentId }: { agentId: string }): AgentClient {
     return { skills: createAgentSkillsResource(this.config, agentId) };
   }
 
-  /** Scope requests to one end user. IDs use printable ASCII, at most 256 characters, without leading or trailing spaces. */
+  /**
+   * Scope requests to one end user. IDs use printable ASCII, at most 256 characters, without leading or trailing spaces.
+   * @param userId - Printable ASCII end-user ID, at most 256 characters with no surrounding spaces.
+   * @returns A client scoped to the validated end-user ID.
+   * @throws ZodError - If the user ID is invalid.
+   */
   forUser(userId: string): UserClient {
     return createUserClient({
       ...this.config,
@@ -151,6 +173,8 @@ export class BlazingAgents {
    * `POST /v1/agents/:agentId/sessions` (create, no `sessionId`) or
    * `POST /v1/agents/:agentId/sessions/:sessionId` (resume). Returns the
    * session id and a byte-compatible SSE relay for `useChat`.
+   * @param input - Agent, message or stored Prompt, and optional existing Session.
+   * @returns The Session ID promise and single-owner SSE accessors.
    */
   chat(input: ChatInput): Promise<ChatResult> {
     return chat(this.config, input);
@@ -159,6 +183,8 @@ export class BlazingAgents {
   /**
    * Records a complete Tool approval round and streams its continuation.
    * Caller-local function handlers apply only to this invocation.
+   * @param input - Agent, Session, and decisions for the complete approval round.
+   * @returns The Session ID promise and continuation SSE accessors.
    */
   continueChat(input: ContinueChatInput): Promise<ChatResult> {
     return continueChat(this.config, input);
@@ -167,6 +193,8 @@ export class BlazingAgents {
   /**
    * `POST /v1/agents/:agentId/generation` — stateless one-shot text
    * stream. Returns `textStream` + `await result.text` + `toResponse()`.
+   * @param input - Agent and literal prompt or stored Prompt reference.
+   * @returns Independent text stream, final text promise, and response relay.
    */
   completion(input: CompletionInput): Promise<CompletionResult> {
     return completion(this.config, input);
@@ -175,6 +203,8 @@ export class BlazingAgents {
   /**
    * `POST /v1/agents/:agentId/generation` — stateless structured output.
    * Returns `partialObjectStream` + `await result.object` + `toResponse()`.
+   * @param input - Agent, prompt source, and JSON output schema.
+   * @returns Partial JSON objects, a final JSON promise, and a text response relay.
    */
   object(input: ObjectInput): Promise<ObjectResult> {
     return objectGeneration(this.config, input);
@@ -183,6 +213,8 @@ export class BlazingAgents {
   /**
    * Returns a lightweight client view whose resource and generation calls
    * carry caller-owned correlation without raw header manipulation.
+   * @param options - Caller-owned request correlation ID for subsequent calls.
+   * @returns A new client carrying the supplied correlation ID.
    */
   withOptions(options: BlazingAgentsRequestOptions): BlazingAgents {
     return new BlazingAgents({

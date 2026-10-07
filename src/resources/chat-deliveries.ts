@@ -5,11 +5,16 @@ import type { ChatDeliveriesResource, HttpConfig } from "../types.ts";
 /**
  * `client.chatDeliveries` — `GET /v1/chat-deliveries`, the Tenant-wide
  * delivery feed across all Chat Connections, newest first.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
  */
 export function createChatDeliveriesResource(
   config: HttpConfig
 ): ChatDeliveriesResource {
   return {
+    /**
+     * Lists one page of chat deliveries.
+     */
     async list({ abortSignal, status, ...query } = {}) {
       return await requestJson(
         config,

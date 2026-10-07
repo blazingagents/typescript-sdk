@@ -11,6 +11,9 @@ import {
 } from "../http.ts";
 import type { AgentSkillsResource, HttpConfig } from "../types.ts";
 
+/**
+ * Builds a Skill file URL with encoded Agent, Skill, and file path values.
+ */
 function fileUrl(
   agentId: string,
   input: { path: string; skillId: string }
@@ -18,11 +21,19 @@ function fileUrl(
   return `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(input.skillId)}/files?path=${encodeURIComponent(input.path)}`;
 }
 
+/**
+ * Builds the Agent Skills operations using the shared HTTP configuration.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
+ */
 export function createAgentSkillsResource(
   config: HttpConfig,
   agentId: string
 ): AgentSkillsResource {
   return {
+    /**
+     * Copies skills.
+     */
     async copy({ skillId, to, abortSignal }) {
       return await requestJson(
         config,
@@ -31,6 +42,9 @@ export function createAgentSkillsResource(
         skillCopyResultsSchema
       );
     },
+    /**
+     * Creates skills.
+     */
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -39,6 +53,9 @@ export function createAgentSkillsResource(
         skillDetailSchema
       );
     },
+    /**
+     * Deletes skills.
+     */
     async delete({ skillId, abortSignal }) {
       await requestJson<void>(
         config,
@@ -46,6 +63,9 @@ export function createAgentSkillsResource(
         { method: "DELETE", signal: abortSignal }
       );
     },
+    /**
+     * Deletes a Skill file.
+     */
     async deleteFile({ abortSignal, ...input }) {
       return await requestJson(
         config,
@@ -57,6 +77,9 @@ export function createAgentSkillsResource(
         skillDetailSchema
       );
     },
+    /**
+     * Retrieves skills.
+     */
     async get({ skillId, abortSignal }) {
       return await requestJson(
         config,
@@ -65,6 +88,9 @@ export function createAgentSkillsResource(
         skillDetailSchema
       );
     },
+    /**
+     * Reads Skill file bytes.
+     */
     async getFile({ abortSignal, ...input }) {
       const response = await requestStream(config, fileUrl(agentId, input), {
         signal: abortSignal,
@@ -78,6 +104,9 @@ export function createAgentSkillsResource(
         throw cause;
       }
     },
+    /**
+     * Lists one page of skills.
+     */
     async list({ cursor, limit, abortSignal } = {}) {
       return await requestJson(
         config,
@@ -86,6 +115,9 @@ export function createAgentSkillsResource(
         skillsListResponseSchema
       );
     },
+    /**
+     * Replaces a Skill file with the supplied content.
+     */
     async putFile({ content, abortSignal, ...input }) {
       return await requestJson(
         config,
@@ -98,6 +130,9 @@ export function createAgentSkillsResource(
         skillDetailSchema
       );
     },
+    /**
+     * Uploads a Skill archive as multipart form data.
+     */
     async upload({ source, abortSignal }) {
       const form = new FormData();
       form.set("type", source.type);

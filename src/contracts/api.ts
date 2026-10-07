@@ -149,6 +149,12 @@ export interface ApiErrorOptions {
   param?: string;
 }
 
+/**
+ * Builds an API error envelope with optional parameter and detail fields.
+ * @param code - API error code for programmatic handling.
+ * @param message - Human-readable error description.
+ * @param options - Configuration for this operation.
+ */
 export function apiError(
   code: ApiErrorCode,
   message: string,
@@ -170,6 +176,8 @@ export function apiError(
  * Cursor pagination — `{ data, nextCursor }` on unbounded list surfaces,
  * including sessions, transcripts, artifacts, and memories.
  * `nextCursor` is opaque (base64 of the keyset); `null` means no more pages.
+ * @param data - Response data to wrap in the success envelope.
+ * @param nextCursor - Next Cursor.
  */
 export function paginatedResponse<T>(data: T[], nextCursor: string | null) {
   return { data, nextCursor };
@@ -177,6 +185,10 @@ export function paginatedResponse<T>(data: T[], nextCursor: string | null) {
 
 export const cursorSchema = z.string().trim().min(1);
 
+/**
+ * Creates a schema for a data page and nullable next cursor.
+ * @param itemSchema - Item Schema.
+ */
 export function paginatedResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
   return z
     .object({
@@ -196,6 +208,11 @@ export function paginatedResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
 export class CursorDecodeError extends Error {
   readonly errorCode = "INVALID_CURSOR";
   readonly statusCode = 400;
+  /**
+   * Creates the error with the supplied message.
+   * @param message - Human-readable error description.
+   * @param options - Configuration for this operation.
+   */
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = "CursorDecodeError";
@@ -208,6 +225,10 @@ const BASE64_PADDING = /[=]+$/;
 const BASE64_DASH = /-/g;
 const BASE64_UNDERSCORE = /_/g;
 
+/**
+ * Encodes a cursor payload as URL-safe base64 JSON.
+ * @param payload - JSON-serializable cursor fields. This function does not validate them.
+ */
 export function encodeCursor(payload: Record<string, unknown>): string {
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
@@ -221,6 +242,10 @@ export function encodeCursor(payload: Record<string, unknown>): string {
     .replace(BASE64_PADDING, "");
 }
 
+/**
+ * Decodes and validates a URL-safe base64 JSON cursor.
+ * @param cursor - URL-safe base64 JSON cursor to decode.
+ */
 export function decodeCursor(cursor: string): Record<string, unknown> {
   let json: string;
   try {

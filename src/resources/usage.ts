@@ -11,10 +11,14 @@ import type { HttpConfig, UsageResource } from "../types.ts";
  * `client.usage` — get over `/v1/usage` (tenant-wide) and
  * `/v1/agents/:agentId/usage` (per-agent). The query shape is the core
  * `usageQuerySchema`; the SDK passes it through as query params.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
  */
-
 export function createUsageResource(config: HttpConfig): UsageResource {
   return {
+    /**
+     * Retrieves usage grouped by Session.
+     */
     async sessions({ abortSignal, ...input }) {
       const body = sessionUsageQuerySchema.parse(input);
       return await requestJson(
@@ -28,6 +32,9 @@ export function createUsageResource(config: HttpConfig): UsageResource {
         sessionUsageResponseSchema
       );
     },
+    /**
+     * Retrieves usage.
+     */
     async get({ abortSignal, ...query } = {}) {
       return await requestJson(
         config,
@@ -39,6 +46,9 @@ export function createUsageResource(config: HttpConfig): UsageResource {
         usageResponseSchema
       );
     },
+    /**
+     * Retrieves usage for one Agent.
+     */
     async getForAgent({ agentId, abortSignal, ...query }) {
       return await requestJson(
         config,
@@ -47,6 +57,9 @@ export function createUsageResource(config: HttpConfig): UsageResource {
         usageResponseSchema
       );
     },
+    /**
+     * Retrieves usage totals, daily usage, and bounded rankings.
+     */
     async overview({ abortSignal, ...query } = {}) {
       return await requestJson(
         config,

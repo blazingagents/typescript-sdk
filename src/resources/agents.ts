@@ -9,7 +9,15 @@ import {
 import { requestJson } from "../http.ts";
 import type { AgentsResource, HttpConfig } from "../types.ts";
 
+/**
+ * Builds the Agents operations using the shared HTTP configuration.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
+ */
 export function createAgentsResource(config: HttpConfig): AgentsResource {
+  /**
+   * Updates agents.
+   */
   const update: AgentsResource["update"] = async ({
     agentId,
     abortSignal,
@@ -27,6 +35,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
     );
 
   return {
+    /**
+     * Creates agents.
+     */
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -39,6 +50,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentResponseSchema
       );
     },
+    /**
+     * Lists one page of agents.
+     */
     async list(options = {}) {
       return await requestJson(
         config,
@@ -55,6 +69,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentsResponseSchema
       );
     },
+    /**
+     * Retrieves agents.
+     */
     async get({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -63,6 +80,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentResponseSchema
       );
     },
+    /**
+     * Disables agents.
+     */
     async disable({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -71,6 +91,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentResponseSchema
       );
     },
+    /**
+     * Enables agents.
+     */
     async enable({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -79,6 +102,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentResponseSchema
       );
     },
+    /**
+     * Lists the Agent MCP attachments.
+     */
     async listMcpAttachments({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -88,6 +114,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
       );
     },
     update,
+    /**
+     * Updates one Agent MCP attachment.
+     */
     async updateMcpAttachment({
       agentId,
       mcpConnectionId,
@@ -101,6 +130,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         mcpAttachmentResponseSchema
       );
     },
+    /**
+     * Deletes agents.
+     */
     async delete({ agentId, includeArtifacts, abortSignal }) {
       await requestJson<void>(config, `/v1/agents/${agentId}`, {
         method: "DELETE",
@@ -108,6 +140,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         signal: abortSignal,
       });
     },
+    /**
+     * Uploads an Agent avatar as multipart form data.
+     */
     async uploadAvatar({ agentId, file, abortSignal }) {
       const form = new FormData();
       form.append("file", file);
@@ -122,6 +157,9 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         agentResponseSchema
       );
     },
+    /**
+     * Removes the Agent avatar.
+     */
     async removeAvatar({ agentId, abortSignal }) {
       return await requestJson(
         config,

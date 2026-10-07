@@ -21,6 +21,11 @@ export const promptVariableNamePattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 const promptNameSchema = z.string().trim().min(1).max(MAX_PROMPT_NAME_LENGTH);
 
+/**
+ * Lists unique valid Prompt variables in appearance order and reports invalid names.
+ * @param template - Prompt template containing double-brace variable tokens.
+ * @returns Unique valid variables and all invalid variable names.
+ */
 export function parsePromptVariables(
   template: string
 ): PromptVariableParseResult {
@@ -124,6 +129,14 @@ export const updatePromptBodySchema = z
     message: atLeastOneFieldMessage,
   });
 
+/**
+ * Validates the Prompt template and replaces variables with their supplied string values.
+ * @param template - Prompt template containing double-brace variable tokens.
+ * @param values - Values to inspect or substitute.
+ * @returns The validated template with every variable replaced.
+ * @throws ZodError - If the template is invalid.
+ * @throws Error - If a variable has no string value.
+ */
 export function renderPromptTemplate(
   template: string,
   values: Record<string, string>

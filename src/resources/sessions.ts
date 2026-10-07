@@ -23,10 +23,14 @@ import type { HttpConfig, SessionsResource } from "../types.ts";
  * `/v1/agents/:agentId/sessions`. Pagination is manual: the SDK returns
  * the page as-is (`{ data, nextCursor }` verbatim); the caller passes
  * `nextCursor` back as `cursor` on the next call.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
  */
-
 export function createSessionsResource(config: HttpConfig): SessionsResource {
   return {
+    /**
+     * Submits a Session input. Reuse the request ID and payload after an uncertain acknowledgement.
+     */
     async submitInput({ agentId, sessionId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -35,6 +39,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionInputResponseSchema
       );
     },
+    /**
+     * Lists input receipts. Poll the first page to observe state changes.
+     */
     async inputs({ agentId, sessionId, abortSignal, ...query }) {
       return await requestJson(
         config,
@@ -43,6 +50,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionInputsResponseSchema
       );
     },
+    /**
+     * Records cancellation for the named Turn without waiting for settlement.
+     */
     async stop({ agentId, sessionId, turnId, abortSignal }) {
       return await requestJson(
         config,
@@ -55,6 +65,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         stopSessionResponseSchema
       );
     },
+    /**
+     * Forks a Session at a message. Reuse the idempotency key after an uncertain acknowledgement.
+     */
     async fork({ agentId, sessionId, messageId, idempotencyKey, abortSignal }) {
       return await requestJson(
         config,
@@ -68,6 +81,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionResponseSchema
       );
     },
+    /**
+     * Retrieves sessions.
+     */
     async get({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
@@ -76,6 +92,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionResponseSchema
       );
     },
+    /**
+     * Lists one page of sessions.
+     */
     async list({ agentId, ...options }) {
       return await requestJson(
         config,
@@ -92,6 +111,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionsListResponseSchema
       );
     },
+    /**
+     * Lists recently updated Sessions, optionally limited to one per Agent.
+     */
     async listLatest(options = {}) {
       return await requestJson(
         config,
@@ -111,6 +133,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         latestSessionsListResponseSchema
       );
     },
+    /**
+     * Lists one page of Session messages.
+     */
     async messages({ agentId, sessionId, ...options }) {
       return await requestJson(
         config,
@@ -126,6 +151,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionMessagesResponseSchema
       );
     },
+    /**
+     * Retrieves the pending Tool approval round.
+     */
     async toolApprovals({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
@@ -134,6 +162,9 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         toolApprovalsResponseSchema
       );
     },
+    /**
+     * Deletes sessions.
+     */
     async delete({ agentId, sessionId, deleteArtifacts, abortSignal }) {
       await requestJson<void>(
         config,

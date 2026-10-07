@@ -19,6 +19,12 @@ import type {
   TerminalStreamResult,
 } from "./types.ts";
 
+/**
+ * Creates or resumes a Session and returns its SSE stream and Session ID.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param input - Agent, message or stored Prompt, and optional existing Session.
+ * @returns The Session ID promise and single-owner SSE accessors.
+ */
 export async function chat(
   config: HttpConfig,
   input: ChatInput
@@ -50,6 +56,12 @@ export async function chat(
   });
 }
 
+/**
+ * Submits a complete Tool approval round and streams its continuation.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param input - Agent, Session, and decisions for the complete approval round.
+ * @returns The Session ID promise and continuation SSE accessors.
+ */
 export async function continueChat(
   config: HttpConfig,
   input: ContinueChatInput
@@ -79,6 +91,8 @@ export async function continueChat(
 /**
  * Keeps status and headers while filtering the SSE body. Missing or locked
  * bodies pass through so the stream result reports them as `stream_error`.
+ * @param response - Upstream HTTP response.
+ * @param filter - Transforms upstream SSE bytes before exposing them to the caller.
  */
 export function withFilteredBody(
   response: Response,
@@ -94,6 +108,9 @@ export function withFilteredBody(
   });
 }
 
+/**
+ * Builds a chat request body from messages or a stored Prompt.
+ */
 function buildChatBody(input: ChatInput): Record<string, unknown> {
   const base: Record<string, unknown> = {};
   // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined trigger.
@@ -165,6 +182,9 @@ function sessionIdFromLocation(
   return parsed.data;
 }
 
+/**
+ * Combines the Session ID promise with a single-owner SSE result.
+ */
 function buildChatResult(
   config: HttpConfig,
   response: Response,
@@ -215,6 +235,12 @@ function buildChatResult(
   };
 }
 
+/**
+ * Creates single-owner SSE response and byte-stream accessors.
+ * @param response - Upstream HTTP response.
+ * @param resourceName - Resource label used in stream errors.
+ * @param filter - Transforms upstream SSE bytes before exposing them to the caller.
+ */
 export function buildTerminalStreamResult(
   response: Response,
   resourceName: string,
@@ -223,6 +249,10 @@ export function buildTerminalStreamResult(
   const requestId = response.headers.get("x-request-id") ?? undefined;
   const location = response.headers.get("location");
   let bodyClaimed = false;
+  /**
+   * Claims the response body once and normalizes stream failures.
+   * @throws BlazingAgentsError - If the response body has already been claimed.
+   */
   const claimBody = (): ReadableStream<Uint8Array> => {
     if (bodyClaimed) {
       const message = `The ${resourceName} response body has already been claimed.`;
@@ -248,6 +278,7 @@ export function buildTerminalStreamResult(
   return {
     requestId,
     toStream: claimBody,
+    /** Claims the response relay once. */
     toResponse: () => {
       const headers = replacementResponseHeaders(requestId, location);
       headers.set("content-type", "text/event-stream");
@@ -272,6 +303,9 @@ export function buildTerminalStreamResult(
   };
 }
 
+/**
+ * Preserves a matching stream error or wraps a failure with request correlation.
+ */
 function toStreamError(
   cause: unknown,
   requestId: string | undefined,
@@ -302,6 +336,9 @@ function toStreamError(
   );
 }
 
+/**
+ * Wraps reads and cancellation failures as correlated SDK stream errors.
+ */
 function normalizeStreamErrors<T>(
   stream: ReadableStream<T>,
   requestId: string | undefined,
@@ -314,6 +351,9 @@ function normalizeStreamErrors<T>(
     throw toStreamError(cause, requestId, fallbackMessage);
   }
   return new ReadableStream<T>({
+    /**
+     * Reads one upstream chunk and normalizes stream failures.
+     */
     async pull(controller) {
       try {
         const { done, value } = await reader.read();
@@ -326,6 +366,9 @@ function normalizeStreamErrors<T>(
         controller.error(toStreamError(cause, requestId, fallbackMessage));
       }
     },
+    /**
+     * Cancels the upstream reader with the consumer reason.
+     */
     async cancel(reason) {
       try {
         await reader.cancel(reason);
@@ -336,6 +379,9 @@ function normalizeStreamErrors<T>(
   });
 }
 
+/**
+ * Returns the response body or a stream that fails when the body is missing.
+ */
 function responseBodyStream(
   response: Response,
   requestId: string | undefined,
@@ -355,12 +401,18 @@ function responseBodyStream(
     { cause }
   );
   return new ReadableStream<Uint8Array>({
+    /**
+     * Initializes the stream controller.
+     */
     start(controller) {
       controller.error(error);
     },
   });
 }
 
+/**
+ * Copies request correlation and Session location into relay response headers.
+ */
 function replacementResponseHeaders(
   requestId: string | undefined,
   location: string | null
@@ -375,6 +427,9 @@ function replacementResponseHeaders(
   return headers;
 }
 
+/**
+ * Builds a stateless prompt request with the selected output format.
+ */
 function buildStatelessGenerationBody(
   input: CompletionInput | ObjectInput,
   output: Record<string, unknown>
@@ -400,6 +455,12 @@ function buildStatelessGenerationBody(
   return body;
 }
 
+/**
+ * Starts stateless text generation with independent final, incremental, and response outputs.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param input - Agent and literal prompt or stored Prompt reference.
+ * @returns Independent text stream, final text promise, and response relay.
+ */
 export async function completion(
   config: HttpConfig,
   input: CompletionInput
@@ -415,6 +476,9 @@ export async function completion(
   return buildCompletionResult(response);
 }
 
+/**
+ * Splits text output into a final promise, incremental stream, and response relay.
+ */
 function buildCompletionResult(response: Response): CompletionResult {
   const { finalStream, outputStream, requestId, toResponse } =
     buildStatelessGenerationStreams(response, "completion");
@@ -438,6 +502,12 @@ function buildCompletionResult(response: Response): CompletionResult {
   };
 }
 
+/**
+ * Starts stateless JSON generation with partial objects and a final parsed value.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param input - Agent, prompt source, and JSON output schema.
+ * @returns Partial JSON objects, a final JSON promise, and a text response relay.
+ */
 export async function objectGeneration(
   config: HttpConfig,
   input: ObjectInput
@@ -456,6 +526,9 @@ export async function objectGeneration(
   return buildObjectResult(response);
 }
 
+/**
+ * Parses partial and final JSON from independent text-stream branches.
+ */
 function buildObjectResult(response: Response): ObjectResult {
   const { finalStream, outputStream, requestId, toResponse } =
     buildStatelessGenerationStreams(response, "object");
@@ -463,6 +536,9 @@ function buildObjectResult(response: Response): ObjectResult {
   let accumulatedText = "";
   const partialObjectStream = outputStream.pipeThrough(
     new TransformStream<string, unknown>({
+      /**
+       * Accumulates generated text and emits each available partial JSON value.
+       */
       async transform(chunk, controller) {
         accumulatedText += chunk;
         const { value } = await parsePartialJson(accumulatedText);
@@ -470,6 +546,9 @@ function buildObjectResult(response: Response): ObjectResult {
           controller.enqueue(value);
         }
       },
+      /**
+       * Rejects malformed final JSON when the text stream ends.
+       */
       flush() {
         try {
           JSON.parse(accumulatedText);
@@ -517,6 +596,9 @@ function buildObjectResult(response: Response): ObjectResult {
   };
 }
 
+/**
+ * Splits decoded text into final, public, and response-relay branches.
+ */
 function buildStatelessGenerationStreams(
   response: Response,
   resourceName: string
@@ -524,6 +606,11 @@ function buildStatelessGenerationStreams(
   finalStream: ReadableStream<string>;
   outputStream: ReadableStream<string>;
   requestId: string | undefined;
+  /**
+   * Claims the response relay once and returns its HTTP response.
+   * @returns The response relay.
+   * @throws BlazingAgentsError - If the response body has already been claimed.
+   */
   toResponse: () => Response;
 } {
   const requestId = response.headers.get("x-request-id") ?? undefined;
@@ -542,6 +629,7 @@ function buildStatelessGenerationStreams(
     finalStream,
     outputStream,
     requestId,
+    /** Claims the response relay once. */
     toResponse: () => {
       if (responseBodyClaimed) {
         const message = `The ${resourceName} response body has already been claimed.`;

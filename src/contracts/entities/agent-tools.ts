@@ -55,6 +55,9 @@ export const AGENT_TOOL_CATALOG = [
   },
 ] as const satisfies readonly AgentToolGroup[];
 
+/**
+ * Expands tool group names into their individual tool names.
+ */
 export function expandToolGroups(ids: Iterable<string>): Set<string> {
   const result = new Set<string>();
 

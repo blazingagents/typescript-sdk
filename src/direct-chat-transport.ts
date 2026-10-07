@@ -14,9 +14,16 @@ export type BlazingAgentsDirectChatTransportOptions = {
   agentId: string;
   /** Caller-local functions for every Turn and approved continuation of this chat. */
   functions?: ChatFunctions;
+  /**
+   * Returns the authenticated SDK client for the current request.
+   * @returns The SDK client for this request.
+   */
   getClient: () => BlazingAgents | Promise<BlazingAgents>;
   metadata?: Record<string, unknown>;
-  /** Receives the Session ID before the response stream is consumed. */
+  /**
+   * Receives the Session ID before the response stream is consumed.
+   * @param sessionId - Session to look up or record.
+   */
   onSessionId?: (sessionId: string) => Promise<void> | void;
   sessionId?: string;
   userId?: string;
@@ -32,6 +39,10 @@ export class BlazingAgentsDirectChatTransport<
   readonly #options: BlazingAgentsDirectChatTransportOptions;
   #sessionId: string | undefined;
 
+  /**
+   * Creates a chat transport and validates any supplied Session ID.
+   * @param options - Configuration for this operation.
+   */
   constructor(options: BlazingAgentsDirectChatTransportOptions) {
     super();
     this.#options = options;
@@ -41,6 +52,11 @@ export class BlazingAgentsDirectChatTransport<
         : sessionIdSchema.parse(options.sessionId);
   }
 
+  /**
+   * Submits the supplied user messages directly to the SDK chat endpoint.
+   * @param input - Operation input and optional cancellation signal.
+   * @returns The decoded AI SDK message-chunk stream.
+   */
   async sendUserMessages(input: {
     messages: UI_MESSAGE[];
     abortSignal?: AbortSignal;
@@ -57,6 +73,11 @@ export class BlazingAgentsDirectChatTransport<
     return this.#processChatResult(result);
   }
 
+  /**
+   * Submits the latest user message or complete assistant approval round to the chat.
+   * @param input - Operation input and optional cancellation signal.
+   * @returns The decoded AI SDK message-chunk stream.
+   */
   override async sendMessages(
     input: Parameters<ChatTransport<UI_MESSAGE>["sendMessages"]>[0]
   ) {
@@ -116,6 +137,9 @@ export class BlazingAgentsDirectChatTransport<
     return this.#processChatResult(result);
   }
 
+  /**
+   * Claims the chat stream and records the first Session ID before decoding chunks.
+   */
   async #processChatResult(result: ChatResult) {
     const stream = result.toStream();
     try {
@@ -131,12 +155,21 @@ export class BlazingAgentsDirectChatTransport<
     return this.processResponseStream(stream);
   }
 
+  /**
+   * Returns null because reconnecting to an existing stream is unsupported.
+   * @param _input - Unused reconnect request.
+   * @returns A promise resolving to null.
+   */
   override reconnectToStream(
     _input: Parameters<ChatTransport<UI_MESSAGE>["reconnectToStream"]>[0]
   ) {
     return Promise.resolve(null);
   }
 
+  /**
+   * Submits the last assistant approval round for the existing Session.
+   * @param input - Operation input and optional cancellation signal.
+   */
   async #sendApprovalContinuation(
     input: Parameters<ChatTransport<UI_MESSAGE>["sendMessages"]>[0],
     last: UI_MESSAGE

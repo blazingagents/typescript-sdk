@@ -174,6 +174,9 @@ export type SkillMarkdownFrontmatterParseResult =
 
 const frontmatterPattern = /^---\n([\s\S]*?)\n---(?:\n|$)/;
 
+/**
+ * Parses and validates YAML frontmatter from Skill Markdown.
+ */
 export function parseSkillMarkdownFrontmatter(
   content: string
 ): SkillMarkdownFrontmatterParseResult {

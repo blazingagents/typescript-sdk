@@ -17,6 +17,9 @@ interface BodyReadResult {
   readFailed: boolean;
 }
 
+/**
+ * Appends query values while omitting null and undefined entries.
+ */
 function buildUrl(
   baseUrl: string,
   path: string,
@@ -41,12 +44,22 @@ function buildUrl(
  * Performs a request and returns the parsed JSON body for success (status
  * 2xx). API errors preserve the tolerant wire envelope; malformed responses
  * become `invalid_response`.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param path - Endpoint path relative to the base URL.
+ * @param options - Configuration for this operation.
+ * @param schema - Schema used to validate the value.
  */
 export async function requestJson<T>(
   config: HttpConfig,
   path: string,
   options: RequestOptions = {},
-  schema?: { parse(value: unknown): T }
+  schema?: {
+    /**
+     * Validates the decoded response value.
+     * @param value - Value to inspect.
+     */
+    parse(value: unknown): T;
+  }
 ): Promise<T> {
   const response = await rawRequest(config, path, options);
   if (response.status < 200 || response.status >= 300) {
@@ -91,6 +104,9 @@ export async function requestJson<T>(
 /**
  * Performs a request and returns the raw `Response` for streaming paths.
  * Non-2xx bodies are decoded before a caller can observe a streaming body.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param path - Endpoint path relative to the base URL.
+ * @param options - Configuration for this operation.
  */
 export async function requestStream(
   config: HttpConfig,
@@ -104,6 +120,9 @@ export async function requestStream(
   throw await errorFromResponse(response, options.signal);
 }
 
+/**
+ * Sends an authenticated request and reports response metadata to the observer.
+ */
 async function rawRequest(
   config: HttpConfig,
   path: string,
@@ -168,6 +187,9 @@ async function rawRequest(
   }
 }
 
+/**
+ * Reads bounded diagnostics and decodes a failed HTTP response.
+ */
 async function errorFromResponse(
   response: Response,
   signal?: AbortSignal
@@ -189,6 +211,12 @@ async function errorFromResponse(
   return parseErrorEnvelope(read.diagnosticBody, response.status, headers);
 }
 
+/**
+ * Checks whether the signal aborted or the cause names an AbortError.
+ * @param cause - Original failure to retain.
+ * @param signal - Signal that cancels the operation.
+ * @returns Whether the request signal or cause indicates cancellation.
+ */
 export function isRequestAborted(
   cause: unknown,
   signal?: AbortSignal
@@ -202,6 +230,11 @@ export function isRequestAborted(
   );
 }
 
+/**
+ * Wraps an abort cause as a request_aborted SDK error.
+ * @param cause - Original failure to retain.
+ * @returns A request_aborted error retaining the cause.
+ */
 export function requestAbortedError(cause: unknown): BlazingAgentsError {
   return new BlazingAgentsError(
     {
@@ -298,6 +331,9 @@ async function readResponseBody(
   }
 }
 
+/**
+ * Cancels an oversized error body and retains its bounded diagnostic prefix.
+ */
 async function cancelTruncatedBody(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   chunks: Uint8Array[],
@@ -323,6 +359,9 @@ async function cancelTruncatedBody(
   }
 }
 
+/**
+ * Decodes diagnostics without exceeding the UTF-8 byte limit.
+ */
 function decodeDiagnosticChunks(
   chunks: Uint8Array[],
   byteLength: number,
@@ -343,6 +382,9 @@ function decodeDiagnosticChunks(
   };
 }
 
+/**
+ * Joins retained bytes and omits an incomplete trailing character when truncated.
+ */
 function decodeChunks(
   chunks: Uint8Array[],
   byteLength: number,
@@ -365,6 +407,10 @@ function decodeChunks(
  * Decodes a response body with the tolerant consumer schema. Unknown future
  * codes and fields remain valid; malformed responses never infer a domain
  * code from HTTP status.
+ * @param bodyText - Response body as text.
+ * @param status - HTTP response status.
+ * @param headers - Response headers to preserve or inspect.
+ * @returns The server error, or invalid_response when the envelope is malformed.
  */
 export function parseErrorEnvelope(
   bodyText: string,
@@ -397,6 +443,9 @@ export function parseErrorEnvelope(
   return invalidResponseError(headers, status, bodyText, false);
 }
 
+/**
+ * Builds an invalid_response error with bounded diagnostics and request correlation.
+ */
 function invalidResponseError(
   headers: Headers,
   status: number,

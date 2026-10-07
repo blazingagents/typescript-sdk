@@ -11,6 +11,9 @@ import {
 import { hasUniqueValues } from "../utils.ts";
 import { userIdSchema } from "./attribution.ts";
 
+/**
+ * Adds a validation issue when the usage date range is invalid.
+ */
 function validateUsageRange(
   value: { from?: string; to?: string },
   ctx: z.RefinementCtx
@@ -216,7 +219,10 @@ export const usageOverviewResponseSchema = z
     }
   });
 
-/** Applies the request-dependent ranking and daily-series guarantees. */
+/**
+ * Applies the request-dependent ranking and daily-series guarantees.
+ * @param query - Ranking limit and date range used to validate the response.
+ */
 export function usageOverviewResponseSchemaForQuery(
   query: Partial<UsageOverviewQuery> = {}
 ) {

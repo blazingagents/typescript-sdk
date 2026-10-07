@@ -13,7 +13,10 @@ export type BlazingAgentsChatTransportOptions<
   HttpChatTransportInitOptions<UI_MESSAGE>,
   "prepareReconnectToStreamRequest" | "prepareSendMessagesRequest"
 > & {
-  /** Receives the Session ID minted by the first successful response. */
+  /**
+   * Receives the Session ID minted by the first successful response.
+   * @param sessionId - Session to look up or record.
+   */
   onSessionId?: (sessionId: string) => Promise<void> | void;
   /** An authorized Session ID used to resume after a remount or reload. */
   sessionId?: string;
@@ -30,6 +33,10 @@ export class BlazingAgentsChatTransport<
   readonly #transport: DefaultChatTransport<UI_MESSAGE>;
   #sessionId: string | undefined;
 
+  /**
+   * Creates a chat transport and validates any supplied Session ID.
+   * @param options - Configuration for this operation.
+   */
   constructor(options: BlazingAgentsChatTransportOptions<UI_MESSAGE> = {}) {
     const { onSessionId, sessionId, ...transportOptions } = options;
     const transportFetch = transportOptions.fetch ?? globalThis.fetch;
@@ -37,6 +44,7 @@ export class BlazingAgentsChatTransport<
       sessionId === undefined ? undefined : sessionIdSchema.parse(sessionId);
     this.#transport = new DefaultChatTransport({
       ...transportOptions,
+      /** Reads the first Session ID from Location before returning the response. */
       fetch: async (input, init) => {
         const response = await transportFetch(input, init);
         if (response.ok && this.#sessionId === undefined) {
@@ -52,6 +60,7 @@ export class BlazingAgentsChatTransport<
         }
         return response;
       },
+      /** Selects the user message or complete approval round for the relay request. */
       prepareSendMessagesRequest: ({ body, messageId, messages, trigger }) => {
         const approvals =
           messages.at(-1)?.role === "assistant" &&
@@ -80,12 +89,22 @@ export class BlazingAgentsChatTransport<
     });
   }
 
+  /**
+   * Submits the latest user message or complete assistant approval round to the chat.
+   * @param input - Operation input and optional cancellation signal.
+   * @returns The decoded AI SDK message-chunk stream.
+   */
   sendMessages(
     input: Parameters<ChatTransport<UI_MESSAGE>["sendMessages"]>[0]
   ): Promise<ReadableStream<import("ai").UIMessageChunk>> {
     return this.#transport.sendMessages(input);
   }
 
+  /**
+   * Returns null because reconnecting to an existing stream is unsupported.
+   * @param _input - Unused reconnect request.
+   * @returns A promise resolving to null.
+   */
   reconnectToStream(
     _input: Parameters<ChatTransport<UI_MESSAGE>["reconnectToStream"]>[0]
   ): Promise<null> {

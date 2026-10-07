@@ -25,6 +25,12 @@ export interface ChatFunction<
   Output = unknown,
 > {
   description: string;
+  /**
+   * Runs a caller-local function with validated input and deadline cancellation.
+   * @param input - Input parsed by inputSchema.
+   * @param context - Function-call idempotency key and cancellation signal.
+   * @returns The function output, synchronously or as a promise.
+   */
   execute(
     input: z.output<Schema>,
     context: ChatFunctionContext
@@ -34,13 +40,23 @@ export interface ChatFunction<
 
 export type ChatFunctions = Record<string, ChatFunction>;
 
-/** Declares a caller-local function whose handler input is inferred from its Zod schema. */
+/**
+ * Declares a caller-local function whose handler input is inferred from its Zod schema.
+ * @param definition - Description, input schema, and local handler.
+ * @returns The unchanged definition with inferred handler types.
+ */
 export function defineFunction<Schema extends z.ZodType, Output>(
   definition: ChatFunction<Schema, Output>
 ): ChatFunction<Schema, Output> {
   return definition;
 }
 
+/**
+ * Converts caller-local Zod input schemas to validated JSON Schema definitions.
+ * @param functions - Caller-local function handlers keyed by name.
+ * @returns Validated function descriptions and JSON input schemas.
+ * @throws BlazingAgentsError - If a definition cannot be represented as a valid JSON Schema.
+ */
 export function toChatFunctionDefinitions(
   functions: ChatFunctions
 ): ChatFunctionDefinitions {
@@ -106,6 +122,9 @@ function functionCallFrom(
   return chatFunctionCallEventSchema.safeParse(parsed).data ?? null;
 }
 
+/**
+ * Reads Retry-After as seconds or an HTTP date and clamps past dates to zero.
+ */
 function retryAfterMs(headers: Headers | undefined): number | undefined {
   const value = headers?.get("retry-after");
   if (!value) {
@@ -117,6 +136,9 @@ function retryAfterMs(headers: Headers | undefined): number | undefined {
   return Number.isNaN(ms) ? undefined : Math.max(0, ms);
 }
 
+/**
+ * Returns the retry delay for transient transport or HTTP failures.
+ */
 function retryDelayMs(
   { code, headers, status }: BlazingAgentsError,
   attempt: number
@@ -134,6 +156,9 @@ function retryDelayMs(
   );
 }
 
+/**
+ * Waits for the delay or resolves early when the signal aborts.
+ */
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
@@ -188,7 +213,9 @@ async function postWithRetry(
   }
 }
 
-/** Classifies a failed attempt as a lost race, an exhausted budget, or the delay before retrying; permanent failures rethrow. */
+/**
+ * Classifies a failed attempt as a lost race, an exhausted budget, or the delay before retrying; permanent failures rethrow.
+ */
 function afterFailure(
   caught: unknown,
   attempt: number,
@@ -214,7 +241,9 @@ const invalidResult: ChatFunctionOutcome = {
   message: "Function returned an invalid result.",
 };
 
-/** Resolves `undefined` when the call became late or aborted before customer code could start. */
+/**
+ * Resolves `undefined` when the call became late or aborted before customer code could start.
+ */
 async function execute(
   functions: ChatFunctions,
   { id, name, input }: ChatFunctionCallEvent["data"],
@@ -268,11 +297,22 @@ export interface FunctionDispatchTarget {
 }
 
 interface FunctionEventHandlers {
+  /**
+   * Dispatches a function call without blocking the stream reader.
+   * @param call - Private function-call event payload.
+   * @param fail - Reports a dispatch failure to the stream reader.
+   */
   onCall?(
     call: ChatFunctionCallEvent["data"],
     fail: (error: unknown) => void
   ): void;
+  /**
+   * Handles consumer cancellation.
+   */
   onCancel?(): void;
+  /**
+   * Stops function handlers when the upstream stream ends.
+   */
   onEnd?(): void;
 }
 
@@ -280,6 +320,7 @@ interface FunctionEventHandlers {
  * Reads native SSE eagerly and returns it without private function events,
  * so slow consumers never delay a call. A recognized but malformed event
  * fails the stream.
+ * @param body - Upstream SSE byte stream.
  */
 export function stripFunctionEvents(
   body: ReadableStream<Uint8Array>,
@@ -291,6 +332,9 @@ export function stripFunctionEvents(
   let output!: ReadableStreamDefaultController<Uint8Array>;
   let finished = false;
 
+  /**
+   * Fails the output stream once and cancels its upstream reader.
+   */
   const fail = (error: unknown) => {
     if (finished) {
       return;
@@ -300,6 +344,9 @@ export function stripFunctionEvents(
     reader.cancel(error).catch(() => undefined);
   };
 
+  /**
+   * Forwards public SSE blocks and dispatches or rejects private function events.
+   */
   const handleBlock = (block: string, raw: string) => {
     const call = functionCallFrom(block);
     if (call === undefined) {
@@ -318,6 +365,9 @@ export function stripFunctionEvents(
     }
   };
 
+  /**
+   * Reads SSE bytes eagerly and splits complete event blocks for dispatch.
+   */
   const pump = async () => {
     let buffer = "";
     try {
@@ -350,10 +400,16 @@ export function stripFunctionEvents(
   };
 
   return new ReadableStream<Uint8Array>({
+    /**
+     * Initializes the stream controller.
+     */
     start(controller) {
       output = controller;
       pump();
     },
+    /**
+     * Cancels the upstream reader with the consumer reason.
+     */
     async cancel(reason) {
       finished = true;
       onCancel?.();
@@ -362,7 +418,12 @@ export function stripFunctionEvents(
   });
 }
 
-/** Strips private function events and executes claimed calls without blocking the read loop. */
+/**
+ * Strips private function events and executes claimed calls without blocking the read loop.
+ * @param config - Authentication, base URL, and transport configuration.
+ * @param target - Agent, Session, local handlers, and caller cancellation signal.
+ * @param body - Upstream SSE byte stream.
+ */
 export function dispatchChatFunctions(
   config: HttpConfig,
   target: FunctionDispatchTarget,
@@ -372,6 +433,9 @@ export function dispatchChatFunctions(
   const stop = new AbortController();
   /** Also aborted when the stream ends: stops claims and handlers. */
   const handlers = new AbortController();
+  /**
+   * Aborts pending function claims and retries.
+   */
   const abort = () => stop.abort();
   stop.signal.addEventListener("abort", () => handlers.abort(), {
     once: true,
@@ -382,6 +446,9 @@ export function dispatchChatFunctions(
   }
   const dispatched = new Set<string>();
 
+  /**
+   * Claims a function call, runs its handler, and posts the result within its retry budget.
+   */
   const runCall = async (call: ChatFunctionCallEvent["data"]) => {
     const path = `/v1/agents/${target.agentId}/sessions/${target.sessionId}/function-calls/${call.id}`;
     const claimRequestId = crypto.randomUUID();
@@ -424,6 +491,9 @@ export function dispatchChatFunctions(
   };
 
   return stripFunctionEvents(body, {
+    /**
+     * Dispatches a function call without blocking the stream reader.
+     */
     onCall(call, fail) {
       if (!dispatched.has(call.id)) {
         dispatched.add(call.id);
@@ -431,6 +501,9 @@ export function dispatchChatFunctions(
       }
     },
     onCancel: abort,
+    /**
+     * Stops function handlers when the upstream stream ends.
+     */
     onEnd() {
       handlers.abort();
       target.abortSignal?.removeEventListener("abort", abort);

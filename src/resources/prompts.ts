@@ -5,8 +5,16 @@ import {
 import { requestJson } from "../http.ts";
 import type { HttpConfig, PromptsResource } from "../types.ts";
 
+/**
+ * Builds the Prompts operations using the shared HTTP configuration.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
+ */
 export function createPromptsResource(config: HttpConfig): PromptsResource {
   return {
+    /**
+     * Creates prompts.
+     */
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -19,6 +27,9 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptResponseSchema
       );
     },
+    /**
+     * Lists one page of prompts.
+     */
     async list({ userId, agentId, cursor, limit, abortSignal } = {}) {
       return await requestJson(
         config,
@@ -30,6 +41,9 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptsResponseSchema
       );
     },
+    /**
+     * Retrieves prompts.
+     */
     async get({ promptId, abortSignal }) {
       return await requestJson(
         config,
@@ -38,6 +52,9 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptResponseSchema
       );
     },
+    /**
+     * Updates prompts.
+     */
     async update({ promptId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -50,6 +67,9 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
         promptResponseSchema
       );
     },
+    /**
+     * Deletes prompts.
+     */
     async delete({ promptId, abortSignal }) {
       await requestJson<void>(config, `/v1/prompts/${promptId}`, {
         method: "DELETE",

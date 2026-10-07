@@ -10,6 +10,11 @@ import {
 import { requestJson } from "../http.ts";
 import type { HttpConfig, McpConnectionsResource } from "../types.ts";
 
+/**
+ * Builds the Mcp Connections operations using the shared HTTP configuration.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
+ */
 export function createMcpConnectionsResource(
   config: HttpConfig
 ): McpConnectionsResource {
@@ -28,6 +33,9 @@ export function createMcpConnectionsResource(
       mcpConnectionResponseSchema
     )) as McpConnectionsResource["create"];
   return {
+    /**
+     * Starts OAuth authorization for mcp connections.
+     */
     async connect({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
@@ -37,6 +45,9 @@ export function createMcpConnectionsResource(
       );
     },
     create,
+    /**
+     * Lists one page of mcp connections.
+     */
     async list({ abortSignal } = {}) {
       return await requestJson(
         config,
@@ -45,6 +56,9 @@ export function createMcpConnectionsResource(
         mcpConnectionsResponseSchema
       );
     },
+    /**
+     * Retrieves mcp connections.
+     */
     async get({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
@@ -53,6 +67,9 @@ export function createMcpConnectionsResource(
         mcpConnectionResponseSchema
       );
     },
+    /**
+     * Updates mcp connections.
+     */
     async update({ mcpConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -65,6 +82,9 @@ export function createMcpConnectionsResource(
         mcpConnectionResponseSchema
       );
     },
+    /**
+     * Deletes mcp connections.
+     */
     async delete({ mcpConnectionId, abortSignal }) {
       await requestJson<void>(
         config,
@@ -75,6 +95,9 @@ export function createMcpConnectionsResource(
         }
       );
     },
+    /**
+     * Tests mcp connections.
+     */
     async test({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
@@ -83,6 +106,9 @@ export function createMcpConnectionsResource(
         mcpConnectionTestResponseSchema
       );
     },
+    /**
+     * Reconnects mcp connections.
+     */
     async reconnect({ mcpConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,

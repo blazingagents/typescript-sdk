@@ -15,12 +15,28 @@ export interface RelayContext {
 }
 
 export interface SessionOwnershipStore {
+  /**
+   * Looks up the end user who owns the Session.
+   * @param sessionId - Session to look up or record.
+   * @returns The owner ID, or undefined when no owner is recorded.
+   */
   ownerOf(sessionId: string): Promise<string | undefined>;
+  /**
+   * Records ownership of a newly created Session.
+   * @param sessionId - Session to look up or record.
+   * @param userId - End-user ID for request scope.
+   * @returns Resolves after ownership is stored.
+   */
   recordOwner(sessionId: string, userId: string): Promise<void>;
 }
 
 interface RelayOptions<Method extends keyof BlazingAgents> {
   client: Pick<BlazingAgents, Method>;
+  /**
+   * Resolves authenticated Agent and end-user context, or null for an unauthenticated request.
+   * @param request - Incoming HTTP request.
+   * @returns Authenticated context, or null when authentication fails.
+   */
   resolveContext(request: Request): Promise<RelayContext | null>;
 }
 
@@ -38,6 +54,8 @@ const completionBodySchema = z.object({ prompt: z.string().trim().min(1) });
 /**
  * Relays useChat submissions. An assistant message carrying approval
  * responses submits the complete round and streams the continuation.
+ * @param options - Configuration for this operation.
+ * @returns An HTTP handler that checks Session ownership before resuming.
  */
 export function createChatRelay(
   options: RelayOptions<"chat" | "continueChat"> & {
@@ -120,6 +138,9 @@ export function createChatRelay(
   };
 }
 
+/**
+ * Validates the Session and forwards the last assistant approval round.
+ */
 async function relayApprovalResponses(
   client: Pick<BlazingAgents, "continueChat">,
   {
@@ -163,6 +184,11 @@ async function relayApprovalResponses(
   return continuation.toResponse();
 }
 
+/**
+ * Creates an authenticated HTTP handler that validates prompts and relays text generation.
+ * @param options - Configuration for this operation.
+ * @returns An HTTP handler that validates prompts and relays text generation.
+ */
 export function createCompletionRelay(
   options: RelayOptions<"completion">
 ): (request: Request) => Promise<Response> {
@@ -187,6 +213,9 @@ export function createCompletionRelay(
   };
 }
 
+/**
+ * Maps validation and SDK failures to safe public error responses.
+ */
 function safeErrorResponse(error: unknown): Response {
   if (error instanceof z.ZodError || error instanceof SyntaxError) {
     return errorResponse(400, "invalid_request", "Invalid request body.");
@@ -209,6 +238,9 @@ function safeErrorResponse(error: unknown): Response {
   return errorResponse(500, "internal_error", "Request failed.");
 }
 
+/**
+ * Builds a JSON error envelope with the selected HTTP status.
+ */
 function errorResponse(
   status: number,
   code: string,

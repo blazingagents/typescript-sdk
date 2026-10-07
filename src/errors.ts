@@ -33,6 +33,10 @@ export class BlazingAgentsError extends Error {
   private readonly [BLAZING_AGENTS_ERROR_SYMBOL] = true;
   // Stryker restore BooleanLiteral
 
+  /**
+   * Creates an SDK error with its code, diagnostics, and optional cause.
+   * @param options - Configuration for this operation.
+   */
   constructor(
     {
       code,
@@ -69,6 +73,11 @@ export class BlazingAgentsError extends Error {
     this.status = status;
   }
 
+  /**
+   * Checks the shared symbol marker, including errors from duplicated SDK packages.
+   * @param error - Value to inspect or handle.
+   * @returns Whether the value carries the SDK error marker.
+   */
   static isInstance(error: unknown): error is BlazingAgentsError {
     if (error === null || typeof error !== "object") {
       return false;

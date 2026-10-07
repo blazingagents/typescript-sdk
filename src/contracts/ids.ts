@@ -15,26 +15,51 @@ const createAgentIdFirstChar = customAlphabet(BASE62.replace("a", ""), 1);
 const createNanoId15 = customAlphabet(BASE62, 15);
 const createNanoId40 = customAlphabet(BASE62, 40);
 
+/**
+ * Creates a generator for prefixed IDs with a 16-character base62 body.
+ */
 const platformId = (prefix: string) => () => `${prefix}_${createNanoId16()}`;
 
+/** Creates a Tenant ID with a 16-character base62 body. */
 export const createTenantId = platformId("ten");
+/**
+ * Creates an Agent ID outside the reserved administrator prefix.
+ */
 export const createAgentId = () =>
   `ag_${createAgentIdFirstChar()}${createNanoId15()}`;
+/**
+ * Creates an Agent ID with the reserved administrator prefix.
+ */
 export const mintAdminAgentId = () =>
   `${ADMIN_AGENT_ID_PREFIX}${createNanoId13()}`;
+/** Creates a Session ID with a 16-character base62 body. */
 export const createSessionId = platformId("ss");
+/** Creates a Api Key ID with a 16-character base62 body. */
 export const createApiKeyId = platformId("ak");
+/** Creates a Provider ID with a 16-character base62 body. */
 export const createProviderId = platformId("prv");
+/** Creates a Mcp Connection ID with a 16-character base62 body. */
 export const createMcpConnectionId = platformId("mcp");
+/** Creates a Workspace ID with a 16-character base62 body. */
 export const createWorkspaceId = platformId("ws");
+/** Creates a Artifact ID with a 16-character base62 body. */
 export const createArtifactId = platformId("at");
+/** Creates a Task ID with a 16-character base62 body. */
 export const createTaskId = platformId("tk");
+/** Creates a Task Run ID with a 16-character base62 body. */
 export const createTaskRunId = platformId("tr");
+/** Creates a Memory ID with a 16-character base62 body. */
 export const createMemoryId = platformId("mem");
+/** Creates a Prompt ID with a 16-character base62 body. */
 export const createPromptId = platformId("prompt");
+/** Creates a Request ID with a 16-character base62 body. */
 export const createRequestId = platformId("req");
+/** Creates a Checkout Attempt ID with a 16-character base62 body. */
 export const createCheckoutAttemptId = platformId("ca");
 
+/**
+ * Creates a Skill ID with a 16-character base62 body.
+ */
 export const createSkillId = () => `skill_${createNanoId16()}`;
 
 /**
@@ -44,6 +69,10 @@ export const createSkillId = () => `skill_${createNanoId16()}`;
  */
 export const API_KEY_TOKEN_PREFIX = "ba_";
 
+/**
+ * Creates an API key token with a 40-character random base62 body.
+ * @returns A ba_ token with 40 random base62 characters.
+ */
 export function createApiKeyToken() {
   return `${API_KEY_TOKEN_PREFIX}${createNanoId40()}`;
 }
@@ -51,6 +80,8 @@ export function createApiKeyToken() {
 /**
  * The display fragment is `ba_` + the first 2 chars of the random body —
  * safe to store (~12 of ~230 bits revealed).
+ * @param token - API key token with the ba_ prefix.
+ * @returns The prefix and first two characters of the token body.
  */
 export function apiKeyFragmentFromToken(token: string) {
   if (!token.startsWith(API_KEY_TOKEN_PREFIX)) {
@@ -63,6 +94,9 @@ export function apiKeyFragmentFromToken(token: string) {
 // Schemas — one per id prefix, mirroring the migration check constraints.
 export const tenantIdSchema = z.string().regex(/^ten_[0-9A-Za-z]{16}$/);
 export const agentIdSchema = z.string().regex(/^ag_[0-9A-Za-z]{16}$/);
+/**
+ * Checks the administrator prefix and validates the complete Agent ID.
+ */
 export const isAdminAgentId = (id: string): boolean =>
   id.startsWith(ADMIN_AGENT_ID_PREFIX) && z.validate(agentIdSchema, id);
 export const sessionIdSchema = z.string().regex(/^ss_[0-9A-Za-z]{16}$/);

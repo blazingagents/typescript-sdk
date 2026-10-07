@@ -8,10 +8,14 @@ import type { ArtifactsResource, HttpConfig } from "../types.ts";
 
 /**
  * `client.artifacts` — Tenant-level metadata and direct download URLs.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
  */
-
 export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
   return {
+    /**
+     * Creates a temporary Artifact download URL.
+     */
     async createDownloadUrl({ artifactId, abortSignal }) {
       return await requestJson(
         config,
@@ -20,6 +24,9 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactDownloadUrlResponseSchema
       );
     },
+    /**
+     * Retrieves artifacts.
+     */
     async get({ artifactId, abortSignal }) {
       return await requestJson(
         config,
@@ -28,6 +35,9 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactListItemSchema
       );
     },
+    /**
+     * Lists one page of artifacts.
+     */
     async list({ abortSignal, ...options } = {}) {
       return await requestJson(
         config,
@@ -43,6 +53,9 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactsListResponseSchema
       );
     },
+    /**
+     * Deletes artifacts.
+     */
     async delete({ artifactId, abortSignal }) {
       await requestJson<void>(config, `/v1/artifacts/${artifactId}`, {
         method: "DELETE",

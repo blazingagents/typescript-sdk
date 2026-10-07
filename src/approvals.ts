@@ -1,6 +1,10 @@
 import { isToolUIPart, type UIMessage } from "ai";
 import type { ToolApprovalDecision } from "./contracts/entities/sessions.ts";
 
+/**
+ * Extracts approval decisions from the last assistant step without changing the message.
+ * @returns Decisions after the last step-start part, or an empty array.
+ */
 export function extractApprovalDecisions(
   message: UIMessage
 ): ToolApprovalDecision[] {

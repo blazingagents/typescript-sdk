@@ -14,10 +14,14 @@ import type { HttpConfig, TasksResource } from "../types.ts";
  * `client.tasks` — CRUD + runs over `/v1/tasks`. Runs are listed/get/
  * canceled/transcripted via `/v1/tasks/:taskId/runs/...`. All lists are
  * keyset-cursored.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
  */
-
 export function createTasksResource(config: HttpConfig): TasksResource {
   return {
+    /**
+     * Creates tasks.
+     */
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -30,6 +34,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         createTaskResponseSchema
       );
     },
+    /**
+     * Lists one page of tasks.
+     */
     async list(options = {}) {
       return await requestJson(
         config,
@@ -47,6 +54,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         tasksListResponseSchema
       );
     },
+    /**
+     * Retrieves tasks.
+     */
     async get({ taskId, abortSignal }) {
       return await requestJson(
         config,
@@ -55,6 +65,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         taskResponseSchema
       );
     },
+    /**
+     * Updates tasks.
+     */
     async update({ taskId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -67,12 +80,18 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         taskResponseSchema
       );
     },
+    /**
+     * Deletes tasks.
+     */
     async delete({ taskId, abortSignal }) {
       await requestJson<void>(config, `/v1/tasks/${taskId}`, {
         method: "DELETE",
         signal: abortSignal,
       });
     },
+    /**
+     * Creates a Task run.
+     */
     async createRun({ taskId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -81,6 +100,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         createTaskRunResponseSchema
       );
     },
+    /**
+     * Lists one page of Task runs.
+     */
     async listRuns({ taskId, ...options }) {
       return await requestJson(
         config,
@@ -92,6 +114,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         taskRunsListResponseSchema
       );
     },
+    /**
+     * Retrieves a Task run.
+     */
     async getRun({ taskId, runId, abortSignal }) {
       return await requestJson(
         config,
@@ -100,6 +125,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         taskRunResponseSchema
       );
     },
+    /**
+     * Lists one page of Task run messages.
+     */
     async runMessages({ taskId, runId, ...options }) {
       return await requestJson(
         config,
@@ -115,6 +143,9 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         taskRunMessagesResponseSchema
       );
     },
+    /**
+     * Requests cancellation of a Task run.
+     */
     async cancelRun({ taskId, runId, abortSignal }) {
       await requestJson<void>(
         config,

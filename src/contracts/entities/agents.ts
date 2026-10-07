@@ -60,6 +60,9 @@ export const agentStatusSchema = z.enum(["active", "disabled"]);
 const providerModelPairMessage =
   "Provider and model must either both be set or both be null.";
 
+/**
+ * Checks that provider and model selections are both present or both absent.
+ */
 function hasProviderModelPair(input: {
   model: string | null;
   providerId: string | null;

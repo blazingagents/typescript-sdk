@@ -118,7 +118,9 @@ const oauthIssuerSchema = z
 
 const credentialFragmentSchema = z.string().min(1).max(4).nullable();
 
-/** Mirrors the MCP SDK's SEP-2352 issuer-identity comparison. */
+/**
+ * Mirrors the MCP SDK's SEP-2352 issuer-identity comparison.
+ */
 export function mcpOauthIssuersMatch(a: string, b: string): boolean {
   return (
     a === b ||

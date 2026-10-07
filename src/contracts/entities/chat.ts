@@ -96,6 +96,9 @@ type ConvertibleJsonSchema = z.core.JSONSchema.JSONSchema;
 const JSON_SCHEMA_COMPOSITION_KEYS = ["allOf", "anyOf", "oneOf"] as const;
 type JsonSchemaRecord = Record<string, unknown>;
 
+/**
+ * Checks whether the JSON Schema root contains a meaningful schema keyword.
+ */
 function hasMeaningfulSchemaRoot(
   value: unknown,
   definitions: JsonSchemaRecord,
@@ -173,6 +176,9 @@ export const MAX_CHAT_FUNCTIONS = 32;
 export const MAX_CHAT_FUNCTION_DEFINITIONS_BYTES = 64 * 1024;
 export const MAX_CHAT_FUNCTION_PAYLOAD_BYTES = 256 * 1024;
 
+/**
+ * Measures the UTF-8 byte length of a JSON-serialized value.
+ */
 export const jsonByteLength = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).byteLength;
 

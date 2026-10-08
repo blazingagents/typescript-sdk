@@ -42,6 +42,7 @@ const workspace = {
   id: "ws_0123456789abcdef",
   metadata: {},
   name: "Consumer Workspace",
+  tier: "core",
   networkPolicy: { mode: "unrestricted" },
   tenantId: "ten_0123456789abcdef",
   updatedAt: "2026-01-01T00:00:00.000Z",

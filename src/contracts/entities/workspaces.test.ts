@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   createWorkspaceBodySchema,
   updateWorkspaceBodySchema,
-  workspaceBackupSchema,
   workspaceListQuerySchema,
   workspaceNetworkPolicySchema,
   workspaceSchema,
@@ -12,6 +11,7 @@ import {
 const workspace = {
   id: "ws_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
+  tier: "core",
   name: "Build environment",
   userId: "user-42",
   metadata: { tier: "pro" },
@@ -21,6 +21,25 @@ const workspace = {
 } as const;
 
 describe("Workspace contracts", () => {
+  it.each(["core", "plus"])("accepts immutable %s tiers", (tier) => {
+    expect(workspaceSchema.parse({ ...workspace, tier }).tier).toBe(tier);
+    expect(createWorkspaceBodySchema.parse({ tier }).tier).toBe(tier);
+    expect(
+      updateWorkspaceBodySchema.safeParse({ name: "New", tier }).success
+    ).toBe(false);
+  });
+
+  it("requires a recognized Workspace tier", () => {
+    const { tier: _tier, ...missingTier } = workspace;
+    expect(workspaceSchema.safeParse(missingTier).success).toBe(false);
+    expect(
+      workspaceSchema.safeParse({ ...workspace, tier: "pro" }).success
+    ).toBe(false);
+    expect(createWorkspaceBodySchema.safeParse({ tier: "pro" }).success).toBe(
+      false
+    );
+  });
+
   it("supports exactly the three Workspace network policies", () => {
     expect(
       workspaceNetworkPolicySchema.parse({ mode: "unrestricted" })
@@ -54,23 +73,6 @@ describe("Workspace contracts", () => {
     ).toBe(false);
   });
 
-  it("validates the serializable Cloudflare directory-backup handle", () => {
-    const backup = {
-      dir: "/workspace",
-      id: "123e4567-e89b-42d3-a456-426614174000",
-      localBucket: true,
-    } as const;
-
-    expect(workspaceBackupSchema.parse(backup)).toEqual(backup);
-    expect(
-      workspaceBackupSchema.safeParse({
-        dir: "/home",
-        extra: true,
-        id: "not-a-backup-id",
-      }).success
-    ).toBe(false);
-  });
-
   it("accepts the exact public resource projection", () => {
     expect(workspaceSchema.parse(workspace)).toEqual(workspace);
     expect(
@@ -84,6 +86,7 @@ describe("Workspace contracts", () => {
 
   it("settles create defaults without provisioning state", () => {
     expect(createWorkspaceBodySchema.parse({})).toEqual({
+      tier: "core",
       metadata: {},
       networkPolicy: { mode: "unrestricted" },
       userId: "",

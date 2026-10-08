@@ -22,6 +22,7 @@ import {
 import { approvalPolicySchema } from "./agent-approval.ts";
 import { agentToolGroupIds } from "./agent-tools.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
+import { workspaceTierSchema } from "./workspaces.ts";
 
 const approvalFields = {
   approvalInChat: approvalPolicySchema.default({
@@ -151,6 +152,7 @@ export const createAgentBodySchema = z
     thinkingLevel: z.string().min(1).nullable().default(null),
     providerId: providerIdSchema.nullable().default(null),
     workspaceId: workspaceIdSchema.optional(),
+    workspaceTier: workspaceTierSchema.optional(),
     autoCompaction: z.boolean().default(true),
     compactionReserveTokens:
       agentSchema.shape.compactionReserveTokens.default(16_384),
@@ -162,6 +164,14 @@ export const createAgentBodySchema = z
     mcpConnectionIds: agentMcpConnectionIdsSchema.default([]),
   })
   .strict()
+  .refine(
+    (input) =>
+      input.workspaceId === undefined || input.workspaceTier === undefined,
+    {
+      message: "workspaceId and workspaceTier are mutually exclusive.",
+      path: ["workspaceTier"],
+    }
+  )
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],

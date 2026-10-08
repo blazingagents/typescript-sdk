@@ -432,7 +432,7 @@ export interface ResourceRequestOptions {
 
 export interface AgentsResource {
   /**
-   * Creates the Agent. Omitting `workspaceId` attaches a default Workspace with a lazy runtime.
+   * Creates the Agent. Omitting `workspaceId` creates a Core Workspace by default. `workspaceTier` selects its immutable tier and conflicts with `workspaceId`.
    * @param input - creation fields; optional abortSignal.
    * @returns The agent.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.

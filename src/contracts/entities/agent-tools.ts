@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Tool groups an Agent can attach. File operations use its durable Workspace. */
+/** Tool groups an Agent can attach. File operations use its Workspace. */
 
 export const agentToolGroupIds = [
   "workspace",
@@ -22,7 +22,7 @@ export const AGENT_TOOL_CATALOG = [
     id: "workspace",
     name: "File operations",
     description:
-      "Read, write, edit, search, and run shell commands in the attached durable Workspace.",
+      "Read, write, edit, search, and run shell commands in the attached Workspace.",
     tools: [
       "read",
       "write",

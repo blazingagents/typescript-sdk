@@ -7,7 +7,7 @@ import {
 } from "./agent-tools.ts";
 
 describe("AGENT_TOOL_CATALOG", () => {
-  it("exposes one durable Workspace group covering the seven file tools", () => {
+  it("exposes one Workspace group covering the seven file tools", () => {
     expect(AGENT_TOOL_CATALOG[0].id).toBe("workspace");
     expect(AGENT_TOOL_CATALOG[0].tools).toEqual([
       "read",

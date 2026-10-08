@@ -251,11 +251,13 @@ export {
   usageOverviewResponseSchema,
   usageResponseSchema,
 } from "./entities/usage.ts";
+export type { WorkspaceTier } from "./entities/workspaces.ts";
 export {
   createWorkspaceBodySchema,
   updateWorkspaceBodySchema,
   workspaceSchema,
   workspacesListResponseSchema,
+  workspaceTierSchema,
 } from "./entities/workspaces.ts";
 export {
   agentIdSchema,

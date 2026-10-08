@@ -10,6 +10,7 @@ const workspace = {
   name: "Build files",
   networkPolicy: { mode: "unrestricted" as const },
   tenantId: "ten_0123456789abcdef",
+  tier: "plus" as const,
   updatedAt: "2026-07-30T12:00:00.000Z",
   userId: "user-42",
 };
@@ -26,6 +27,7 @@ describe("client.workspaces", () => {
       client(fetch).workspaces.create({
         metadata: { project: "alpha" },
         name: "Build files",
+        tier: "plus",
         networkPolicy: {
           allowedHosts: ["registry.npmjs.org"],
           mode: "allowlist",
@@ -36,6 +38,7 @@ describe("client.workspaces", () => {
     expect(calls[0].url).toBe(`${BASE}/v1/workspaces`);
     expect(calls[0].init?.method).toBe("POST");
     expect(JSON.parse(calls[0].init?.body as string)).toMatchObject({
+      tier: "plus",
       networkPolicy: {
         allowedHosts: ["registry.npmjs.org"],
         mode: "allowlist",

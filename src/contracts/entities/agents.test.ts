@@ -203,6 +203,33 @@ describe("Agent mutation contracts", () => {
     });
   });
 
+  it.each(["core", "plus"])(
+    "accepts automatic %s Workspace creation only",
+    (workspaceTier) => {
+      expect(
+        createAgentBodySchema.parse({ name: "Builder", workspaceTier })
+          .workspaceTier
+      ).toBe(workspaceTier);
+      expect(
+        createAgentBodySchema.safeParse({
+          name: "Builder",
+          workspaceId,
+          workspaceTier,
+        }).success
+      ).toBe(false);
+      expect(updateAgentBodySchema.safeParse({ workspaceTier }).success).toBe(
+        false
+      );
+    }
+  );
+
+  it("rejects unknown automatic Workspace tiers", () => {
+    expect(
+      createAgentBodySchema.safeParse({ name: "Builder", workspaceTier: "pro" })
+        .success
+    ).toBe(false);
+  });
+
   it("accepts current Workspace attachment on create", () => {
     expect(
       createAgentBodySchema.parse({ name: "Builder", workspaceId }).workspaceId

@@ -184,6 +184,7 @@ const publicContractNames = [
   "usageResponseSchema",
   "usageSummarySchema",
   "workspaceSchema",
+  "workspaceTierSchema",
   "workspacesListResponseSchema",
 ] as const;
 

@@ -143,6 +143,7 @@ export type {
   Workspace,
   WorkspaceNetworkPolicy,
   WorkspacesListResponse,
+  WorkspaceTier,
 } from "./contracts/entities/workspaces.ts";
 export {
   BlazingAgentsDirectChatTransport,

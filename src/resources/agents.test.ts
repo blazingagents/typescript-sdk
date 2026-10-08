@@ -123,6 +123,18 @@ describe("client.agents", () => {
     expect(agent.workspaceId).toBe("ws_0123456789abcdef");
   });
 
+  it.each(["core", "plus"] as const)(
+    "create sends the %s automatic Workspace tier",
+    async (workspaceTier) => {
+      const { fetch, calls } = createMockFetch({ body: agentRow() });
+      await client(fetch).agents.create({ name: "Builder", workspaceTier });
+      expect(JSON.parse(calls[0].init?.body as string)).toEqual({
+        name: "Builder",
+        workspaceTier,
+      });
+    }
+  );
+
   it("create threads end-user attribution (userId + metadata) into the body", async () => {
     const { fetch, calls } = createMockFetch({
       body: agentRow({ userId: "user-42", metadata: { tier: "pro" } }),

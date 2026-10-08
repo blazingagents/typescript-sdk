@@ -3,15 +3,19 @@ import type {
   ApprovalPolicy,
   CreateAgentBody,
   CreateChatConnectionBody,
+  CreateWorkspaceBody,
   ToolApprovalState,
   ToolReference,
   UpdateAgentBody,
+  WorkspaceTier,
 } from "@blazingagents/sdk";
 import {
   apiKeyTokenSchema,
   approvalPolicySchema,
   type ContinueToolApprovalsBody,
+  createAgentBodySchema,
   createChatConnectionBodySchema,
+  createWorkspaceBodySchema,
   isAdminAgentId,
   jsonSchemaShapeSchema,
   metadataSchema,
@@ -22,6 +26,8 @@ import {
   toolReferenceSchema,
   type UsageOverviewResponse,
   type UsageSummary,
+  updateWorkspaceBodySchema,
+  workspaceTierSchema,
 } from "@blazingagents/sdk/contracts";
 import { describe, expect, it } from "vitest";
 
@@ -125,4 +131,21 @@ it("exports Chat Connection input types and runtime contracts", () => {
     enabled: true,
     configuration: { chatIds: [] },
   });
+});
+
+it("exports immutable Core and Plus Workspace contracts", () => {
+  const tier: WorkspaceTier = "plus";
+  const workspace: CreateWorkspaceBody = { tier };
+  const agent: CreateAgentBody = { name: "Builder", workspaceTier: tier };
+  expect(workspaceTierSchema.options).toEqual(["core", "plus"]);
+  expect(createWorkspaceBodySchema.parse({}).tier).toBe("core");
+  expect(createWorkspaceBodySchema.parse(workspace).tier).toBe(tier);
+  expect(createAgentBodySchema.parse(agent).workspaceTier).toBe(tier);
+  expect(
+    createAgentBodySchema.safeParse({
+      ...agent,
+      workspaceId: "ws_0123456789abcdef",
+    }).success
+  ).toBe(false);
+  expect(updateWorkspaceBodySchema.safeParse({ tier }).success).toBe(false);
 });

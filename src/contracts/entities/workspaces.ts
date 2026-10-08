@@ -15,13 +15,7 @@ export const workspaceNameSchema = z
   .min(1)
   .max(MAX_WORKSPACE_NAME_LENGTH);
 
-export const workspaceBackupSchema = z
-  .object({
-    dir: z.literal("/workspace"),
-    id: z.uuid(),
-    localBucket: z.boolean().optional(),
-  })
-  .strict();
+export const workspaceTierSchema = z.enum(["core", "plus"]);
 
 export const workspaceNetworkPolicySchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("unrestricted") }).strict(),
@@ -44,6 +38,7 @@ export const workspaceSchema = z
   .object({
     id: workspaceIdSchema,
     tenantId: tenantIdSchema,
+    tier: workspaceTierSchema,
     name: workspaceNameSchema.nullable(),
     userId: userIdSchema,
     metadata: metadataSchema,
@@ -56,6 +51,7 @@ export const workspaceSchema = z
 export const createWorkspaceBodySchema = z
   .object({
     name: workspaceNameSchema.optional(),
+    tier: workspaceTierSchema.default("core"),
     userId: userIdSchema.default(""),
     metadata: metadataSchema.default({}),
     networkPolicy: workspaceNetworkPolicySchema.default({
@@ -90,7 +86,7 @@ export const workspacesListResponseSchema =
   paginatedResponseSchema(workspaceSchema);
 
 export type Workspace = z.infer<typeof workspaceSchema>;
-export type WorkspaceBackup = z.infer<typeof workspaceBackupSchema>;
+export type WorkspaceTier = z.infer<typeof workspaceTierSchema>;
 export type WorkspaceNetworkPolicy = z.infer<
   typeof workspaceNetworkPolicySchema
 >;

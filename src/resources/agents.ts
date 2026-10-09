@@ -6,6 +6,7 @@ import {
   mcpAttachmentResponseSchema,
   mcpAttachmentsResponseSchema,
 } from "../contracts/entities/mcp-connections.ts";
+import { spendingLimitResponseSchema } from "../contracts/entities/spending-limits.ts";
 import { requestJson } from "../http.ts";
 import type { AgentsResource, HttpConfig } from "../types.ts";
 
@@ -35,6 +36,24 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
     );
 
   return {
+    /** Retrieves the model spending limit using tenant authority. */
+    async getSpendingLimit({ agentId, abortSignal }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentId}/spending-limit`,
+        { signal: abortSignal },
+        spendingLimitResponseSchema
+      );
+    },
+    /** Sets the model spending limit. Null disables it. Requires tenant authority. */
+    async updateSpendingLimit({ agentId, abortSignal, ...body }) {
+      return await requestJson(
+        config,
+        `/v1/agents/${agentId}/spending-limit`,
+        { method: "PUT", json: body, signal: abortSignal },
+        spendingLimitResponseSchema
+      );
+    },
     /**
      * Creates agents.
      */

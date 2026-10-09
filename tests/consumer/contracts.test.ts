@@ -1,13 +1,22 @@
 import type {
   ApprovalDecision,
   ApprovalPolicy,
+  BlazingAgentsUIMessage,
   CreateAgentBody,
   CreateChatConnectionBody,
   CreateWorkspaceBody,
+  SpendingLimitStopDetails,
   ToolApprovalState,
   ToolReference,
   UpdateAgentBody,
   WorkspaceTier,
+} from "@blazingagents/sdk";
+import {
+  BlazingAgents,
+  nextSpendingLimitReset,
+  type SpendingLimit,
+  type SpendingLimitResponse,
+  type SpendingLimitStopEvent,
 } from "@blazingagents/sdk";
 import {
   apiKeyTokenSchema,
@@ -22,6 +31,9 @@ import {
   promptIdSchema,
   promptVariablesSchema,
   sessionIdSchema,
+  spendingLimitResponseSchema,
+  spendingLimitSchema,
+  spendingLimitStopEventSchema,
   type ToolApprovalsResponse,
   toolReferenceSchema,
   type UsageOverviewResponse,
@@ -29,6 +41,7 @@ import {
   updateWorkspaceBodySchema,
   workspaceTierSchema,
 } from "@blazingagents/sdk/contracts";
+import type { ChatOnDataCallback } from "ai";
 import { describe, expect, it } from "vitest";
 
 describe("installed SDK contracts", () => {
@@ -148,4 +161,55 @@ it("exports immutable Core and Plus Workspace contracts", () => {
     }).success
   ).toBe(false);
   expect(updateWorkspaceBodySchema.safeParse({ tier }).success).toBe(false);
+});
+
+it("exports spending-limit contracts and methods from the installed package", async () => {
+  const limit: SpendingLimit = {
+    amountUsd: 5,
+    resetStartDate: "2026-01-31",
+    resetInterval: "monthly",
+  };
+  expect(spendingLimitSchema.parse(limit)).toEqual(limit);
+  expect(nextSpendingLimitReset(limit, "2026-02-28T00:00:00Z")).toBe(
+    "2026-03-31T00:00:00.000Z"
+  );
+  const status: SpendingLimitResponse = {
+    spendingLimit: null,
+    period: null,
+    nextResetAt: null,
+    scheduleChangeAt: null,
+  };
+  const client = new BlazingAgents({
+    apiKey: "ba_test",
+    fetch: () => Promise.resolve(Response.json(status)),
+  });
+  expect(
+    await client.agents.getSpendingLimit({ agentId: "ag_0123456789abcdef" })
+  ).toEqual(spendingLimitResponseSchema.parse(status));
+  expect(
+    await client.tenant.updateSpendingLimit({ spendingLimit: null })
+  ).toEqual(status);
+  const event: SpendingLimitStopEvent = {
+    type: "data-model-spending-limit",
+    transient: true,
+    data: {
+      code: "model_spending_limit_exceeded",
+      scope: "tenant",
+      reason: "exhausted",
+      spentUsd: 5,
+      reservedUsd: 0,
+      availableUsd: 0,
+      nextResetAt: null,
+    },
+  };
+  expect(spendingLimitStopEventSchema.parse(event)).toEqual(event);
+  const onData: ChatOnDataCallback<BlazingAgentsUIMessage> = (chunk) => {
+    if (chunk.type === "data-model-spending-limit") {
+      const details: SpendingLimitStopDetails = chunk.data;
+      const code: "model_spending_limit_exceeded" = chunk.data.code;
+      expect(details.reason).toBe("exhausted");
+      expect(code).toBe("model_spending_limit_exceeded");
+    }
+  };
+  onData(event);
 });

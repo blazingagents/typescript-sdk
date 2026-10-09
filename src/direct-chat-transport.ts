@@ -1,10 +1,10 @@
 import {
   type ChatTransport,
-  DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
 import { extractApprovalDecisions } from "./approvals.ts";
+import { ChatStreamTransport } from "./chat-stream-transport.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import type { ChatFunctions } from "./functions.ts";
@@ -35,7 +35,7 @@ export type BlazingAgentsDirectChatTransportOptions = {
 /** Connects useChat directly to the SDK, including native streaming fetch clients. */
 export class BlazingAgentsDirectChatTransport<
   UI_MESSAGE extends UIMessage = UIMessage,
-> extends DefaultChatTransport<UI_MESSAGE> {
+> extends ChatStreamTransport<UI_MESSAGE> {
   readonly #options: BlazingAgentsDirectChatTransportOptions;
   #sessionId: string | undefined;
 

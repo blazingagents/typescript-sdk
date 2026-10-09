@@ -130,6 +130,14 @@ export type {
   SkillsListResponse,
 } from "./contracts/entities/skills.ts";
 export type {
+  SpendingLimit,
+  SpendingLimitResponse,
+  SpendingLimitStopDetails,
+  SpendingLimitStopEvent,
+  UpdateSpendingLimitBody,
+} from "./contracts/entities/spending-limits.ts";
+export { nextSpendingLimitReset } from "./contracts/entities/spending-limits.ts";
+export type {
   SessionUsageQuery,
   SessionUsageResponse,
   UsageBucket,
@@ -174,6 +182,7 @@ export type {
   BlazingAgentsRequestOptions,
   BlazingAgentsUIMessage,
   BlazingAgentsUIMessageChunk,
+  BlazingAgentsUIMessageData,
   ChatConnectionsResource,
   ChatDeliveriesListOptions,
   ChatDeliveriesResource,

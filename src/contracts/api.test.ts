@@ -71,6 +71,7 @@ describe("apiErrorCodeSchema", () => {
       "forbidden",
       "not_found",
       "quota_exceeded",
+      "model_spending_limit_exceeded",
       "subscription_required",
       "usage_credit_required",
       "rate_limited",

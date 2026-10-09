@@ -205,6 +205,23 @@ export {
   skillDetailSchema,
   skillsListResponseSchema,
 } from "./entities/skills.ts";
+export type {
+  SpendingLimit,
+  SpendingLimitResponse,
+  SpendingLimitStopDetails,
+  SpendingLimitStopEvent,
+  UpdateSpendingLimitBody,
+} from "./entities/spending-limits.ts";
+export {
+  nextSpendingLimitReset,
+  spendingLimitPeriodSchema,
+  spendingLimitResetIntervalSchema,
+  spendingLimitResponseSchema,
+  spendingLimitSchema,
+  spendingLimitStopDetailsSchema,
+  spendingLimitStopEventSchema,
+  updateSpendingLimitBodySchema,
+} from "./entities/spending-limits.ts";
 export {
   createTaskBodySchema,
   createTaskResponseSchema,

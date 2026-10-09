@@ -1,6 +1,12 @@
-import type { ChatTransport, UIMessage } from "ai";
+import {
+  AbstractChat,
+  type ChatState,
+  type ChatTransport,
+  type UIMessage,
+} from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { BlazingAgentsChatTransport } from "./chat-transport.ts";
 import { BlazingAgents } from "./client.ts";
 import { BlazingAgentsDirectChatTransport } from "./direct-chat-transport.ts";
 import { defineFunction } from "./functions.ts";
@@ -152,20 +158,29 @@ describe("BlazingAgentsDirectChatTransport", () => {
     expect(requests).toHaveLength(2);
   });
 
-  it.each([chatErrorChunks, chatAbortChunks])(
-    "preserves streamed error and abort chunks",
-    async (...chunks) => {
-      const transport = new BlazingAgentsDirectChatTransport({
-        agentId,
-        getClient: () =>
-          client(() => Promise.resolve(new Response(sseStream(chunks)))),
-        sessionId: mintedSessionId,
-      });
-      expect(await collect(await transport.sendMessages(input))).toEqual(
-        chunks
-      );
-    }
-  );
+  it("preserves streamed abort chunks", async () => {
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      getClient: () =>
+        client(() => Promise.resolve(new Response(sseStream(chatAbortChunks)))),
+      sessionId: mintedSessionId,
+    });
+    expect(await collect(await transport.sendMessages(input))).toEqual(
+      chatAbortChunks
+    );
+  });
+
+  it("rejects the decoded stream with the server error", async () => {
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      getClient: () =>
+        client(() => Promise.resolve(new Response(sseStream(chatErrorChunks)))),
+      sessionId: mintedSessionId,
+    });
+    await expect(collect(await transport.sendMessages(input))).rejects.toThrow(
+      "Safe streamed error"
+    );
+  });
 
   it("creates a Session without an identity callback", async () => {
     const transport = new BlazingAgentsDirectChatTransport({
@@ -545,3 +560,91 @@ describe("BlazingAgentsDirectChatTransport", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+it.each(["direct", "relay"])(
+  "preserves completed text and a spending stop through native AI Chat (%s)",
+  async (kind) => {
+    const event = {
+      type: "data-model-spending-limit",
+      transient: true,
+      data: {
+        code: "model_spending_limit_exceeded",
+        scope: "agent",
+        reason: "reserved",
+        spentUsd: 1,
+        reservedUsd: 4,
+        availableUsd: 0,
+        nextResetAt: null,
+      },
+    };
+    const chunks = [
+      { type: "start", messageId: "answer" },
+      { type: "text-start", id: "text" },
+      { type: "text-delta", id: "text", delta: "Completed work" },
+      { type: "text-end", id: "text" },
+      event,
+      {
+        type: "error",
+        errorText: "Agent funds are reserved by unfinished work.",
+      },
+      {
+        type: "finish",
+        finishReason: "error",
+        messageMetadata: { trailing: true },
+      },
+    ];
+    const fetch = () => Promise.resolve(new Response(sseStream(chunks)));
+    const transport =
+      kind === "direct"
+        ? new BlazingAgentsDirectChatTransport({
+            agentId,
+            sessionId: mintedSessionId,
+            getClient: () => client(fetch),
+          })
+        : new BlazingAgentsChatTransport({ sessionId: mintedSessionId, fetch });
+    const state: ChatState<UIMessage> = {
+      messages: [],
+      status: "ready",
+      error: undefined,
+      pushMessage(item) {
+        this.messages.push(item);
+      },
+      popMessage() {
+        this.messages.pop();
+      },
+      replaceMessage(index, item) {
+        this.messages[index] = item;
+      },
+      snapshot: structuredClone,
+    };
+    class TestChat extends AbstractChat<UIMessage> {}
+    const errors: Error[] = [];
+    const data: unknown[] = [];
+    const onFinish = vi.fn();
+    const chat = new TestChat({
+      state,
+      transport,
+      onError: (error) => errors.push(error),
+      onData: (chunk) => data.push(chunk),
+      onFinish,
+    });
+    await chat.sendMessage({ text: "Run" });
+    expect(chat.status).toBe("error");
+    expect(errors.map((error) => error.message)).toEqual([
+      "Agent funds are reserved by unfinished work.",
+    ]);
+    expect(data).toEqual([event]);
+    expect(onFinish).toHaveBeenCalledWith(
+      expect.objectContaining({ isError: true, finishReason: undefined })
+    );
+    expect(chat.messages.at(-1)?.metadata).toBeUndefined();
+    expect(chat.messages.at(-1)?.parts).toEqual([
+      {
+        type: "text",
+        text: "Completed work",
+        state: "done",
+        providerMetadata: undefined,
+      },
+    ]);
+  }
+);

@@ -3,10 +3,19 @@ import {
   BlazingAgentsChatTransport,
   BlazingAgentsDirectChatTransport,
   type BlazingAgentsUIMessage,
+  type BlazingAgentsUIMessageChunk,
+  type ChatSteerConsumedEvent,
+  type SpendingLimitStopEvent,
 } from "@blazingagents/sdk";
 import { taskOnceConfigSchema } from "@blazingagents/sdk/contracts";
-import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
-import { expect, it } from "vitest";
+import {
+  AbstractChat,
+  type ChatState,
+  type ChatTransport,
+  type UIMessage,
+  type UIMessageChunk,
+} from "ai";
+import { expect, it, vi } from "vitest";
 import { z } from "zod";
 
 it("composes exported schemas with the consumer's Zod", () => {
@@ -71,3 +80,120 @@ it("uses the consumer's AI transport and message contracts", async () => {
     });
   expect(await direct.reconnectToStream({ chatId: "chat-1" })).toBeNull();
 });
+
+it.each(["direct", "relay"])(
+  "handles steer consumption and a spending stop in the consumer's native AI Chat (%s)",
+  async (kind) => {
+    const steerEvent: ChatSteerConsumedEvent = {
+      type: "data-ba-steer-consumed",
+      transient: true,
+      data: {
+        requestId: "steer-1",
+        turnId: "tr_0123456789abcdef",
+        sequence: 1,
+        message: {
+          id: "steer-message",
+          role: "user",
+          parts: [{ type: "text", text: "Focus on the tests" }],
+        },
+      },
+    };
+    const event: SpendingLimitStopEvent = {
+      type: "data-model-spending-limit",
+      transient: true,
+      data: {
+        code: "model_spending_limit_exceeded",
+        scope: "tenant",
+        reason: "exhausted",
+        spentUsd: 5,
+        reservedUsd: 0,
+        availableUsd: 0,
+        nextResetAt: null,
+      },
+    };
+    const chunks: BlazingAgentsUIMessageChunk[] = [
+      { type: "start", messageId: "answer" },
+      { type: "text-start", id: "text" },
+      { type: "text-delta", id: "text", delta: "Completed work" },
+      { type: "text-end", id: "text" },
+      steerEvent,
+      event,
+      { type: "error", errorText: "Tenant model spending limit reached." },
+      { type: "finish", finishReason: "error" },
+    ];
+    const steerRequestIds: string[] = chunks
+      .filter((chunk) => chunk.type === "data-ba-steer-consumed")
+      .map((chunk) => chunk.data.requestId);
+    const spendingStopCodes: "model_spending_limit_exceeded"[] = chunks
+      .filter((chunk) => chunk.type === "data-model-spending-limit")
+      .map((chunk) => chunk.data.code);
+    expect(steerRequestIds).toEqual([steerEvent.data.requestId]);
+    expect(spendingStopCodes).toEqual([event.data.code]);
+    const fetch = () =>
+      Promise.resolve(
+        new Response(
+          `${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("")}data: [DONE]\n\n`
+        )
+      );
+    const sessionId = "ss_0123456789abcdef";
+    const transport: ChatTransport<BlazingAgentsUIMessage> =
+      kind === "direct"
+        ? new BlazingAgentsDirectChatTransport({
+            agentId: "ag_0123456789abcdef",
+            sessionId,
+            getClient: () => new BlazingAgents({ apiKey: "ba_test", fetch }),
+          })
+        : new BlazingAgentsChatTransport({ sessionId, fetch });
+    const state: ChatState<BlazingAgentsUIMessage> = {
+      messages: [],
+      status: "ready",
+      error: undefined,
+      pushMessage(message) {
+        this.messages.push(message);
+      },
+      popMessage() {
+        this.messages.pop();
+      },
+      replaceMessage(index, message) {
+        this.messages[index] = message;
+      },
+      snapshot: structuredClone,
+    };
+    class TestChat extends AbstractChat<BlazingAgentsUIMessage> {}
+    const onError = vi.fn();
+    const onFinish = vi.fn();
+    const data: SpendingLimitStopEvent["data"][] = [];
+    const consumedSteers: ChatSteerConsumedEvent["data"][] = [];
+    const chat = new TestChat({
+      state,
+      transport,
+      onError,
+      onFinish,
+      onData(chunk) {
+        if (chunk.type === "data-ba-steer-consumed") {
+          consumedSteers.push(chunk.data);
+        } else if (chunk.type === "data-model-spending-limit") {
+          data.push(chunk.data);
+        }
+      },
+    });
+    await chat.sendMessage({ text: "Run" });
+    expect(chat.status).toBe("error");
+    expect(onError).toHaveBeenCalledWith(
+      new Error("Tenant model spending limit reached.")
+    );
+    expect(onFinish).toHaveBeenCalledWith(
+      expect.objectContaining({ isError: true, finishReason: undefined })
+    );
+    expect(consumedSteers).toEqual([steerEvent.data]);
+    expect(data).toEqual([event.data]);
+    expect(chat.messages.at(-1)?.parts).toEqual([
+      {
+        type: "text",
+        text: "Completed work",
+        state: "done",
+        providerMetadata: undefined,
+      },
+    ]);
+  }
+);

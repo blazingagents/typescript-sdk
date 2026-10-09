@@ -68,6 +68,7 @@ import type {
   UpdateProviderBody,
 } from "./contracts/entities/providers.ts";
 import type {
+  ChatSteerConsumedEvent,
   SessionInputResponse,
   SessionInputsQuery,
   SessionInputsResponse,
@@ -90,6 +91,11 @@ import type {
   SkillDetail,
   SkillsListResponse,
 } from "./contracts/entities/skills.ts";
+import type {
+  SpendingLimitResponse,
+  SpendingLimitStopEvent,
+  UpdateSpendingLimitBody,
+} from "./contracts/entities/spending-limits.ts";
 import type {
   CreateTaskBody,
   CreateTaskResponse,
@@ -245,10 +251,20 @@ export interface ResponseObservation {
 
 export type ChatTrigger = "submit-message" | "regenerate-message";
 
-export type BlazingAgentsUIMessage =
-  UIMessage<BlazingAgentsChatMessageMetadata>;
-export type BlazingAgentsUIMessageChunk =
-  UIMessageChunk<BlazingAgentsChatMessageMetadata>;
+export type BlazingAgentsUIMessageData = Record<
+  "ba-steer-consumed",
+  ChatSteerConsumedEvent["data"]
+> &
+  Record<"model-spending-limit", SpendingLimitStopEvent["data"]>;
+
+export type BlazingAgentsUIMessage = UIMessage<
+  BlazingAgentsChatMessageMetadata,
+  BlazingAgentsUIMessageData
+>;
+export type BlazingAgentsUIMessageChunk = UIMessageChunk<
+  BlazingAgentsChatMessageMetadata,
+  BlazingAgentsUIMessageData
+>;
 
 /**
  * End-user attribution (ADR-0001) carried on every generation request.
@@ -471,6 +487,10 @@ export interface AgentsResource {
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   get(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
+  /** Retrieves the Agent model spending limit. Requires tenant authority. */
+  getSpendingLimit(
+    input: { agentId: string } & ResourceRequestOptions
+  ): Promise<SpendingLimitResponse>;
   /**
    * Lists available Agent records.
    * @param input - filters and pagination options.
@@ -517,6 +537,12 @@ export interface AgentsResource {
       mcpConnectionId: string;
     } & ResourceRequestOptions
   ): Promise<McpAttachmentResponse>;
+  /** Sets the Agent model spending limit. Pass null to disable it. Requires tenant authority. */
+  updateSpendingLimit(
+    input: UpdateSpendingLimitBody & {
+      agentId: string;
+    } & ResourceRequestOptions
+  ): Promise<SpendingLimitResponse>;
   /**
    * Uploads an Agent avatar as multipart form data.
    * @param input - Target `agentId`, image `file`, and optional abortSignal.
@@ -1220,6 +1246,10 @@ export interface TenantResource {
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   get(input?: ResourceRequestOptions): Promise<TenantSettingsResponse>;
+  /** Retrieves the tenant model spending limit. Requires tenant authority. */
+  getSpendingLimit(
+    input?: ResourceRequestOptions
+  ): Promise<SpendingLimitResponse>;
   /**
    * Updates Tenant settings.
    * @param input - fields to change; optional abortSignal.
@@ -1229,6 +1259,10 @@ export interface TenantResource {
   patch(
     input: UpdateTenantSettingsBody & ResourceRequestOptions
   ): Promise<TenantSettingsResponse>;
+  /** Sets the tenant model spending limit. Pass null to disable it. Requires tenant authority. */
+  updateSpendingLimit(
+    input: UpdateSpendingLimitBody & ResourceRequestOptions
+  ): Promise<SpendingLimitResponse>;
 }
 
 export interface UsageResource {

@@ -100,6 +100,24 @@ const requests: [
     (c, o) => c.tasks.runMessages({ taskId: "task", runId: "run", ...o }),
   ],
   ["tenant.get", (c, o) => c.tenant.get(o)],
+  ["tenant.getSpendingLimit", (c, o) => c.tenant.getSpendingLimit(o)],
+  [
+    "tenant.updateSpendingLimit",
+    (c, o) => c.tenant.updateSpendingLimit({ spendingLimit: null, ...o }),
+  ],
+  [
+    "agents.getSpendingLimit",
+    (c, o) => c.agents.getSpendingLimit({ agentId: "agent", ...o }),
+  ],
+  [
+    "agents.updateSpendingLimit",
+    (c, o) =>
+      c.agents.updateSpendingLimit({
+        agentId: "agent",
+        spendingLimit: null,
+        ...o,
+      }),
+  ],
   ["usage.get", (c, o) => c.usage.get({ userId: "user", ...o })],
   ["usage.overview", (c, o) => c.usage.overview(o)],
   [

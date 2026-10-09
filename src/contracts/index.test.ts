@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import * as contracts from "./index.ts";
 
 const publicContractNames = [
+  "nextSpendingLimitReset",
+  "spendingLimitPeriodSchema",
+  "spendingLimitResetIntervalSchema",
+  "spendingLimitResponseSchema",
+  "spendingLimitSchema",
+  "spendingLimitStopDetailsSchema",
+  "spendingLimitStopEventSchema",
+  "updateSpendingLimitBodySchema",
   "MAX_CHAT_FUNCTIONS",
   "MAX_CHAT_FUNCTION_DEFINITIONS_BYTES",
   "MAX_CHAT_FUNCTION_PAYLOAD_BYTES",

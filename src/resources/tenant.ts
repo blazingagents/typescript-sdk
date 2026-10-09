@@ -1,3 +1,4 @@
+import { spendingLimitResponseSchema } from "../contracts/entities/spending-limits.ts";
 import { tenantSettingsResponseSchema } from "../contracts/entities/tenants.ts";
 import { requestJson } from "../http.ts";
 import type { HttpConfig, TenantResource } from "../types.ts";
@@ -10,6 +11,24 @@ import type { HttpConfig, TenantResource } from "../types.ts";
  */
 export function createTenantResource(config: HttpConfig): TenantResource {
   return {
+    /** Retrieves the model spending limit using tenant authority. */
+    async getSpendingLimit({ abortSignal } = {}) {
+      return await requestJson(
+        config,
+        "/v1/tenant/spending-limit",
+        { signal: abortSignal },
+        spendingLimitResponseSchema
+      );
+    },
+    /** Sets the model spending limit. Null disables it. Requires tenant authority. */
+    async updateSpendingLimit({ abortSignal, ...body }) {
+      return await requestJson(
+        config,
+        "/v1/tenant/spending-limit",
+        { method: "PUT", json: body, signal: abortSignal },
+        spendingLimitResponseSchema
+      );
+    },
     /**
      * Retrieves tenant.
      */

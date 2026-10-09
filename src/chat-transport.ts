@@ -1,10 +1,10 @@
 import {
   type ChatTransport,
-  DefaultChatTransport,
   type HttpChatTransportInitOptions,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
+import { ChatStreamTransport } from "./chat-stream-transport.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 
 export type BlazingAgentsChatTransportOptions<
@@ -30,7 +30,7 @@ export class BlazingAgentsChatTransport<
   UI_MESSAGE extends UIMessage = UIMessage,
 > implements ChatTransport<UI_MESSAGE>
 {
-  readonly #transport: DefaultChatTransport<UI_MESSAGE>;
+  readonly #transport: ChatStreamTransport<UI_MESSAGE>;
   #sessionId: string | undefined;
 
   /**
@@ -42,7 +42,7 @@ export class BlazingAgentsChatTransport<
     const transportFetch = transportOptions.fetch ?? globalThis.fetch;
     this.#sessionId =
       sessionId === undefined ? undefined : sessionIdSchema.parse(sessionId);
-    this.#transport = new DefaultChatTransport({
+    this.#transport = new ChatStreamTransport({
       ...transportOptions,
       /** Reads the first Session ID from Location before returning the response. */
       fetch: async (input, init) => {

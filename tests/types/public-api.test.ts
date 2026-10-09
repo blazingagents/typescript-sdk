@@ -435,3 +435,82 @@ sdk.sessions.fork({
   sessionId: session.id,
   idempotencyKey: "retry-key",
 });
+
+import type {
+  BlazingAgentsUIMessageChunk,
+  ChatSteerConsumedEvent,
+  SpendingLimit,
+  SpendingLimitStopDetails,
+  UpdateSpendingLimitBody,
+} from "../../src/index.ts";
+
+const spendingLimit: SpendingLimit = {
+  amountUsd: 25,
+  resetStartDate: "2026-10-09",
+  resetInterval: "weekly",
+};
+export const spendingUpdate: UpdateSpendingLimitBody = { spendingLimit };
+const spendingStopChunk: BlazingAgentsUIMessageChunk = {
+  type: "data-model-spending-limit",
+  transient: true,
+  data: {
+    code: "model_spending_limit_exceeded",
+    scope: "tenant",
+    reason: "exhausted",
+    spentUsd: 25,
+    reservedUsd: 0,
+    availableUsd: 0,
+    nextResetAt: null,
+  },
+};
+export function narrowSpendingStop(
+  chunk: BlazingAgentsUIMessageChunk
+): SpendingLimitStopDetails | undefined {
+  if (chunk.type === "data-model-spending-limit") {
+    return chunk.data;
+  }
+  return undefined;
+}
+const steerConsumedChunk: BlazingAgentsUIMessageChunk = {
+  type: "data-ba-steer-consumed",
+  transient: true,
+  data: {
+    requestId: "steer-1",
+    turnId: "tr_0123456789abcdef",
+    sequence: 1,
+    message: { id: "steer-message", role: "user", parts: [] },
+  },
+};
+export function narrowSteerConsumed(
+  chunk: BlazingAgentsUIMessageChunk
+): ChatSteerConsumedEvent["data"] | undefined {
+  if (chunk.type === "data-ba-steer-consumed") {
+    // @ts-expect-error steer consumption carries no spending-limit code
+    JSON.stringify(chunk.data.code);
+    return chunk.data;
+  }
+  if (chunk.type === "data-model-spending-limit") {
+    // @ts-expect-error spending stops carry no steer request ID
+    JSON.stringify(chunk.data.requestId);
+  }
+  return undefined;
+}
+export const narrowedSteerConsumed = narrowSteerConsumed(steerConsumedChunk);
+export const updatedAgentSpending = sdk.agents.updateSpendingLimit({
+  agentId: "ag_0123456789abcdef",
+  ...spendingUpdate,
+});
+export const updatedTenantSpending = sdk.tenant.updateSpendingLimit({
+  spendingLimit: null,
+});
+// @ts-expect-error spending limit updates require explicit config or null
+sdk.tenant.updateSpendingLimit({});
+sdk.tenant.updateSpendingLimit({
+  spendingLimit: {
+    amountUsd: 1,
+    resetStartDate: "2026-10-09",
+    // @ts-expect-error interval is a closed API enum
+    resetInterval: "yearly",
+  },
+});
+export const narrowedSpendingStop = narrowSpendingStop(spendingStopChunk);

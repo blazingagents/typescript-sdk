@@ -60,7 +60,6 @@ export type UpdateSpendingLimitBody = z.infer<
   typeof updateSpendingLimitBodySchema
 >;
 
-/** A schedule edit uses the active period end as `after` for its first new boundary. */
 export function nextSpendingLimitReset(
   schedule: Pick<SpendingLimit, "resetStartDate" | "resetInterval">,
   after: string | Date

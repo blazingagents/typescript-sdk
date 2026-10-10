@@ -37,7 +37,6 @@ export const spendingLimitResponseSchema = z
     spendingLimit: spendingLimitSchema.nullable(),
     period: spendingLimitPeriodSchema.nullable(),
     nextResetAt: z.iso.datetime({ offset: true }).nullable(),
-    scheduleChangeAt: z.iso.datetime({ offset: true }).nullable(),
   })
   .strict()
   .meta({ id: "ModelSpendingLimitStatus" });

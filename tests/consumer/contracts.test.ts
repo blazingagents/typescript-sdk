@@ -177,7 +177,6 @@ it("exports spending-limit contracts and methods from the installed package", as
     spendingLimit: null,
     period: null,
     nextResetAt: null,
-    scheduleChangeAt: null,
   };
   const client = new BlazingAgents({
     apiKey: "ba_test",

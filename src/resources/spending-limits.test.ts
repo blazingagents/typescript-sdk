@@ -18,13 +18,11 @@ const enabled = {
     availableUsd: 18.123_456,
   },
   nextResetAt: "2026-11-09T00:00:00Z",
-  scheduleChangeAt: "2026-11-09T00:00:00Z",
 };
 const disabled = {
   spendingLimit: null,
   period: null,
   nextResetAt: null,
-  scheduleChangeAt: null,
 };
 const stopDetails = {
   scope: "both",

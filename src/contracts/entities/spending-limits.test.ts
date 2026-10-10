@@ -29,7 +29,6 @@ describe("spending-limit contracts", () => {
         spendingLimit: null,
         period: null,
         nextResetAt: null,
-        scheduleChangeAt: null,
       }).period
     ).toBeNull();
   });

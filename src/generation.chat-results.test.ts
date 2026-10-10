@@ -8,6 +8,8 @@ import {
   mintedSessionId,
 } from "./test/generation-fixtures.ts";
 
+const turnId = "turn_0123456789abcdef";
+
 describe("client.chat result", () => {
   it("exposes the session id and untouched SSE relay", async () => {
     const { fetch } = createMockFetch({
@@ -15,6 +17,7 @@ describe("client.chat result", () => {
         "content-encoding": "gzip",
         "content-length": "999",
         location: createLocation,
+        "x-ba-turn-id": turnId,
         "x-request-id": "request-chat-1",
       },
       status: 201,
@@ -34,13 +37,16 @@ describe("client.chat result", () => {
       "sessionId",
       "toResponse",
       "toStream",
+      "turnId",
     ]);
     expect(result.requestId).toBe("request-chat-1");
+    await expect(result.turnId).resolves.toBe(turnId);
 
     const response = result.toResponse();
     expect(response.status).toBe(201);
     expect(response.headers.get("location")).toBe(createLocation);
     expect(response.headers.get("x-request-id")).toBe("request-chat-1");
+    expect(response.headers.get("x-ba-turn-id")).toBe(turnId);
     expect(response.headers.get("content-encoding")).toBeNull();
     expect(response.headers.get("content-length")).toBeNull();
     expect(response.headers.get("x-vercel-ai-ui-message-stream")).toBe("v1");
@@ -91,4 +97,35 @@ describe("client.chat result", () => {
       })
     );
   });
+
+  it.each([
+    ["missing", undefined],
+    ["malformed", "turn_short"],
+  ])(
+    "rejects turnId with stream_error when the header is %s",
+    async (_case, header) => {
+      const { fetch } = createMockFetch({
+        headers: {
+          location: createLocation,
+          ...(header === undefined ? {} : { "x-ba-turn-id": header }),
+        },
+        status: 201,
+        stream: sseStream(chatChunks),
+      });
+      const result = await client(fetch).chat({
+        agentId: "ag_0123456789abcdef",
+        message: {
+          id: "u1",
+          role: "user",
+          parts: [{ type: "text", text: "hi" }],
+        },
+      });
+
+      await expect(result.turnId).rejects.toMatchObject({
+        code: "stream_error",
+      });
+      await expect(result.sessionId).resolves.toBe(mintedSessionId);
+      await expect(result.toResponse().text()).resolves.toContain("[DONE]");
+    }
+  );
 });

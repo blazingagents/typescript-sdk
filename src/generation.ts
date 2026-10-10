@@ -1,5 +1,5 @@
 import { createTextStreamResponse, parsePartialJson } from "ai";
-import { sessionIdSchema } from "./contracts/ids.ts";
+import { sessionIdSchema, turnIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import {
   dispatchChatFunctions,
@@ -217,6 +217,23 @@ function buildChatResult(
   sessionIdPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
   });
+  const turnId = turnIdSchema.safeParse(response.headers.get("x-ba-turn-id"));
+  const turnIdPromise = turnId.success
+    ? Promise.resolve(turnId.data)
+    : Promise.reject(
+        new BlazingAgentsError(
+          {
+            code: "stream_error",
+            message:
+              "The server did not return a valid turn id (X-BA-Turn-Id header).",
+            requestId: response.headers.get("x-request-id") ?? undefined,
+          },
+          { cause: turnId.error }
+        )
+      );
+  turnIdPromise.catch(() => {
+    /* no-op — prevents unhandled rejection if the caller never awaits */
+  });
   const { functions } = dispatch;
   const streamResponse =
     functions && sessionId !== undefined
@@ -231,6 +248,7 @@ function buildChatResult(
 
   return {
     sessionId: sessionIdPromise,
+    turnId: turnIdPromise,
     ...buildTerminalStreamResult(streamResponse, "chat"),
   };
 }
@@ -248,6 +266,7 @@ export function buildTerminalStreamResult(
 ): TerminalStreamResult {
   const requestId = response.headers.get("x-request-id") ?? undefined;
   const location = response.headers.get("location");
+  const turnId = response.headers.get("x-ba-turn-id");
   let bodyClaimed = false;
   /**
    * Claims the response body once and normalizes stream failures.
@@ -280,7 +299,7 @@ export function buildTerminalStreamResult(
     toStream: claimBody,
     /** Claims the response relay once. */
     toResponse: () => {
-      const headers = replacementResponseHeaders(requestId, location);
+      const headers = replacementResponseHeaders(requestId, location, turnId);
       headers.set("content-type", "text/event-stream");
       headers.set("cache-control", "no-cache");
       headers.set("connection", "keep-alive");
@@ -415,7 +434,8 @@ function responseBodyStream(
  */
 function replacementResponseHeaders(
   requestId: string | undefined,
-  location: string | null
+  location: string | null,
+  turnId: string | null
 ): Headers {
   const headers = new Headers();
   if (requestId !== undefined) {
@@ -423,6 +443,9 @@ function replacementResponseHeaders(
   }
   if (location !== null) {
     headers.set("location", location);
+  }
+  if (turnId !== null) {
+    headers.set("x-ba-turn-id", turnId);
   }
   return headers;
 }
@@ -643,7 +666,7 @@ function buildStatelessGenerationStreams(
         );
       }
       responseBodyClaimed = true;
-      const headers = replacementResponseHeaders(requestId, location);
+      const headers = replacementResponseHeaders(requestId, location, null);
       headers.set("content-type", "text/plain; charset=utf-8");
       try {
         return createTextStreamResponse({

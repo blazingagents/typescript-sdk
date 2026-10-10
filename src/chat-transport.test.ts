@@ -91,6 +91,72 @@ describe("BlazingAgentsChatTransport", () => {
     expect(onSessionId).toHaveBeenCalledWith("ss_0123456789abcdef");
   });
 
+  it("reports the running Turn ID from every response that names one", async () => {
+    const turnIds = ["turn_0123456789abcdef", undefined, "turn_short"];
+    let call = 0;
+    const fetch = () => {
+      const turnId = turnIds[call];
+      call += 1;
+      return Promise.resolve(
+        new Response(sseStream(chatChunks), {
+          headers: turnId === undefined ? {} : { "x-ba-turn-id": turnId },
+        })
+      );
+    };
+    const onTurnId = vi.fn();
+    const transport = new BlazingAgentsChatTransport({
+      fetch,
+      onTurnId,
+      sessionId: "ss_0123456789abcdef",
+    });
+
+    for (const _ of turnIds) {
+      for await (const _chunk of await transport.sendMessages({
+        abortSignal: undefined,
+        chatId: "client-chat-id",
+        messageId: undefined,
+        messages: [firstMessage],
+        trigger: "submit-message",
+      })) {
+        /** Drain the transport response. */
+      }
+    }
+
+    expect(onTurnId).toHaveBeenCalledOnce();
+    expect(onTurnId).toHaveBeenCalledWith("turn_0123456789abcdef");
+  });
+
+  it("records no Session or Turn from an error response", async () => {
+    const fetch = () =>
+      Promise.resolve(
+        Response.json(
+          {
+            error: { code: "forbidden", message: "Session is not available." },
+          },
+          { status: 403 }
+        )
+      );
+    const onSessionId = vi.fn();
+    const onTurnId = vi.fn();
+    const transport = new BlazingAgentsChatTransport({
+      fetch,
+      onSessionId,
+      onTurnId,
+    });
+
+    await expect(
+      transport.sendMessages({
+        abortSignal: undefined,
+        chatId: "client-chat-id",
+        messageId: undefined,
+        messages: [firstMessage],
+        trigger: "submit-message",
+      })
+    ).rejects.toThrow();
+    expect(onSessionId).not.toHaveBeenCalled();
+    expect(onTurnId).not.toHaveBeenCalled();
+  });
+
   it("resumes from an authorized initial Session ID after a reload", async () => {
     const fetch = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
       expect(JSON.parse(String(init?.body))).toEqual({

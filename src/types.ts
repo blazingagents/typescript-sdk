@@ -358,6 +358,12 @@ export interface ChatResult {
    * @throws BlazingAgentsError - If the response body has already been claimed.
    */
   toStream: () => ReadableStream<Uint8Array>;
+  /**
+   * Resolves to the id of the Turn this response runs, read from the
+   * `X-BA-Turn-Id` header. Pass it to `sessions.stop()` to stop the Turn.
+   * Rejects with `stream_error` when the header is missing or malformed.
+   */
+  turnId: Promise<string>;
 }
 
 export interface TerminalStreamResult {

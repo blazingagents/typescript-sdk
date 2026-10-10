@@ -5,7 +5,7 @@ import {
   type UIMessage,
 } from "ai";
 import { ChatStreamTransport } from "./chat-stream-transport.ts";
-import { sessionIdSchema } from "./contracts/ids.ts";
+import { sessionIdSchema, turnIdSchema } from "./contracts/ids.ts";
 
 export type BlazingAgentsChatTransportOptions<
   UI_MESSAGE extends UIMessage = UIMessage,
@@ -18,6 +18,12 @@ export type BlazingAgentsChatTransportOptions<
    * @param sessionId - Session to look up or record.
    */
   onSessionId?: (sessionId: string) => Promise<void> | void;
+  /**
+   * Receives the running Turn ID from each response that names one, before
+   * its stream is consumed. Pass it to Stop.
+   * @param turnId - Turn the response runs.
+   */
+  onTurnId?: (turnId: string) => Promise<void> | void;
   /** An authorized Session ID used to resume after a remount or reload. */
   sessionId?: string;
 };
@@ -38,25 +44,34 @@ export class BlazingAgentsChatTransport<
    * @param options - Configuration for this operation.
    */
   constructor(options: BlazingAgentsChatTransportOptions<UI_MESSAGE> = {}) {
-    const { onSessionId, sessionId, ...transportOptions } = options;
+    const { onSessionId, onTurnId, sessionId, ...transportOptions } = options;
     const transportFetch = transportOptions.fetch ?? globalThis.fetch;
     this.#sessionId =
       sessionId === undefined ? undefined : sessionIdSchema.parse(sessionId);
     this.#transport = new ChatStreamTransport({
       ...transportOptions,
-      /** Reads the first Session ID from Location before returning the response. */
+      /** Reads the first Session ID and each Turn ID before returning the response. */
       fetch: async (input, init) => {
         const response = await transportFetch(input, init);
-        if (response.ok && this.#sessionId === undefined) {
-          try {
+        if (!response.ok) {
+          return response;
+        }
+        try {
+          if (this.#sessionId === undefined) {
             const location = response.headers.get("location");
             const candidate = location?.split("/").pop();
             this.#sessionId = sessionIdSchema.parse(candidate);
             await onSessionId?.(this.#sessionId);
-          } catch (error) {
-            await response.body?.cancel(error).catch(() => undefined);
-            throw error;
           }
+          const turnId = turnIdSchema.safeParse(
+            response.headers.get("x-ba-turn-id")
+          );
+          if (turnId.success) {
+            await onTurnId?.(turnId.data);
+          }
+        } catch (error) {
+          await response.body?.cancel(error).catch(() => undefined);
+          throw error;
         }
         return response;
       },

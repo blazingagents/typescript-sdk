@@ -25,6 +25,12 @@ export type BlazingAgentsDirectChatTransportOptions = {
    * @param sessionId - Session to look up or record.
    */
   onSessionId?: (sessionId: string) => Promise<void> | void;
+  /**
+   * Receives the running Turn ID before the response stream is consumed.
+   * Pass it to Stop.
+   * @param turnId - Turn the response runs.
+   */
+  onTurnId?: (turnId: string) => Promise<void> | void;
   sessionId?: string;
   userId?: string;
 } & (
@@ -138,7 +144,8 @@ export class BlazingAgentsDirectChatTransport<
   }
 
   /**
-   * Claims the chat stream and records the first Session ID before decoding chunks.
+   * Claims the chat stream and records the first Session ID and the Turn ID
+   * before decoding chunks.
    */
   async #processChatResult(result: ChatResult) {
     const stream = result.toStream();
@@ -148,6 +155,7 @@ export class BlazingAgentsDirectChatTransport<
         this.#sessionId = sessionId;
         await this.#options.onSessionId?.(sessionId);
       }
+      await this.#reportTurnId(result);
     } catch (error) {
       await stream.cancel(error).catch(() => undefined);
       throw error;
@@ -189,6 +197,21 @@ export class BlazingAgentsDirectChatTransport<
       decisions,
       functions: this.#options.functions ?? {},
     });
-    return this.processResponseStream(continuation.toStream());
+    const stream = continuation.toStream();
+    try {
+      await this.#reportTurnId(continuation);
+    } catch (error) {
+      await stream.cancel(error).catch(() => undefined);
+      throw error;
+    }
+    return this.processResponseStream(stream);
+  }
+
+  /** Reports the Turn ID when the response names one. */
+  async #reportTurnId(result: ChatResult) {
+    const turnId = await result.turnId.catch(() => undefined);
+    if (turnId !== undefined) {
+      await this.#options.onTurnId?.(turnId);
+    }
   }
 }

@@ -158,6 +158,37 @@ describe("BlazingAgentsDirectChatTransport", () => {
     expect(requests).toHaveLength(2);
   });
 
+  it("reports the running Turn ID before the stream is consumed", async () => {
+    const turnIds = ["turn_0123456789abcdef", undefined];
+    let call = 0;
+    const fetch = vi.fn(() => {
+      const turnId = turnIds[call];
+      call += 1;
+      return Promise.resolve(
+        new Response(sseStream(chatChunks), {
+          status: 201,
+          headers: {
+            location: createLocation,
+            ...(turnId === undefined ? {} : { "x-ba-turn-id": turnId }),
+          },
+        })
+      );
+    });
+    const onTurnId = vi.fn();
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      getClient: () => client(fetch),
+      onTurnId,
+    });
+
+    const first = await transport.sendMessages(input);
+    expect(onTurnId).toHaveBeenCalledWith("turn_0123456789abcdef");
+    await collect(first);
+    await collect(await transport.sendMessages(input));
+
+    expect(onTurnId).toHaveBeenCalledOnce();
+  });
+
   it("preserves streamed abort chunks", async () => {
     const transport = new BlazingAgentsDirectChatTransport({
       agentId,

@@ -12,21 +12,22 @@ import {
   createTaskResponseSchema,
   createTaskRunResponseSchema,
   taskListItemSchema,
+  taskResponseSchema,
   taskRunMessagesResponseSchema,
-  taskRunSchema,
-  taskSchema,
-  tasksListQuerySchema,
+  taskRunResponseSchema,
   tasksListResponseSchema,
 } from "./tasks.ts";
 
-describe("taskSchema", () => {
+describe("taskResponseSchema", () => {
   it("accepts a complete on-demand task", () => {
-    expect(taskSchema.safeParse(createTaskFixture()).success).toBe(true);
+    expect(taskResponseSchema.safeParse(createTaskFixture()).success).toBe(
+      true
+    );
   });
 
   it("strips extra fields", () => {
     expect(
-      taskSchema.parse({
+      taskResponseSchema.parse({
         ...createTaskFixture(),
         extra: true,
       })
@@ -35,30 +36,36 @@ describe("taskSchema", () => {
 
   it("requires and validates the next fire time on a single task", () => {
     expect(
-      taskSchema.parse(createTaskFixture({ nextFireAt: iso })).nextFireAt
+      taskResponseSchema.parse(createTaskFixture({ nextFireAt: iso }))
+        .nextFireAt
     ).toBe(iso);
     expect(
-      taskSchema.safeParse(createTaskFixture({ nextFireAt: "tomorrow" }))
-        .success
+      taskResponseSchema.safeParse(
+        createTaskFixture({ nextFireAt: "tomorrow" })
+      ).success
     ).toBe(false);
     const { nextFireAt: _, ...missing } = createTaskFixture();
-    expect(taskSchema.safeParse(missing).success).toBe(false);
+    expect(taskResponseSchema.safeParse(missing).success).toBe(false);
   });
 });
 
-describe("taskRunSchema", () => {
+describe("taskRunResponseSchema", () => {
   it("accepts a complete run record", () => {
-    expect(taskRunSchema.safeParse(createTaskRunFixture()).success).toBe(true);
+    expect(
+      taskRunResponseSchema.safeParse(createTaskRunFixture()).success
+    ).toBe(true);
   });
 
   it("requires saved Agent config", () => {
     const { agentConfig: _, ...runWithoutConfig } = createTaskRunFixture();
-    expect(taskRunSchema.safeParse(runWithoutConfig).success).toBe(false);
+    expect(taskRunResponseSchema.safeParse(runWithoutConfig).success).toBe(
+      false
+    );
   });
 
   it("accepts a null sessionId for a not-yet-started run", () => {
     expect(
-      taskRunSchema.safeParse(
+      taskRunResponseSchema.safeParse(
         createTaskRunFixture({
           sessionId: null,
           status: "queued",
@@ -110,20 +117,6 @@ describe("taskListItemSchema + tasksListResponseSchema", () => {
         nextCursor: null,
       }).success
     ).toBe(true);
-  });
-});
-
-describe("tasksListQuerySchema", () => {
-  it("accepts an optional agentId filter", () => {
-    expect(tasksListQuerySchema.parse({ agentId }).agentId).toBe(agentId);
-  });
-
-  it("accepts an optional userId filter", () => {
-    expect(tasksListQuerySchema.parse({ userId: "u-42" }).userId).toBe("u-42");
-  });
-
-  it("accepts an empty query", () => {
-    expect(tasksListQuerySchema.parse({}).agentId).toBeUndefined();
   });
 });
 
@@ -183,7 +176,7 @@ describe("additive schedule response fields", () => {
         config: { ...schedule.config, futureConfig: true },
       };
       expect(
-        taskSchema.parse({ ...createTaskFixture(), schedule: expanded })
+        taskResponseSchema.parse({ ...createTaskFixture(), schedule: expanded })
           .schedule
       ).toEqual(schedule);
       expect(

@@ -1,12 +1,8 @@
 import { z } from "zod";
 import { paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, sessionIdSchema } from "../ids.ts";
-import {
-  DEFAULT_SESSION_MESSAGES_LIMIT,
-  MAX_SESSION_MESSAGES_LIMIT,
-} from "../limitations.ts";
 import { toolExecutionReferenceSchema } from "./agent-approval.ts";
-import { agentConfigSchema, agentSchema } from "./agents.ts";
+import { agentConfigSchema, agentResponseSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 import { chatFunctionDefinitionsSchema } from "./chat.ts";
 
@@ -53,9 +49,9 @@ export const sessionResponseSchema = sessionListItemSchema
 export const latestSessionListItemSchema = sessionListItemSchema
   .extend({
     agentId: agentIdSchema,
-    model: agentSchema.shape.model,
-    thinkingLevel: agentSchema.shape.thinkingLevel,
-    status: agentSchema.shape.status,
+    model: agentResponseSchema.shape.model,
+    thinkingLevel: agentResponseSchema.shape.thinkingLevel,
+    status: agentResponseSchema.shape.status,
   })
   .strip();
 
@@ -102,23 +98,6 @@ export const sessionMessagesResponseSchema = z
     latestCursor: z.string().nullable(),
   })
   .strip();
-
-export const sessionMessagesQuerySchema = z
-  .object({
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_SESSION_MESSAGES_LIMIT)
-      .default(DEFAULT_SESSION_MESSAGES_LIMIT),
-    cursor: z.string().nullable().optional(),
-    after: z.string().nullable().optional(),
-  })
-  .strict()
-  .refine((value) => !(value.cursor && value.after), {
-    message: "cursor and after are mutually exclusive.",
-    path: ["after"],
-  });
 
 /** One decision in the current Tool approval round. */
 export const toolApprovalDecisionSchema = z
@@ -179,20 +158,15 @@ export const continueToolApprovalsBodySchema = z
     functions: chatFunctionDefinitionsSchema.optional(),
   })
   .strict();
-
-export type SessionListItem = z.infer<typeof sessionListItemSchema>;
 export type SessionForkedFrom = z.infer<typeof sessionForkedFromSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
-export type LatestSessionListItem = z.infer<typeof latestSessionListItemSchema>;
 export type LatestSessionsListResponse = z.infer<
   typeof latestSessionsListResponseSchema
 >;
-export type SessionMessage = z.infer<typeof sessionMessageSchema>;
 export type SessionMessagesResponse = z.infer<
   typeof sessionMessagesResponseSchema
 >;
-export type SessionMessagesQuery = z.infer<typeof sessionMessagesQuerySchema>;
 export type ToolApprovalDecision = z.infer<typeof toolApprovalDecisionSchema>;
 export type ContinueToolApprovalsBody = z.infer<
   typeof continueToolApprovalsBodySchema

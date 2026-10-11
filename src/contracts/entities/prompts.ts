@@ -75,7 +75,7 @@ export const promptTemplateSchema = z
     }
   });
 
-export const promptSchema = z
+export const promptResponseSchema = z
   .object({
     id: promptIdSchema,
     tenantId: tenantIdSchema,
@@ -90,7 +90,8 @@ export const promptSchema = z
   })
   .strip();
 
-export const promptsResponseSchema = paginatedResponseSchema(promptSchema);
+export const promptsResponseSchema =
+  paginatedResponseSchema(promptResponseSchema);
 export const promptsListQuerySchema = z
   .object({
     cursor: cursorSchema.optional(),
@@ -104,8 +105,6 @@ export const promptsListQuerySchema = z
     agentId: agentIdSchema.optional(),
   })
   .strict();
-
-export const promptResponseSchema = promptSchema;
 
 export const createPromptBodySchema = z
   .object({
@@ -154,8 +153,6 @@ export function renderPromptTemplate(
       return value;
     });
 }
-
-export type Prompt = z.infer<typeof promptSchema>;
 export type PromptsResponse = z.infer<typeof promptsResponseSchema>;
 export type PromptsListQuery = z.infer<typeof promptsListQuerySchema>;
 export type PromptResponse = z.infer<typeof promptResponseSchema>;

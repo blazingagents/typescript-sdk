@@ -100,9 +100,6 @@ export const updateChatConnectionBodySchema = z
         Object.keys(body.configuration).length > 0),
     { message: "Provide a name or a configuration change" }
   );
-export const chatConnectionParamsSchema = z.object({
-  id: chatConnectionIdSchema,
-});
 export const chatHealthCheckSchema = z
   .object({
     code: z.string(),

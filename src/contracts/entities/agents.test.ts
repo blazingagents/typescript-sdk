@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agentConfigSchema,
-  agentSchema,
+  agentResponseSchema,
   agentStatusSchema,
   agentsListQuerySchema,
   agentsResponseSchema,
@@ -58,17 +58,20 @@ const baseAgentConfig = {
 
 describe("Agent current and config contracts", () => {
   it("accepts configured and unconfigured Provider-model pairs only", () => {
-    expect(agentSchema.safeParse(baseAgent).success).toBe(true);
+    expect(agentResponseSchema.safeParse(baseAgent).success).toBe(true);
     expect(
-      agentSchema.safeParse({ ...baseAgent, model: null, providerId: null })
-        .success
+      agentResponseSchema.safeParse({
+        ...baseAgent,
+        model: null,
+        providerId: null,
+      }).success
     ).toBe(true);
     expect(
-      agentSchema.safeParse({ ...baseAgent, providerId: null }).success
+      agentResponseSchema.safeParse({ ...baseAgent, providerId: null }).success
     ).toBe(false);
-    expect(agentSchema.safeParse({ ...baseAgent, model: null }).success).toBe(
-      false
-    );
+    expect(
+      agentResponseSchema.safeParse({ ...baseAgent, model: null }).success
+    ).toBe(false);
 
     expect(agentConfigSchema.safeParse(baseAgentConfig).success).toBe(true);
     expect(
@@ -85,17 +88,17 @@ describe("Agent current and config contracts", () => {
   });
 
   it("requires the current Workspace attachment", () => {
-    expect(agentSchema.parse(baseAgent)).toEqual(baseAgent);
+    expect(agentResponseSchema.parse(baseAgent)).toEqual(baseAgent);
     expect(
-      agentSchema.safeParse({ ...baseAgent, workspaceId: null }).success
+      agentResponseSchema.safeParse({ ...baseAgent, workspaceId: null }).success
     ).toBe(false);
     const { workspaceId: _workspaceId, ...withoutWorkspace } = baseAgent;
-    expect(agentSchema.safeParse(withoutWorkspace).success).toBe(false);
+    expect(agentResponseSchema.safeParse(withoutWorkspace).success).toBe(false);
   });
 
   it.each(["sandboxId", "skills"])("strips retired field %s", (field) => {
     expect(
-      agentSchema.parse({
+      agentResponseSchema.parse({
         ...baseAgent,
         [field]: field === "skills" ? [] : null,
       })

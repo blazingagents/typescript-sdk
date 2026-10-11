@@ -40,7 +40,6 @@ export const tenantDeletionSchema = z
     requestedAt: z.iso.datetime({ offset: true }),
   })
   .strict();
-export type TenantDeletion = z.infer<typeof tenantDeletionSchema>;
 
 /**
  * Quota — `GET/PATCH /v1/tenant` carries the tenant's self-set quota.
@@ -87,12 +86,6 @@ export const updateTenantSettingsBodySchema = z
   .refine(hasObjectKeys, {
     message: atLeastOneFieldMessage,
   });
-
-export type Tenant = z.infer<typeof tenantSchema>;
-export type SubscriptionStatus = z.infer<typeof subscriptionStatusSchema>;
-export type TenantResponse = z.infer<typeof tenantResponseSchema>;
-export type Quota = z.infer<typeof quotaSchema>;
-export type TenantSettings = z.infer<typeof tenantSettingsSchema>;
 export type TenantSettingsResponse = z.infer<
   typeof tenantSettingsResponseSchema
 >;

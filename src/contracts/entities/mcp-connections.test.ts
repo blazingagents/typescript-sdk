@@ -9,14 +9,10 @@ import {
   mcpConnectionOauthConnectResponseSchema,
   mcpConnectionReconnectResultSchema,
   mcpConnectionResponseSchema,
-  mcpConnectionSchema,
   mcpConnectionStatusSchema,
   mcpConnectionsResponseSchema,
   mcpConnectionTestResponseSchema,
-  mcpCredentialBundleSchema,
   mcpOauthAuthorizationLaunchResponseSchema,
-  mcpOauthAuthorizationTransactionBundleSchema,
-  mcpOauthIssuersMatch,
   reconnectMcpConnectionBodySchema,
   updateMcpAttachmentBodySchema,
   updateMcpConnectionBodySchema,
@@ -42,29 +38,6 @@ const baseConnection = {
   updatedAt: iso,
 };
 
-describe("MCP OAuth issuer identity", () => {
-  it("matches exactly one trailing slash and rejects broader aliases", () => {
-    expect(
-      mcpOauthIssuersMatch(
-        "https://issuer.example.com/tenant",
-        "https://issuer.example.com/tenant/"
-      )
-    ).toBe(true);
-    expect(
-      mcpOauthIssuersMatch(
-        "https://issuer.example.com/tenant/",
-        "https://issuer.example.com/tenant"
-      )
-    ).toBe(true);
-    expect(
-      mcpOauthIssuersMatch(
-        "https://issuer.example.com/tenant//",
-        "https://issuer.example.com/tenant"
-      )
-    ).toBe(false);
-  });
-});
-
 describe("MCP connection enums", () => {
   it("accepts all forward-compatible auth types", () => {
     for (const authType of [
@@ -87,10 +60,6 @@ describe("MCP connection enums", () => {
 });
 
 describe("MCP connection schemas", () => {
-  it("parses an internal connection row", () => {
-    expect(mcpConnectionSchema.parse(baseConnection)).toEqual(baseConnection);
-  });
-
   it("strips internal fields from public responses", () => {
     expect(
       mcpConnectionResponseSchema.parse(baseConnection)
@@ -415,185 +384,6 @@ describe("MCP connection schemas", () => {
     ).toBe(false);
   });
 
-  it("parses only the complete versioned bearer credential bundle", () => {
-    const bundle = {
-      bearerToken: "secret-canary.token_123",
-      type: "bearer" as const,
-      version: 1 as const,
-    };
-    expect(mcpCredentialBundleSchema.parse(bundle)).toEqual(bundle);
-    expect(
-      mcpCredentialBundleSchema.safeParse({ ...bundle, version: 2 }).success
-    ).toBe(false);
-    expect(
-      mcpCredentialBundleSchema.safeParse({ ...bundle, vaultSecretId: "no" })
-        .success
-    ).toBe(false);
-  });
-
-  it("round-trips a complete versioned OAuth Client Credentials bundle", () => {
-    const bundle = {
-      clientInformation: {
-        client_id: "service-client",
-        client_secret: "secret-canary.client-secret",
-        issuer: "https://auth.example.com/",
-      },
-      discoveryState: {
-        authorizationServerMetadata: {
-          issuer: "https://auth.example.com/",
-          token_endpoint: "https://auth.example.com/token",
-          token_endpoint_auth_methods_supported: ["client_secret_basic"],
-        },
-        authorizationServerUrl: "https://auth.example.com/",
-        resourceMetadata: {
-          authorization_servers: ["https://auth.example.com/"],
-          resource: "https://mcp.example.com/tools",
-        },
-        resourceMetadataUrl:
-          "https://mcp.example.com/.well-known/oauth-protected-resource/tools",
-      },
-      scope: "mcp:tools mcp:read",
-      tokens: {
-        access_token: "secret-canary.access-token",
-        expires_in: 300,
-        issuer: "https://auth.example.com/",
-        refresh_token: "secret-canary.unusual-refresh-token",
-        scope: "mcp:tools mcp:read",
-        token_type: "Bearer",
-      },
-      type: "oauth_client_credentials" as const,
-      version: 1 as const,
-    };
-
-    expect(mcpCredentialBundleSchema.parse(bundle)).toEqual(bundle);
-    expect(
-      mcpCredentialBundleSchema.safeParse({
-        ...bundle,
-        tokens: {
-          ...bundle.tokens,
-          id_token: "secret-canary.id-token",
-        },
-      }).success
-    ).toBe(false);
-    expect(
-      mcpCredentialBundleSchema.safeParse({
-        ...bundle,
-        clientInformation: null,
-      }).success
-    ).toBe(false);
-    expect(
-      mcpCredentialBundleSchema.safeParse({
-        ...bundle,
-        clientInformation: {
-          ...bundle.clientInformation,
-          issuer: "https://other.example.com/",
-        },
-      }).success
-    ).toBe(false);
-  });
-
-  it("round-trips a complete Authorization Code bundle without id_token", () => {
-    const bundle = {
-      clientInformation: {
-        client_id: "interactive-client",
-        client_secret: "secret-canary.authorization-client-secret",
-        issuer: "https://auth.example.com/",
-      },
-      discoveryState: {
-        authorizationServerMetadata: {
-          authorization_endpoint: "https://auth.example.com/authorize",
-          code_challenge_methods_supported: ["S256"],
-          issuer: "https://auth.example.com/",
-          token_endpoint: "https://auth.example.com/token",
-        },
-        authorizationServerUrl: "https://auth.example.com/",
-        resourceMetadata: {
-          authorization_servers: ["https://auth.example.com/"],
-          resource: "https://mcp.example.com/tools",
-        },
-      },
-      scope: "mcp:tools offline_access",
-      tokens: {
-        access_token: "secret-canary.authorization-access-token",
-        expires_in: 300,
-        issuer: "https://auth.example.com/",
-        refresh_token: "secret-canary.authorization-refresh-token",
-        token_type: "Bearer",
-      },
-      type: "oauth_authorization_code" as const,
-      version: 1 as const,
-    };
-
-    expect(mcpCredentialBundleSchema.parse(bundle)).toEqual(bundle);
-    expect(
-      mcpCredentialBundleSchema.safeParse({
-        ...bundle,
-        tokens: { ...bundle.tokens, id_token: "must-not-persist" },
-      }).success
-    ).toBe(false);
-    expect(
-      mcpCredentialBundleSchema.safeParse({
-        ...bundle,
-        clientInformation: null,
-      }).success
-    ).toBe(false);
-    expect(
-      mcpCredentialBundleSchema.safeParse({
-        ...bundle,
-        clientInformation: {
-          ...bundle.clientInformation,
-          issuer: "https://other.example.com/",
-        },
-      }).success
-    ).toBe(false);
-  });
-
-  it("round-trips complete CIMD and DCR client information without requiring a client secret", () => {
-    const base = {
-      discoveryState: {
-        authorizationServerMetadata: {
-          authorization_endpoint: "https://auth.example.com/authorize",
-          client_id_metadata_document_supported: true,
-          code_challenge_methods_supported: ["S256"],
-          issuer: "https://auth.example.com/",
-          token_endpoint: "https://auth.example.com/token",
-        },
-        authorizationServerUrl: "https://auth.example.com/",
-        resourceMetadata: {
-          authorization_servers: ["https://auth.example.com/"],
-          resource: "https://mcp.example.com/tools",
-        },
-      },
-      scope: null,
-      tokens: null,
-      type: "oauth_authorization_code" as const,
-      version: 1 as const,
-    };
-    const cimd = {
-      ...base,
-      clientInformation: {
-        client_id: "https://app.example.com/v1/mcp/oauth/client-metadata",
-        issuer: "https://auth.example.com/",
-      },
-    };
-    const dcr = {
-      ...base,
-      clientInformation: {
-        client_id: "dcr-client",
-        client_id_issued_at: 1_783_983_600,
-        client_secret: "SDK-valid-秘密",
-        client_secret_expires_at: 0,
-        issuer: "https://auth.example.com/",
-        registration_access_token: "secret-canary.registration-token",
-        registration_client_uri: "https://auth.example.com/register/dcr-client",
-        token_endpoint_auth_method: "client_secret_basic",
-      },
-    };
-
-    expect(mcpCredentialBundleSchema.parse(cimd)).toEqual(cimd);
-    expect(mcpCredentialBundleSchema.parse(dcr)).toEqual(dcr);
-  });
-
   it("parses only a Blazing OAuth initiation URL", () => {
     const setupToken = "A".repeat(43);
     expect(
@@ -625,53 +415,6 @@ describe("MCP connection schemas", () => {
           "https://app.example.com/v1/mcp/oauth/authorize?wrong=value",
       }).success
     ).toBe(false);
-  });
-
-  it("round-trips only the encrypted Authorization Code transaction bundle", () => {
-    const transaction = {
-      clientInformation: {
-        client_id: "interactive-client",
-        client_secret: "secret-canary.authorization-client-secret",
-        issuer: "https://auth.example.com/",
-      },
-      codeVerifier: "secret-canary.pkce-verifier",
-      credentialVersion: 3,
-      discoveryState: {
-        authorizationServerMetadata: {
-          code_challenge_methods_supported: ["S256"],
-          issuer: "https://auth.example.com/",
-        },
-        authorizationServerUrl: "https://auth.example.com/",
-      },
-      expectedIssuer: "https://auth.example.com/",
-      expectedResource: "https://mcp.example.com/tools",
-      redirectUri: "https://app.example.com/v1/mcp/oauth/callback",
-      scope: "mcp:tools offline_access",
-      type: "oauth_authorization_code_transaction" as const,
-      version: 1 as const,
-    };
-
-    expect(
-      mcpOauthAuthorizationTransactionBundleSchema.parse(transaction)
-    ).toEqual(transaction);
-    for (const invalid of [
-      { ...transaction, state: "secret-canary.oauth-state" },
-      { ...transaction, authorizationCode: "secret-canary.authorization-code" },
-      { ...transaction, cookie: "secret-canary.cookie" },
-      { ...transaction, version: 2 },
-      {
-        ...transaction,
-        clientInformation: {
-          ...transaction.clientInformation,
-          issuer: "https://other.example.com/",
-        },
-      },
-      { ...transaction, clientInformation: null },
-    ]) {
-      expect(
-        mcpOauthAuthorizationTransactionBundleSchema.safeParse(invalid).success
-      ).toBe(false);
-    }
   });
 
   it("rejects create fields reserved for future auth modes", () => {

@@ -55,25 +55,6 @@ export const AGENT_TOOL_CATALOG = [
   },
 ] as const satisfies readonly AgentToolGroup[];
 
-/**
- * Expands tool group names into their individual tool names.
- */
-export function expandToolGroups(ids: Iterable<string>): Set<string> {
-  const result = new Set<string>();
-
-  for (const id of ids) {
-    const group = AGENT_TOOL_CATALOG.find((candidate) => candidate.id === id);
-
-    if (group) {
-      for (const tool of group.tools) {
-        result.add(tool);
-      }
-    }
-  }
-
-  return result;
-}
-
 const RESERVED_CHAT_FUNCTION_NAMES: ReadonlySet<string> = new Set([
   ...AGENT_TOOL_CATALOG.flatMap((group) => group.tools),
   "activate_skill",

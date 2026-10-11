@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { mcpConnectionIdSchema, tenantIdSchema } from "../ids.ts";
+import { mcpConnectionIdSchema } from "../ids.ts";
 import {
   MAX_MCP_ATTACHMENT_METADATA_KEY_LENGTH,
   MAX_MCP_ATTACHMENT_METADATA_KEYS,
@@ -71,15 +71,6 @@ const oauthClientSecretSchema = z
     "Client secret must contain visible ASCII characters only"
   );
 
-const storedOauthClientIdSchema = z
-  .string()
-  .min(1)
-  .max(MAX_MCP_OAUTH_CLIENT_ID_LENGTH);
-const storedOauthClientSecretSchema = z
-  .string()
-  .min(1)
-  .max(MAX_MCP_OAUTH_CLIENT_SECRET_LENGTH);
-
 const oauthScopeSchema = z
   .string()
   .trim()
@@ -90,178 +81,7 @@ const oauthScopeSchema = z
     "Scope must contain printable ASCII characters only"
   );
 
-const oauthIssuerSchema = z
-  .string()
-  .trim()
-  .url()
-  .refine(
-    (value) => {
-      try {
-        const url = new URL(value);
-        return (
-          (url.protocol === "http:" || url.protocol === "https:") &&
-          url.username === "" &&
-          url.password === "" &&
-          url.search === "" &&
-          url.hash === ""
-        );
-      } catch {
-        return false;
-      }
-    },
-    {
-      message:
-        "OAuth issuer must be an http(s) URL without credentials, query, or fragment",
-    }
-  )
-  .transform((value) => new URL(value).toString());
-
 const credentialFragmentSchema = z.string().min(1).max(4).nullable();
-
-/**
- * Mirrors the MCP SDK's SEP-2352 issuer-identity comparison.
- */
-export function mcpOauthIssuersMatch(a: string, b: string): boolean {
-  return (
-    a === b ||
-    (a.endsWith("/") && a.slice(0, -1) === b) ||
-    (b.endsWith("/") && b.slice(0, -1) === a)
-  );
-}
-
-const oauthClientInformationSchema = z.looseObject({
-  client_id: storedOauthClientIdSchema,
-  client_secret: storedOauthClientSecretSchema.optional(),
-  issuer: oauthIssuerSchema,
-});
-
-const oauthConfidentialClientInformationSchema =
-  oauthClientInformationSchema.safeExtend({
-    client_secret: oauthClientSecretSchema,
-  });
-
-const oauthTokensSchema = z
-  .object({
-    access_token: z.string().min(1),
-    expires_in: z.number().positive().optional(),
-    issuer: oauthIssuerSchema,
-    refresh_token: z.string().optional(),
-    scope: z.string().optional(),
-    token_type: z.string().min(1),
-  })
-  .strict();
-
-const oauthDiscoveryStateSchema = z.looseObject({
-  authorizationServerMetadata: z.record(z.string(), z.unknown()).optional(),
-  authorizationServerUrl: oauthIssuerSchema,
-  resourceMetadata: z.record(z.string(), z.unknown()).optional(),
-  resourceMetadataUrl: z.string().url().optional(),
-});
-
-export const mcpOauthClientCredentialsBundleSchema = z
-  .object({
-    clientInformation: oauthConfidentialClientInformationSchema,
-    discoveryState: oauthDiscoveryStateSchema.nullable(),
-    scope: oauthScopeSchema.nullable(),
-    tokens: oauthTokensSchema.nullable(),
-    type: z.literal("oauth_client_credentials"),
-    version: z.literal(1),
-  })
-  .strict()
-  .superRefine((bundle, context) => {
-    if (
-      bundle.tokens &&
-      bundle.tokens.issuer !== bundle.clientInformation.issuer
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "OAuth token issuer must match the client issuer",
-        path: ["tokens", "issuer"],
-      });
-    }
-  });
-
-export const mcpOauthAuthorizationCodeBundleSchema = z
-  .object({
-    clientInformation: oauthClientInformationSchema.nullable(),
-    discoveryState: oauthDiscoveryStateSchema.nullable(),
-    scope: oauthScopeSchema.nullable(),
-    tokens: oauthTokensSchema.nullable(),
-    type: z.literal("oauth_authorization_code"),
-    version: z.literal(1),
-  })
-  .strict()
-  .superRefine((bundle, context) => {
-    if (bundle.tokens && !bundle.clientInformation) {
-      context.addIssue({
-        code: "custom",
-        message: "OAuth tokens require client information",
-        path: ["clientInformation"],
-      });
-      return;
-    }
-    if (
-      bundle.tokens &&
-      bundle.tokens.issuer !== bundle.clientInformation?.issuer
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "OAuth token issuer must match the client issuer",
-        path: ["tokens", "issuer"],
-      });
-    }
-  });
-
-export const mcpOauthAuthorizationTransactionBundleSchema = z
-  .object({
-    clientInformation: oauthClientInformationSchema.nullable(),
-    codeVerifier: z.string().min(1).max(1024).nullable(),
-    credentialVersion: z.number().int().nonnegative(),
-    discoveryState: oauthDiscoveryStateSchema.nullable(),
-    expectedIssuer: oauthIssuerSchema,
-    expectedResource: z.string().url(),
-    redirectUri: z.string().url(),
-    scope: oauthScopeSchema.nullable(),
-    type: z.literal("oauth_authorization_code_transaction"),
-    version: z.literal(1),
-  })
-  .strict()
-  .superRefine((bundle, context) => {
-    if (
-      bundle.clientInformation &&
-      bundle.clientInformation.issuer !== bundle.expectedIssuer
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "OAuth client issuer must match the expected issuer",
-        path: ["clientInformation", "issuer"],
-      });
-    }
-    if (
-      (bundle.codeVerifier !== null || bundle.discoveryState !== null) &&
-      bundle.clientInformation === null
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "An active OAuth transaction requires client information",
-        path: ["clientInformation"],
-      });
-    }
-  });
-
-export const mcpBearerCredentialBundleSchema = z
-  .object({
-    bearerToken: bearerTokenSchema,
-    type: z.literal("bearer"),
-    version: z.literal(1),
-  })
-  .strict();
-
-export const mcpCredentialBundleSchema = z.discriminatedUnion("type", [
-  mcpBearerCredentialBundleSchema,
-  mcpOauthAuthorizationCodeBundleSchema,
-  mcpOauthClientCredentialsBundleSchema,
-]);
 
 const mcpConnectionUrlSchema = z
   .string()
@@ -288,25 +108,6 @@ const mcpConnectionUrlSchema = z
     }
   )
   .transform((value) => new URL(value).toString());
-
-export const mcpConnectionSchema = z
-  .object({
-    id: mcpConnectionIdSchema,
-    tenantId: tenantIdSchema,
-    name: mcpConnectionNameSchema,
-    url: mcpConnectionUrlSchema,
-    authType: mcpConnectionAuthTypeSchema,
-    status: mcpConnectionStatusSchema,
-    credentialVersion: z.number().int().nonnegative(),
-    credentialFragment: credentialFragmentSchema,
-    lastAuthErrorCode: mcpConnectionTestErrorCodeSchema.nullable(),
-    oauthIssuer: z.string().url().nullable(),
-    oauthResource: z.string().url().nullable(),
-    tokenExpiresAt: z.iso.datetime({ offset: true }).nullable(),
-    createdAt: z.iso.datetime({ offset: true }),
-    updatedAt: z.iso.datetime({ offset: true }),
-  })
-  .strict();
 
 export const mcpConnectionResponseSchema = z
   .object({
@@ -582,24 +383,7 @@ export const mcpConnectionReconnectResultSchema = z.discriminatedUnion(
 );
 
 export type McpConnectionAuthType = z.infer<typeof mcpConnectionAuthTypeSchema>;
-export type McpCredentialBundle = z.infer<typeof mcpCredentialBundleSchema>;
-export type McpOauthClientCredentialsBundle = z.infer<
-  typeof mcpOauthClientCredentialsBundleSchema
->;
-export type McpOauthAuthorizationCodeBundle = z.infer<
-  typeof mcpOauthAuthorizationCodeBundleSchema
->;
-export type McpOauthAuthorizationTransactionBundle = z.infer<
-  typeof mcpOauthAuthorizationTransactionBundleSchema
->;
 export type McpConnectionStatus = z.infer<typeof mcpConnectionStatusSchema>;
-export type McpConnectionTestErrorCode = z.infer<
-  typeof mcpConnectionTestErrorCodeSchema
->;
-export type McpConnectionLiveDetails = z.infer<
-  typeof mcpConnectionLiveDetailsSchema
->;
-export type McpConnection = z.infer<typeof mcpConnectionSchema>;
 export type McpConnectionResponse = z.infer<typeof mcpConnectionResponseSchema>;
 export type McpConnectionsResponse = z.infer<
   typeof mcpConnectionsResponseSchema
@@ -621,12 +405,6 @@ export type McpConnectionReconnectResult = z.infer<
 >;
 export type McpConnectionOauthConnectResponse = z.infer<
   typeof mcpConnectionOauthConnectResponseSchema
->;
-export type ApproveMcpOauthAuthorizationBody = z.infer<
-  typeof approveMcpOauthAuthorizationBodySchema
->;
-export type McpOauthAuthorizationLaunchResponse = z.infer<
-  typeof mcpOauthAuthorizationLaunchResponseSchema
 >;
 export type McpAttachmentResponse = z.infer<typeof mcpAttachmentResponseSchema>;
 export type McpAttachmentsResponse = z.infer<

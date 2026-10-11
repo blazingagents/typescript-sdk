@@ -71,7 +71,7 @@ function hasProviderModelPair(input: {
   return (input.model === null) === (input.providerId === null);
 }
 
-export const agentSchema = z
+export const agentResponseSchema = z
   .object({
     ...approvalFields,
     id: agentIdSchema,
@@ -105,9 +105,8 @@ export const agentSchema = z
     path: ["providerId"],
   });
 
-export const agentsResponseSchema = paginatedResponseSchema(agentSchema);
-
-export const agentResponseSchema = agentSchema;
+export const agentsResponseSchema =
+  paginatedResponseSchema(agentResponseSchema);
 
 export const agentsListQuerySchema = z
   .object({
@@ -126,17 +125,17 @@ export const agentsListQuerySchema = z
 export const agentConfigSchema = z
   .object({
     ...approvalFields,
-    name: agentSchema.shape.name,
-    model: agentSchema.shape.model,
-    thinkingLevel: agentSchema.shape.thinkingLevel,
-    providerId: agentSchema.shape.providerId,
-    autoCompaction: agentSchema.shape.autoCompaction,
-    compactionReserveTokens: agentSchema.shape.compactionReserveTokens,
-    memoryInjectionEnabled: agentSchema.shape.memoryInjectionEnabled,
-    tools: agentSchema.shape.tools,
-    instructions: agentSchema.shape.instructions,
-    metadata: agentSchema.shape.metadata,
-    mcpConnectionIds: agentSchema.shape.mcpConnectionIds,
+    name: agentResponseSchema.shape.name,
+    model: agentResponseSchema.shape.model,
+    thinkingLevel: agentResponseSchema.shape.thinkingLevel,
+    providerId: agentResponseSchema.shape.providerId,
+    autoCompaction: agentResponseSchema.shape.autoCompaction,
+    compactionReserveTokens: agentResponseSchema.shape.compactionReserveTokens,
+    memoryInjectionEnabled: agentResponseSchema.shape.memoryInjectionEnabled,
+    tools: agentResponseSchema.shape.tools,
+    instructions: agentResponseSchema.shape.instructions,
+    metadata: agentResponseSchema.shape.metadata,
+    mcpConnectionIds: agentResponseSchema.shape.mcpConnectionIds,
   })
   .strip()
   .refine(hasProviderModelPair, {
@@ -155,7 +154,7 @@ export const createAgentBodySchema = z
     workspaceTier: workspaceTierSchema.optional(),
     autoCompaction: z.boolean().default(true),
     compactionReserveTokens:
-      agentSchema.shape.compactionReserveTokens.default(16_384),
+      agentResponseSchema.shape.compactionReserveTokens.default(16_384),
     memoryInjectionEnabled: z.boolean().default(false),
     tools: agentToolsSchema.default([]),
     instructions: agentInstructionsSchema.default(""),
@@ -188,7 +187,7 @@ export const updateAgentBodySchema = z
     workspaceId: workspaceIdSchema.optional(),
     autoCompaction: z.boolean().optional(),
     compactionReserveTokens:
-      agentSchema.shape.compactionReserveTokens.optional(),
+      agentResponseSchema.shape.compactionReserveTokens.optional(),
     memoryInjectionEnabled: z.boolean().optional(),
     tools: agentToolsSchema.optional(),
     instructions: agentInstructionsSchema.optional(),
@@ -218,11 +217,10 @@ export const updateAgentBodySchema = z
     }
   );
 
-export type Agent = z.infer<typeof agentSchema>;
+export type Agent = z.infer<typeof agentResponseSchema>;
 export type AgentsResponse = z.infer<typeof agentsResponseSchema>;
 export type AgentResponse = z.infer<typeof agentResponseSchema>;
 export type AgentsListQuery = z.infer<typeof agentsListQuerySchema>;
 export type AgentConfig = z.infer<typeof agentConfigSchema>;
-export type AgentStatus = z.infer<typeof agentStatusSchema>;
 export type CreateAgentBody = z.input<typeof createAgentBodySchema>;
 export type UpdateAgentBody = z.input<typeof updateAgentBodySchema>;

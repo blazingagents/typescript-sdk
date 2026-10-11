@@ -2,30 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   createProviderBodySchema,
-  providerHistoricalUseDetailsSchema,
   providerModelsResponseSchema,
   providerResponseSchema,
-  providerSchema,
   providersResponseSchema,
   providerTypeSchema,
   updateProviderBodySchema,
 } from "./providers.ts";
-
-describe("providerHistoricalUseDetailsSchema", () => {
-  it("identifies saved Sessions and active TaskRuns", () => {
-    const details = {
-      sessionIds: ["ss_0123456789abcdef"],
-      taskRunIds: ["tr_0123456789abcdef"],
-    };
-    expect(providerHistoricalUseDetailsSchema.parse(details)).toEqual(details);
-    expect(
-      providerHistoricalUseDetailsSchema.safeParse({
-        ...details,
-        taskRunIds: ["tk_0123456789abcdef"],
-      }).success
-    ).toBe(false);
-  });
-});
 
 describe("providerModelsResponseSchema", () => {
   it("accepts the normalized models envelope", () => {
@@ -81,34 +63,6 @@ describe("providerTypeSchema", () => {
 
   it("rejects unknown types", () => {
     expect(providerTypeSchema.safeParse("vertex").success).toBe(false);
-  });
-});
-
-describe("providerSchema", () => {
-  it("accepts a complete stored row", () => {
-    expect(providerSchema.safeParse(baseProvider).success).toBe(true);
-  });
-
-  it("accepts a baseUrl override", () => {
-    expect(
-      providerSchema.safeParse({
-        ...baseProvider,
-        baseUrl: "https://api.example.com/v1",
-      }).success
-    ).toBe(true);
-  });
-
-  it("rejects extra fields", () => {
-    expect(
-      providerSchema.safeParse({ ...baseProvider, extra: true }).success
-    ).toBe(false);
-  });
-
-  it("rejects an overlong keyFragment", () => {
-    expect(
-      providerSchema.safeParse({ ...baseProvider, keyFragment: "abcde" })
-        .success
-    ).toBe(false);
   });
 });
 

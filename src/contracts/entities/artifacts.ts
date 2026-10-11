@@ -6,10 +6,7 @@ import {
   sessionIdSchema,
   tenantIdSchema,
 } from "../ids.ts";
-import {
-  MAX_ARTIFACT_BYTES,
-  MAX_ARTIFACT_PUBLICATIONS_PER_CALL,
-} from "../limitations.ts";
+import { MAX_ARTIFACT_BYTES } from "../limitations.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
 export const artifactFilenameSchema = z
@@ -42,45 +39,6 @@ export const artifactsListResponseSchema = paginatedResponseSchema(
   artifactListItemSchema
 );
 
-export const artifactsListQuerySchema = z
-  .object({
-    agentId: agentIdSchema.optional(),
-    sessionId: sessionIdSchema.optional(),
-    cursor: z.string().nullable().optional(),
-  })
-  .strict();
-
-export const publishArtifactsInputSchema = z
-  .object({
-    paths: z
-      .array(z.string().trim().min(1))
-      .min(1)
-      .max(MAX_ARTIFACT_PUBLICATIONS_PER_CALL),
-  })
-  .strict();
-
-export const publishArtifactResultSchema = z.union([
-  z
-    .object({
-      artifactId: artifactIdSchema,
-      path: z.string().trim().min(1),
-    })
-    .strip(),
-  z
-    .object({
-      error: z.literal(true),
-      message: z.string().trim().min(1),
-      path: z.string().trim().min(1),
-    })
-    .strip(),
-]);
-
-export const publishArtifactsOutputSchema = z
-  .object({
-    results: z.array(publishArtifactResultSchema).min(1),
-  })
-  .strip();
-
 export const artifactDownloadUrlResponseSchema = z
   .object({
     url: z.url(),
@@ -90,12 +48,6 @@ export const artifactDownloadUrlResponseSchema = z
 
 export type ArtifactListItem = z.infer<typeof artifactListItemSchema>;
 export type ArtifactsListResponse = z.infer<typeof artifactsListResponseSchema>;
-export type ArtifactsListQuery = z.infer<typeof artifactsListQuerySchema>;
-export type PublishArtifactsInput = z.infer<typeof publishArtifactsInputSchema>;
-export type PublishArtifactResult = z.infer<typeof publishArtifactResultSchema>;
-export type PublishArtifactsOutput = z.infer<
-  typeof publishArtifactsOutputSchema
->;
 export type ArtifactDownloadUrlResponse = z.infer<
   typeof artifactDownloadUrlResponseSchema
 >;

@@ -2,17 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   copySkillBodySchema,
   createSkillBodySchema,
-  parseSkillMarkdownFrontmatter,
-  skillArchiveTypeSchema,
   skillCopyResultSchema,
   skillDetailSchema,
   skillFilePathSchema,
-  skillFrontmatterSchema,
   skillNameSchema,
   skillSchema,
-  skillsListQuerySchema,
-  skillsListResponseSchema,
-  skillUploadBodySchema,
 } from "./skills.ts";
 
 const iso = "2026-07-04T00:00:00.000Z";
@@ -51,17 +45,6 @@ describe("Agent-owned Skill resources", () => {
       "userId"
     );
   });
-
-  it("defines the accepted cursor page", () => {
-    expect(skillsListQuerySchema.parse({})).toEqual({ limit: 50 });
-    expect(
-      skillsListQuerySchema.parse({ cursor: "opaque", limit: "100" })
-    ).toEqual({ cursor: "opaque", limit: 100 });
-    expect(skillsListQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
-    expect(
-      skillsListResponseSchema.parse({ data: [skill], nextCursor: null })
-    ).toEqual({ data: [skill], nextCursor: null });
-  });
 });
 
 describe("Skill creation, upload, file, and copy contracts", () => {
@@ -79,17 +62,6 @@ describe("Skill creation, upload, file, and copy contracts", () => {
       createSkillBodySchema.safeParse({ path: "nested/SKILL.md", content: "" })
         .success
     ).toBe(false);
-  });
-
-  it("accepts exactly zip, tar, and tar.gz archives", () => {
-    expect(skillArchiveTypeSchema.options).toEqual(["zip", "tar", "tar.gz"]);
-    expect(
-      skillUploadBodySchema.parse({
-        type: "tar.gz",
-        file: new File(["bytes"], "skill.tgz"),
-      }).type
-    ).toBe("tar.gz");
-    expect(skillArchiveTypeSchema.safeParse("tgz").success).toBe(false);
   });
 
   it.each(["SKILL.md", "references/guide.md", ".config/file"])(
@@ -178,77 +150,5 @@ describe("SKILL.md frontmatter", () => {
     "x".repeat(65),
   ])("rejects invalid or reserved name %s", (name) => {
     expect(skillNameSchema.safeParse(name).success).toBe(false);
-  });
-
-  it("accepts exactly the six official fields", () => {
-    const frontmatter = {
-      name: "ppt-writer",
-      description: "Creates decks.",
-      license: "MIT",
-      compatibility: "Requires PowerPoint.",
-      metadata: { author: "Blazing Agents" },
-      "allowed-tools": "read write",
-    };
-    expect(skillFrontmatterSchema.parse(frontmatter)).toEqual(frontmatter);
-    expect(
-      skillFrontmatterSchema.safeParse({ ...frontmatter, unknown: true })
-        .success
-    ).toBe(false);
-  });
-
-  it("requires string-to-string metadata and bounded compatibility", () => {
-    expect(
-      skillFrontmatterSchema.safeParse({
-        name: "ppt-writer",
-        description: "Creates decks.",
-        metadata: { version: 1 },
-      }).success
-    ).toBe(false);
-    expect(
-      skillFrontmatterSchema.safeParse({
-        name: "ppt-writer",
-        description: "Creates decks.",
-        compatibility: "x".repeat(501),
-      }).success
-    ).toBe(false);
-  });
-
-  it("parses CRLF YAML and preserves optional official fields", () => {
-    expect(
-      parseSkillMarkdownFrontmatter(
-        [
-          "---",
-          "name: ppt-writer",
-          "description: Creates decks.",
-          "license: MIT",
-          "metadata:",
-          "  author: Blazing Agents",
-          "allowed-tools: read write",
-          "---",
-          "# Usage",
-        ].join("\r\n")
-      )
-    ).toEqual({
-      frontmatter: {
-        name: "ppt-writer",
-        description: "Creates decks.",
-        license: "MIT",
-        metadata: { author: "Blazing Agents" },
-        "allowed-tools": "read write",
-      },
-      success: true,
-    });
-  });
-
-  it("rejects missing, malformed, non-object, unknown, and invalid frontmatter", () => {
-    for (const content of [
-      "# Skill",
-      "---\n[bad\n---\n",
-      "---\n- not\n- an-object\n---\n",
-      "---\nname: valid\ndescription: Valid.\nunknown: true\n---\n",
-      "---\nname: -bad\ndescription: Valid.\n---\n",
-    ]) {
-      expect(parseSkillMarkdownFrontmatter(content).success).toBe(false);
-    }
   });
 });

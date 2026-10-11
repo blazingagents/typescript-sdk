@@ -1,11 +1,7 @@
 import { z } from "zod";
-import { cursorSchema, paginatedResponseSchema } from "../api.ts";
+import { paginatedResponseSchema } from "../api.ts";
 import { tenantIdSchema, workspaceIdSchema } from "../ids.ts";
-import {
-  DEFAULT_WORKSPACES_LIST_LIMIT,
-  MAX_WORKSPACE_NAME_LENGTH,
-  MAX_WORKSPACES_LIST_LIMIT,
-} from "../limitations.ts";
+import { MAX_WORKSPACE_NAME_LENGTH } from "../limitations.ts";
 import { hasObjectKeys } from "../utils.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 
@@ -69,19 +65,6 @@ export const updateWorkspaceBodySchema = z
   .strict()
   .refine(hasObjectKeys, { message: "At least one field is required." });
 
-export const workspaceListQuerySchema = z
-  .object({
-    cursor: cursorSchema.optional(),
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_WORKSPACES_LIST_LIMIT)
-      .default(DEFAULT_WORKSPACES_LIST_LIMIT),
-    userId: userIdSchema.optional(),
-  })
-  .strict();
-
 export const workspacesListResponseSchema =
   paginatedResponseSchema(workspaceSchema);
 
@@ -92,7 +75,6 @@ export type WorkspaceNetworkPolicy = z.infer<
 >;
 export type CreateWorkspaceBody = z.input<typeof createWorkspaceBodySchema>;
 export type UpdateWorkspaceBody = z.infer<typeof updateWorkspaceBodySchema>;
-export type WorkspaceListQuery = z.infer<typeof workspaceListQuerySchema>;
 export type WorkspacesListResponse = z.infer<
   typeof workspacesListResponseSchema
 >;

@@ -4,11 +4,7 @@ import {
   artifactDownloadUrlResponseSchema,
   artifactFilenameSchema,
   artifactListItemSchema,
-  artifactsListQuerySchema,
   artifactsListResponseSchema,
-  publishArtifactResultSchema,
-  publishArtifactsInputSchema,
-  publishArtifactsOutputSchema,
 } from "./artifacts.ts";
 
 const tenantId = "ten_xxxxxxxxxxxxxxxx";
@@ -62,79 +58,6 @@ describe("active Artifact responses", () => {
         nextCursor: "next",
       })
     ).toStrictEqual({ data: [artifact], nextCursor: "next" });
-  });
-
-  it("accepts Tenant-list provenance filters", () => {
-    expect(
-      artifactsListQuerySchema.parse({ agentId, sessionId, cursor: null })
-    ).toStrictEqual({ agentId, sessionId, cursor: null });
-  });
-});
-
-describe("Artifact publication contracts", () => {
-  it("accepts one to ten paths, including duplicate basenames", () => {
-    expect(
-      publishArtifactsInputSchema.parse({
-        paths: ["/reports/final.txt", "/notes/final.txt"],
-      })
-    ).toEqual({ paths: ["/reports/final.txt", "/notes/final.txt"] });
-    expect(publishArtifactsInputSchema.safeParse({ paths: [] }).success).toBe(
-      false
-    );
-    expect(
-      publishArtifactsInputSchema.safeParse({
-        paths: Array.from({ length: 11 }, (_, index) => `/${index}.txt`),
-      }).success
-    ).toBe(false);
-  });
-
-  it("rejects blank paths and extra input fields", () => {
-    expect(
-      publishArtifactsInputSchema.safeParse({ paths: [" "] }).success
-    ).toBe(false);
-    expect(
-      publishArtifactsInputSchema.safeParse({
-        paths: ["/report.txt"],
-        filename: "renamed.txt",
-      }).success
-    ).toBe(false);
-  });
-
-  it("returns one success or failure per path", () => {
-    expect(
-      publishArtifactsOutputSchema.parse({
-        results: [
-          {
-            path: "/report.txt",
-            artifactId,
-          },
-          {
-            path: "/missing.txt",
-            error: true,
-            message: "Workspace file not found",
-          },
-        ],
-      })
-    ).toStrictEqual({
-      results: [
-        {
-          path: "/report.txt",
-          artifactId,
-        },
-        {
-          path: "/missing.txt",
-          error: true,
-          message: "Workspace file not found",
-        },
-      ],
-    });
-    expect(
-      publishArtifactResultSchema.parse({
-        artifactId,
-        path: "/report.txt",
-        filename: "report.txt",
-      })
-    ).not.toHaveProperty("filename");
   });
 });
 

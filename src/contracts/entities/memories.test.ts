@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   createMemoryBodySchema,
-  memoriesListQuerySchema,
   memoriesListResponseSchema,
   memoryResponseSchema,
   memorySchema,
@@ -91,33 +90,6 @@ describe("memoryResponseSchema", () => {
 });
 
 describe("memory list contracts", () => {
-  it("defaults to a 50-row browse page and validates the paginated response", () => {
-    expect(memoriesListQuerySchema.parse({})).toStrictEqual({ limit: 50 });
-    expect(
-      memoriesListResponseSchema.parse({ data: [baseMemory], nextCursor: null })
-    ).toStrictEqual({ data: [baseMemory], nextCursor: null });
-  });
-
-  it("preserves an explicit general partition and trims search text", () => {
-    expect(
-      memoriesListQuerySchema.parse({ userId: "", search: "  dark mode  " })
-    ).toStrictEqual({ userId: "", search: "dark mode", limit: 50 });
-  });
-
-  it("coerces valid limits and rejects invalid list query values", () => {
-    expect(memoriesListQuerySchema.parse({ limit: "100" }).limit).toBe(100);
-    expect(memoriesListQuerySchema.safeParse({ limit: 101 }).success).toBe(
-      false
-    );
-    expect(memoriesListQuerySchema.safeParse({ limit: 0 }).success).toBe(false);
-    expect(memoriesListQuerySchema.safeParse({ search: "   " }).success).toBe(
-      false
-    );
-    expect(memoriesListQuerySchema.safeParse({ cursor: "   " }).success).toBe(
-      false
-    );
-  });
-
   it("strips unknown nested memory fields", () => {
     expect(
       memoriesListResponseSchema.parse({

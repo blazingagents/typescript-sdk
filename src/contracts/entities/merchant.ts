@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { cursorSchema } from "../api.ts";
 import {
   agentIdSchema,
   merchantConnectionIdSchema,
@@ -9,9 +8,7 @@ import {
   turnIdSchema,
 } from "../ids.ts";
 import {
-  DEFAULT_MERCHANT_LIST_LIMIT,
   DEFAULT_MERCHANT_USAGE_SUMMARY_DAYS,
-  MAX_MERCHANT_LIST_LIMIT,
   MAX_MERCHANT_PRODUCT_IDS,
   MAX_MERCHANT_USAGE_SUMMARY_DAYS,
 } from "../limitations.ts";
@@ -112,19 +109,6 @@ export type MerchantCustomerBinding = z.infer<
   typeof merchantCustomerBindingSchema
 >;
 
-export const merchantBindingsListQuerySchema = z
-  .object({
-    userId: userIdSchema.optional(),
-    cursor: cursorSchema.optional(),
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_MERCHANT_LIST_LIMIT)
-      .default(DEFAULT_MERCHANT_LIST_LIMIT),
-  })
-  .strict();
-
 export const merchantBindingsResponseSchema = z
   .object({
     bindings: z.array(merchantCustomerBindingSchema),
@@ -215,19 +199,6 @@ export const merchantUsageEventResponseSchema = z
 export type MerchantUsageEventResponse = z.infer<
   typeof merchantUsageEventResponseSchema
 >;
-
-export const merchantUsageEventsListQuerySchema = z
-  .object({
-    status: merchantUsageEventStatusSchema.optional(),
-    cursor: cursorSchema.optional(),
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_MERCHANT_LIST_LIMIT)
-      .default(DEFAULT_MERCHANT_LIST_LIMIT),
-  })
-  .strict();
 
 export const merchantUsageEventsResponseSchema = z
   .object({

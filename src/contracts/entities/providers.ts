@@ -1,11 +1,5 @@
 import { z } from "zod";
-import {
-  providerIdSchema,
-  providerKeyFragmentSchema,
-  sessionIdSchema,
-  taskRunIdSchema,
-  tenantIdSchema,
-} from "../ids.ts";
+import { providerIdSchema, providerKeyFragmentSchema } from "../ids.ts";
 import { MAX_PROVIDER_NAME_LENGTH } from "../limitations.ts";
 
 /**
@@ -31,24 +25,6 @@ const providerNameSchema = z
   .max(MAX_PROVIDER_NAME_LENGTH);
 
 const providerBaseUrlSchema = z.string().trim().min(1).url().or(z.literal(""));
-
-/**
- * Stored row — the full persisted record, including the Vault pointer and
- * tenant id. Used internally by services; never sent on the wire.
- */
-export const providerSchema = z
-  .object({
-    id: providerIdSchema,
-    tenantId: tenantIdSchema,
-    name: providerNameSchema,
-    providerType: providerTypeSchema,
-    baseUrl: z.string().nullable(),
-    keyFragment: providerKeyFragmentSchema,
-    vaultSecretId: z.string().min(1),
-    createdAt: z.iso.datetime({ offset: true }),
-    updatedAt: z.iso.datetime({ offset: true }),
-  })
-  .strict();
 
 /**
  * `GET /v1/providers/{id}` wire response. The Vault pointer and tenant id
@@ -91,13 +67,6 @@ export const providerModelsResponseSchema = z
   })
   .strip();
 
-export const providerHistoricalUseDetailsSchema = z
-  .object({
-    sessionIds: z.array(sessionIdSchema),
-    taskRunIds: z.array(taskRunIdSchema),
-  })
-  .strip();
-
 /**
  * `POST /v1/providers` — name, type, optional base URL, and the API key
  * (plaintext, never stored — goes to Vault). `custom` providers require a
@@ -136,16 +105,11 @@ export const updateProviderBodySchema = z
     name: providerNameSchema,
   })
   .strict();
-
-export type Provider = z.infer<typeof providerSchema>;
 export type ProvidersResponse = z.infer<typeof providersResponseSchema>;
 export type ProviderModelsResponse = z.infer<
   typeof providerModelsResponseSchema
 >;
 export type ProviderModel = ProviderModelsResponse["models"][number];
-export type ProviderHistoricalUseDetails = z.infer<
-  typeof providerHistoricalUseDetailsSchema
->;
 export interface DeleteProviderOptions {
   confirmSnapshotInvalidation?: boolean;
 }

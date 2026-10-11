@@ -18,7 +18,6 @@ export { chatFunctionNameSchema } from "./entities/agent-tools.ts";
 export {
   agentConfigSchema,
   agentResponseSchema,
-  agentSchema,
   agentStatusSchema,
   agentsListQuerySchema,
   agentsResponseSchema,
@@ -134,7 +133,6 @@ export {
   createPromptBodySchema,
   parsePromptVariables,
   promptResponseSchema,
-  promptSchema,
   promptsListQuerySchema,
   promptsResponseSchema,
   promptTemplateSchema,
@@ -234,12 +232,10 @@ export {
   taskResponseSchema,
   taskRunMessagesResponseSchema,
   taskRunResponseSchema,
-  taskRunSchema,
   taskRunStatusSchema,
   taskRunsListResponseSchema,
   taskScheduleInputSchema,
   taskScheduleKindSchema,
-  taskSchema,
   tasksListResponseSchema,
   updateTaskBodySchema,
 } from "./entities/tasks.ts";

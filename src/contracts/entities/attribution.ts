@@ -28,6 +28,3 @@ export const attributionCreateInputSchema = z
     metadata: metadataSchema.default({}),
   })
   .strict();
-
-export type UserId = z.infer<typeof userIdSchema>;
-export type Metadata = z.infer<typeof metadataSchema>;

@@ -131,8 +131,6 @@ export const taskScheduleInputSchema = z.discriminatedUnion("kind", [
     .strict(),
 ]);
 
-export type TaskScheduleInput = z.infer<typeof taskScheduleInputSchema>;
-
 const taskNameSchema = z.string().trim().min(1).max(MAX_TASK_NAME_LENGTH);
 const taskPromptSchema = z.string().trim().min(1).max(MAX_TASK_PROMPT_LENGTH);
 
@@ -203,7 +201,7 @@ const taskScheduleResponseSchema = z.discriminatedUnion("kind", [
 ]);
 
 // The task record — pure definition; state lives in its runs.
-export const taskSchema = z
+export const taskResponseSchema = z
   .object({
     id: taskIdSchema,
     tenantId: tenantIdSchema,
@@ -232,28 +230,18 @@ export const taskLatestRunSchema = z
   })
   .strip();
 
-export const taskListItemSchema = taskSchema.extend({
+export const taskListItemSchema = taskResponseSchema.extend({
   latestRun: taskLatestRunSchema.nullable(),
 });
 
 export const tasksListResponseSchema =
   paginatedResponseSchema(taskListItemSchema);
 
-export const tasksListQuerySchema = z
-  .object({
-    agentId: agentIdSchema.optional(),
-    userId: z.string().optional(),
-    cursor: z.string().nullable().optional(),
-  })
-  .strict();
-
-export const taskResponseSchema = taskSchema;
-
 /**
  * Task run record. `userId`/`metadata` are copied from the task at enqueue
  * and carried onto the run's Session and usage facts.
  */
-export const taskRunSchema = z
+export const taskRunResponseSchema = z
   .object({
     id: taskRunIdSchema,
     taskId: taskIdSchema,
@@ -275,15 +263,14 @@ export const taskRunSchema = z
   })
   .strip();
 
-export const taskRunResponseSchema = taskRunSchema;
-
-export const taskRunsListResponseSchema =
-  paginatedResponseSchema(taskRunSchema);
+export const taskRunsListResponseSchema = paginatedResponseSchema(
+  taskRunResponseSchema
+);
 
 // `POST /v1/tasks` response — the created task + optional queued run id.
 export const createTaskResponseSchema = z
   .object({
-    task: taskSchema,
+    task: taskResponseSchema,
     runId: taskRunIdSchema.nullable(),
   })
   .strip();
@@ -306,16 +293,9 @@ export const taskRunMessagesResponseSchema = sessionMessagesResponseSchema
     status: taskRunStatusSchema,
   })
   .strip();
-
-export type Task = z.infer<typeof taskSchema>;
-export type TaskListItem = z.infer<typeof taskListItemSchema>;
-export type TaskLatestRun = z.infer<typeof taskLatestRunSchema>;
 export type TasksListResponse = z.infer<typeof tasksListResponseSchema>;
-export type TasksListQuery = z.infer<typeof tasksListQuerySchema>;
 export type TaskResponse = z.infer<typeof taskResponseSchema>;
-export type TaskRun = z.infer<typeof taskRunSchema>;
 export type TaskRunResponse = z.infer<typeof taskRunResponseSchema>;
-export type TaskRunStatus = z.infer<typeof taskRunStatusSchema>;
 export type TaskRunsListResponse = z.infer<typeof taskRunsListResponseSchema>;
 export type CreateTaskBody = z.input<typeof createTaskBodySchema>;
 export type UpdateTaskBody = z.infer<typeof updateTaskBodySchema>;
@@ -325,4 +305,3 @@ export type CreateTaskRunResponse = z.infer<typeof createTaskRunResponseSchema>;
 export type TaskRunMessagesResponse = z.infer<
   typeof taskRunMessagesResponseSchema
 >;
-export type TaskScheduleKind = z.infer<typeof taskScheduleKindSchema>;

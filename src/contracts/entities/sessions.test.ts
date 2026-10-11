@@ -5,7 +5,6 @@ import {
   latestSessionListItemSchema,
   latestSessionsListResponseSchema,
   sessionListItemSchema,
-  sessionMessagesQuerySchema,
   sessionMessagesResponseSchema,
   sessionResponseSchema,
   sessionsListResponseSchema,
@@ -205,42 +204,6 @@ describe("sessionMessagesResponseSchema", () => {
         nextCursor: null,
       }).success
     ).toBe(false);
-  });
-});
-
-describe("sessionMessagesQuerySchema", () => {
-  it("defaults limit to 50", () => {
-    expect(sessionMessagesQuerySchema.parse({}).limit).toBe(50);
-  });
-
-  it("rejects a limit over 200", () => {
-    expect(sessionMessagesQuerySchema.safeParse({ limit: 201 }).success).toBe(
-      false
-    );
-  });
-
-  it("rejects a limit under 1", () => {
-    expect(sessionMessagesQuerySchema.safeParse({ limit: 0 }).success).toBe(
-      false
-    );
-  });
-
-  it("rejects cursor and after together", () => {
-    expect(
-      sessionMessagesQuerySchema.safeParse({
-        cursor: "a",
-        after: "b",
-      }).success
-    ).toBe(false);
-  });
-
-  it("accepts cursor alone and after alone", () => {
-    expect(sessionMessagesQuerySchema.safeParse({ cursor: "a" }).success).toBe(
-      true
-    );
-    expect(sessionMessagesQuerySchema.safeParse({ after: "b" }).success).toBe(
-      true
-    );
   });
 });
 

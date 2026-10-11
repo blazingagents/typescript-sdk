@@ -1,11 +1,7 @@
 import { z } from "zod";
-import { cursorSchema, paginatedResponseSchema } from "../api.ts";
+import { paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, memoryIdSchema, tenantIdSchema } from "../ids.ts";
-import {
-  DEFAULT_MEMORIES_LIST_LIMIT,
-  MAX_MEMORIES_LIST_LIMIT,
-  MAX_MEMORY_TEXT_BYTES,
-} from "../limitations.ts";
+import { MAX_MEMORY_TEXT_BYTES } from "../limitations.ts";
 import { userIdSchema } from "./attribution.ts";
 
 /**
@@ -47,20 +43,6 @@ export const memoryResponseSchema = z
 
 export const memoriesListResponseSchema = paginatedResponseSchema(memorySchema);
 
-export const memoriesListQuerySchema = z
-  .object({
-    userId: userIdSchema.optional(),
-    search: z.string().trim().min(1).optional(),
-    cursor: cursorSchema.optional(),
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_MEMORIES_LIST_LIMIT)
-      .default(DEFAULT_MEMORIES_LIST_LIMIT),
-  })
-  .strict();
-
 export const createMemoryBodySchema = z
   .object({
     text: memoryTextSchema,
@@ -73,10 +55,7 @@ export const updateMemoryBodySchema = z
     text: memoryTextSchema,
   })
   .strict();
-
-export type Memory = z.infer<typeof memorySchema>;
 export type MemoryResponse = z.infer<typeof memoryResponseSchema>;
-export type MemoriesListQuery = z.infer<typeof memoriesListQuerySchema>;
 export type MemoriesListResponse = z.infer<typeof memoriesListResponseSchema>;
 export type CreateMemoryBody = z.input<typeof createMemoryBodySchema>;
 export type UpdateMemoryBody = z.infer<typeof updateMemoryBodySchema>;

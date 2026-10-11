@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPromptBodySchema,
   parsePromptVariables,
-  promptSchema,
+  promptResponseSchema,
   promptsResponseSchema,
   promptTemplateSchema,
   renderPromptTemplate,
@@ -72,10 +72,10 @@ describe("promptTemplateSchema", () => {
   });
 });
 
-describe("promptSchema", () => {
+describe("promptResponseSchema", () => {
   it("accepts a complete prompt record", () => {
     expect(
-      promptSchema.safeParse({
+      promptResponseSchema.safeParse({
         id: "prompt_0123456789abcdef",
         tenantId,
         agentId: null,
@@ -92,7 +92,7 @@ describe("promptSchema", () => {
 
   it("rejects a malformed prompt id", () => {
     expect(
-      promptSchema.safeParse({
+      promptResponseSchema.safeParse({
         id: "nope",
         tenantId,
         agentId: null,
@@ -109,7 +109,7 @@ describe("promptSchema", () => {
 
   it("strips extra fields", () => {
     expect(
-      promptSchema.parse({
+      promptResponseSchema.parse({
         id: "prompt_0123456789abcdef",
         tenantId,
         agentId: null,

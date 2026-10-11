@@ -30,17 +30,17 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
-    "check": "npm run typecheck && npm run test && npm run lint",
+    "check": "npm run typecheck && npm run test && npm run lint && npm run unused",
     "fix": "ultracite fix",
     "lint": "ultracite check",
     "prepack": "npm run build",
     "test": "vitest run --coverage",
     "test:consumer": "node test-consumer.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
+    "unused": "knip && knip --production --include exports,types,duplicates"
   },
   "dependencies": {
-    "croner": "10.0.1",
-    "yaml": "2.9.0"
+    "croner": "10.0.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
@@ -48,6 +48,7 @@
     "@types/node": "^26.4.0",
     "@vitest/coverage-v8": "^4.1.10",
     "ai": "^7.0.84",
+    "knip": "^6.41.0",
     "typescript": "^7.0.2",
     "ultracite": "^7.10.2",
     "vitest": "^4.1.10",

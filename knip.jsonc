@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  /** The consumer suite runs against the packed tarball in a temporary project. */
+  "entry": ["tests/consumer/*.ts", "vitest.consumer.config.mts"],
+  /** Ultracite runs the Biome binary; the consumer project pins @types/json-schema from this lockfile. */
+  "ignoreDependencies": ["@biomejs/biome", "@types/json-schema"],
+  "ignoreExportsUsedInFile": true
+}

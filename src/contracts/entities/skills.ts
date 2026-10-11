@@ -1,14 +1,10 @@
-import { parseDocument } from "yaml";
 import { z } from "zod";
-import { cursorSchema, paginatedResponseSchema } from "../api.ts";
+import { paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, skillIdSchema, tenantIdSchema } from "../ids.ts";
 import {
-  DEFAULT_SKILLS_LIST_LIMIT,
-  MAX_SKILL_COMPATIBILITY_LENGTH,
   MAX_SKILL_COPY_DESTINATIONS,
   MAX_SKILL_DESCRIPTION_LENGTH,
   MAX_SKILL_NAME_LENGTH,
-  MAX_SKILLS_LIST_LIMIT,
 } from "../limitations.ts";
 import { hasUniqueValues } from "../utils.ts";
 
@@ -31,17 +27,6 @@ export const skillDescriptionSchema = z
   .max(MAX_SKILL_DESCRIPTION_LENGTH);
 
 export const skillMetadataSchema = z.record(z.string(), z.string());
-
-export const skillFrontmatterSchema = z
-  .object({
-    name: skillNameSchema,
-    description: skillDescriptionSchema,
-    license: z.string().optional(),
-    compatibility: z.string().max(MAX_SKILL_COMPATIBILITY_LENGTH).optional(),
-    metadata: skillMetadataSchema.optional(),
-    "allowed-tools": z.string().optional(),
-  })
-  .strict();
 
 export const skillSchema = z
   .object({
@@ -85,20 +70,6 @@ export const skillDetailSchema = skillSchema
   })
   .strip();
 
-export const skillResponseSchema = skillDetailSchema;
-
-export const skillsListQuerySchema = z
-  .object({
-    cursor: cursorSchema.optional(),
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_SKILLS_LIST_LIMIT)
-      .default(DEFAULT_SKILLS_LIST_LIMIT),
-  })
-  .strict();
-
 export const skillsListResponseSchema = paginatedResponseSchema(skillSchema);
 
 export const createSkillBodySchema = z
@@ -109,13 +80,6 @@ export const createSkillBodySchema = z
   .strict();
 
 export const skillArchiveTypeSchema = z.enum(["zip", "tar", "tar.gz"]);
-
-export const skillUploadBodySchema = z
-  .object({
-    type: skillArchiveTypeSchema,
-    file: z.file(),
-  })
-  .strict();
 
 export const copySkillBodySchema = z
   .object({
@@ -158,67 +122,11 @@ export const skillCopyResultSchema = z.discriminatedUnion("status", [
 
 export const skillCopyResultsSchema = z.array(skillCopyResultSchema);
 
-export interface SkillMarkdownFrontmatterParseSuccess {
-  frontmatter: SkillFrontmatter;
-  success: true;
-}
-
-export interface SkillMarkdownFrontmatterParseFailure {
-  message: string;
-  success: false;
-}
-
-export type SkillMarkdownFrontmatterParseResult =
-  | SkillMarkdownFrontmatterParseSuccess
-  | SkillMarkdownFrontmatterParseFailure;
-
-const frontmatterPattern = /^---\n([\s\S]*?)\n---(?:\n|$)/;
-
-/**
- * Parses and validates YAML frontmatter from Skill Markdown.
- */
-export function parseSkillMarkdownFrontmatter(
-  content: string
-): SkillMarkdownFrontmatterParseResult {
-  const normalized = content.replaceAll("\r\n", "\n");
-  const match = frontmatterPattern.exec(normalized);
-
-  if (!match) {
-    return {
-      message: "SKILL.md must start with frontmatter.",
-      success: false,
-    };
-  }
-
-  const document = parseDocument(match[1]);
-  if (document.errors.length > 0) {
-    return {
-      message: `SKILL.md frontmatter is not valid YAML: ${document.errors[0].message}`,
-      success: false,
-    };
-  }
-
-  const result = skillFrontmatterSchema.safeParse(document.toJS());
-  if (!result.success) {
-    return {
-      message: "SKILL.md frontmatter does not match the accepted contract.",
-      success: false,
-    };
-  }
-
-  return { frontmatter: result.data, success: true };
-}
-
 export type Skill = z.infer<typeof skillSchema>;
 export type SkillDetail = z.infer<typeof skillDetailSchema>;
-export type SkillResponse = z.infer<typeof skillResponseSchema>;
 export type SkillFile = z.infer<typeof skillFileSchema>;
-export type SkillFrontmatter = z.infer<typeof skillFrontmatterSchema>;
-export type SkillsListQuery = z.infer<typeof skillsListQuerySchema>;
 export type SkillsListResponse = z.infer<typeof skillsListResponseSchema>;
 export type CreateSkillBody = z.infer<typeof createSkillBodySchema>;
 export type SkillArchiveType = z.infer<typeof skillArchiveTypeSchema>;
-export type SkillUploadBody = z.infer<typeof skillUploadBodySchema>;
-export type CopySkillBody = z.infer<typeof copySkillBodySchema>;
 export type SkillCopyResult = z.infer<typeof skillCopyResultSchema>;
 export type SkillCopyResults = z.infer<typeof skillCopyResultsSchema>;

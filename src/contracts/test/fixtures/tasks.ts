@@ -1,5 +1,14 @@
+import type { z } from "zod";
 import type { AgentConfig } from "../../entities/agents.ts";
-import type { Task, TaskListItem, TaskRun } from "../../entities/tasks.ts";
+import type {
+  taskListItemSchema,
+  taskResponseSchema,
+  taskRunResponseSchema,
+} from "../../entities/tasks.ts";
+
+type Task = z.infer<typeof taskResponseSchema>;
+type TaskListItem = z.infer<typeof taskListItemSchema>;
+type TaskRun = z.infer<typeof taskRunResponseSchema>;
 
 export const tenantId = "ten_xxxxxxxxxxxxxxxx";
 export const agentId = "ag_xxxxxxxxxxxxxxxx";

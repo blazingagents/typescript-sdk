@@ -1,20 +1,5 @@
 import { z } from "zod";
 
-export const clientRequestCorrelationSchema = z
-  .string()
-  .regex(/^[A-Za-z0-9._:-]{1,128}$/);
-
-export const apiErrorIssueSchema = z
-  .object({
-    code: z.string().min(1),
-    location: z.enum(["body", "path", "query", "header"]),
-    message: z.string().min(1),
-    path: z.string(),
-  })
-  .strict();
-
-export type ApiErrorIssue = z.infer<typeof apiErrorIssueSchema>;
-
 /**
  * `/v1` error envelope — see docs/adr/0003-ai-sdk-native-wire-protocol.md.
  * Closed producer code set; `code` is what SDKs switch on and `message` is
@@ -105,24 +90,6 @@ export const apiErrorCodeSchema = z.enum([
   "tenant_not_deleting",
 ]);
 
-export const apiErrorSchema = z
-  .object({
-    code: apiErrorCodeSchema,
-    details: z
-      .record(z.string(), z.unknown())
-      .refine((value) => Object.keys(value).length > 0)
-      .optional(),
-    message: z.string().min(1),
-    param: z.string().optional(),
-  })
-  .strict();
-
-export const apiErrorResponseSchema = z
-  .object({
-    error: apiErrorSchema,
-  })
-  .strict();
-
 const receivedApiErrorCodeSchema = z.string().min(1);
 
 const receivedApiErrorSchema = z
@@ -141,48 +108,6 @@ export const receivedApiErrorResponseSchema = z
   .passthrough();
 
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
-export type ApiError = z.infer<typeof apiErrorSchema>;
-export type ApiErrorResponse = z.infer<typeof apiErrorResponseSchema>;
-export type ReceivedApiErrorCode = z.infer<typeof receivedApiErrorCodeSchema>;
-
-export interface ApiErrorOptions {
-  details?: Record<string, unknown>;
-  param?: string;
-}
-
-/**
- * Builds an API error envelope with optional parameter and detail fields.
- * @param code - API error code for programmatic handling.
- * @param message - Human-readable error description.
- * @param options - Configuration for this operation.
- */
-export function apiError(
-  code: ApiErrorCode,
-  message: string,
-  options: ApiErrorOptions = {}
-): ApiErrorResponse {
-  return {
-    error: {
-      code,
-      ...(options.details && Object.keys(options.details).length > 0
-        ? { details: options.details }
-        : {}),
-      message,
-      ...(options.param === undefined ? {} : { param: options.param }),
-    },
-  };
-}
-
-/**
- * Cursor pagination — `{ data, nextCursor }` on unbounded list surfaces,
- * including sessions, transcripts, artifacts, and memories.
- * `nextCursor` is opaque (base64 of the keyset); `null` means no more pages.
- * @param data - Response data to wrap in the success envelope.
- * @param nextCursor - Next Cursor.
- */
-export function paginatedResponse<T>(data: T[], nextCursor: string | null) {
-  return { data, nextCursor };
-}
 
 export const cursorSchema = z.string().trim().min(1);
 
@@ -197,77 +122,4 @@ export function paginatedResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
       nextCursor: z.string().nullable(),
     })
     .strip();
-}
-
-/**
- * Opaque keyset cursor helpers. Cursors are base64url-encoded JSON of the
- * keyset tuple the endpoint paginates by — never a raw value, never a row
- * id alone. The repo-wide pattern: keyset-backed `{ data, nextCursor }`,
- * mapping 1:1 onto `useInfiniteQuery`. Decode failures surface as
- * `INVALID_CURSOR` (the caller wraps the throw).
- */
-export class CursorDecodeError extends Error {
-  readonly errorCode = "INVALID_CURSOR";
-  readonly statusCode = 400;
-  /**
-   * Creates the error with the supplied message.
-   * @param message - Human-readable error description.
-   * @param options - Configuration for this operation.
-   */
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "CursorDecodeError";
-  }
-}
-
-const BASE64_PLUS = /\+/g;
-const BASE64_SLASH = /\//g;
-const BASE64_PADDING = /[=]+$/;
-const BASE64_DASH = /-/g;
-const BASE64_UNDERSCORE = /_/g;
-
-/**
- * Encodes a cursor payload as URL-safe base64 JSON.
- * @param payload - JSON-serializable cursor fields. This function does not validate them.
- */
-export function encodeCursor(payload: Record<string, unknown>): string {
-  const json = JSON.stringify(payload);
-  const bytes = new TextEncoder().encode(json);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary)
-    .replace(BASE64_PLUS, "-")
-    .replace(BASE64_SLASH, "_")
-    .replace(BASE64_PADDING, "");
-}
-
-/**
- * Decodes and validates a URL-safe base64 JSON cursor.
- * @param cursor - URL-safe base64 JSON cursor to decode.
- */
-export function decodeCursor(cursor: string): Record<string, unknown> {
-  let json: string;
-  try {
-    const binary = atob(
-      cursor.replace(BASE64_DASH, "+").replace(BASE64_UNDERSCORE, "/")
-    );
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    json = new TextDecoder().decode(bytes);
-    const parsed = JSON.parse(json) as unknown;
-    if (
-      parsed === null ||
-      typeof parsed !== "object" ||
-      Array.isArray(parsed)
-    ) {
-      throw new Error("cursor payload is not an object");
-    }
-    return parsed as Record<string, unknown>;
-  } catch (cause) {
-    throw new CursorDecodeError("Invalid cursor", { cause });
-  }
 }

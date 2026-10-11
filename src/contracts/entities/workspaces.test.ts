@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   createWorkspaceBodySchema,
   updateWorkspaceBodySchema,
-  workspaceListQuerySchema,
   workspaceNetworkPolicySchema,
   workspaceSchema,
-  workspacesListResponseSchema,
 } from "./workspaces.ts";
 
 const workspace = {
@@ -94,26 +92,6 @@ describe("Workspace contracts", () => {
     expect(
       createWorkspaceBodySchema.safeParse({ runtimeId: "private" }).success
     ).toBe(false);
-  });
-
-  it("supports keyset listing and Attribution filtering", () => {
-    expect(workspaceListQuerySchema.parse({})).toEqual({ limit: 50 });
-    expect(
-      workspaceListQuerySchema.parse({
-        cursor: "opaque",
-        limit: "200",
-        userId: "user-42",
-      })
-    ).toEqual({ cursor: "opaque", limit: 200, userId: "user-42" });
-    expect(workspaceListQuerySchema.safeParse({ limit: 201 }).success).toBe(
-      false
-    );
-    expect(
-      workspacesListResponseSchema.parse({
-        data: [workspace],
-        nextCursor: null,
-      })
-    ).toEqual({ data: [workspace], nextCursor: null });
   });
 
   it("requires a mutable update and permits changing the network policy", () => {

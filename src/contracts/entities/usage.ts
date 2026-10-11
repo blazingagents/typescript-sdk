@@ -275,8 +275,6 @@ export function usageOverviewResponseSchemaForQuery(
     }
   });
 }
-
-export type UsageGroupBy = z.infer<typeof usageGroupBySchema>;
 export type UsageQuery = z.infer<typeof usageQuerySchema>;
 export type UsageBucket = z.infer<typeof usageBucketSchema>;
 export type UsageTotals = z.infer<typeof usageTotalsSchema>;

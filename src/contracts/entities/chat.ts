@@ -11,12 +11,10 @@ import {
 import { chatFunctionNameSchema } from "./agent-tools.ts";
 import { agentModelIdSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
-
 /**
  * Re-exported AI SDK types — every service, the SDK, and the dashboard
  * consume these from one place.
  */
-export type { UIMessage, UIMessageChunk } from "ai";
 
 export const chatModeSchema = z.enum(["create", "resume"]);
 export const chatTriggerSchema = z.enum([
@@ -335,30 +333,10 @@ export const generationRequestBodySchema = z
       path: ["prompt"],
     }
   );
-
-/**
- * Mid-stream error chunk — the AI SDK native `{ type: 'error', errorText }`
- * shape (docs/adr/0003-ai-sdk-native-wire-protocol.md). `errorText` is a plain string:
- * safe human-readable prose produced by our server-side `onError` mapping —
- * no JSON stuffed in the string, no client-side parsing. `useChat` routes it
- * to `onError`, never into the transcript.
- */
-export const chatStreamErrorChunkSchema = z
-  .object({
-    type: z.literal("error"),
-    errorText: z.string(),
-  })
-  .strip();
-
-export type ChatMode = z.infer<typeof chatModeSchema>;
-export type ChatTrigger = z.infer<typeof chatTriggerSchema>;
 export type UsageSummary = z.infer<typeof usageSummarySchema>;
 export type BlazingAgentsChatMessageMetadata = z.infer<
   typeof blazingAgentsChatMessageMetadataSchema
 >;
-export type ChatRequestBody = z.infer<typeof chatRequestBodySchema>;
-export type GenerationRequestBody = z.infer<typeof generationRequestBodySchema>;
-export type ChatStreamErrorChunk = z.infer<typeof chatStreamErrorChunkSchema>;
 export type PromptVariables = z.infer<typeof promptVariablesSchema>;
 export type ChatFunctionDefinition = z.infer<
   typeof chatFunctionDefinitionSchema

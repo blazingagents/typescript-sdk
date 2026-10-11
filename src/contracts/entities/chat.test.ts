@@ -1,15 +1,16 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod";
 
 import {
   blazingAgentsChatMessageMetadataSchema,
-  type ChatRequestBody,
   chatModeSchema,
   chatRequestBodySchema,
-  chatStreamErrorChunkSchema,
   chatTriggerSchema,
-  type GenerationRequestBody,
   generationRequestBodySchema,
 } from "./chat.ts";
+
+type ChatRequestBody = z.infer<typeof chatRequestBodySchema>;
+type GenerationRequestBody = z.infer<typeof generationRequestBodySchema>;
 
 const sessionId = "ss_xxxxxxxxxxxxxxxx";
 
@@ -412,50 +413,5 @@ describe("generationRequestBodySchema", () => {
         output: { type: "object", schema },
       }).success
     ).toBe(false);
-  });
-});
-
-describe("chatStreamErrorChunkSchema", () => {
-  it("accepts the wire chunk shape { type: 'error', errorText }", () => {
-    expect(
-      chatStreamErrorChunkSchema.safeParse({
-        type: "error",
-        errorText: "Session not found.",
-      }).success
-    ).toBe(true);
-  });
-
-  it("rejects a non-string errorText (no JSON stuffed in the string)", () => {
-    expect(
-      chatStreamErrorChunkSchema.safeParse({
-        type: "error",
-        errorText: { code: "session_not_found" },
-      }).success
-    ).toBe(false);
-  });
-
-  it("rejects a chunk missing errorText", () => {
-    expect(
-      chatStreamErrorChunkSchema.safeParse({ type: "error" }).success
-    ).toBe(false);
-  });
-
-  it("rejects a chunk with the wrong type literal", () => {
-    expect(
-      chatStreamErrorChunkSchema.safeParse({
-        type: "data",
-        errorText: "x",
-      }).success
-    ).toBe(false);
-  });
-
-  it("strips extra fields", () => {
-    expect(
-      chatStreamErrorChunkSchema.parse({
-        type: "error",
-        errorText: "x",
-        code: "session_not_found",
-      })
-    ).not.toHaveProperty("code");
   });
 });

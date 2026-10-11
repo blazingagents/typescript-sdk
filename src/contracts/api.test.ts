@@ -19,6 +19,7 @@ describe("apiErrorCodeSchema", () => {
       "validation_failed",
       "unauthorized",
       "forbidden",
+      "insufficient_scope",
       "not_found",
       "quota_exceeded",
       "model_spending_limit_exceeded",

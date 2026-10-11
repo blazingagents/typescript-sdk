@@ -73,19 +73,28 @@ describe("id schemas", () => {
     );
   });
 
-  it("apiKeyTokenSchema accepts ba_ + 40 base62", () => {
-    expect(apiKeyTokenSchema.safeParse(`ba_${"x".repeat(40)}`).success).toBe(
-      true
-    );
+  it("apiKeyTokenSchema accepts ba_read_ and ba_full_ + 40 base62", () => {
+    expect(
+      apiKeyTokenSchema.safeParse(`ba_read_${"x".repeat(40)}`).success
+    ).toBe(true);
+    expect(
+      apiKeyTokenSchema.safeParse(`ba_full_${"x".repeat(40)}`).success
+    ).toBe(true);
   });
 
-  it("apiKeyTokenSchema rejects wrong length and prefix", () => {
-    expect(apiKeyTokenSchema.safeParse(`ba_${"x".repeat(39)}`).success).toBe(
+  it("apiKeyTokenSchema rejects legacy tokens, wrong length and prefix", () => {
+    expect(apiKeyTokenSchema.safeParse(`ba_${"x".repeat(40)}`).success).toBe(
       false
     );
-    expect(apiKeyTokenSchema.safeParse(`xx_${"x".repeat(40)}`).success).toBe(
-      false
-    );
+    expect(
+      apiKeyTokenSchema.safeParse(`ba_admin_${"x".repeat(40)}`).success
+    ).toBe(false);
+    expect(
+      apiKeyTokenSchema.safeParse(`ba_read_${"x".repeat(39)}`).success
+    ).toBe(false);
+    expect(
+      apiKeyTokenSchema.safeParse(`xx_read_${"x".repeat(40)}`).success
+    ).toBe(false);
   });
 
   it("providerKeyFragmentSchema accepts 1-4 chars", () => {

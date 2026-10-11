@@ -30,8 +30,10 @@ export const functionCallIdSchema = z.string().regex(/^fc_[0-9A-Za-z]{16}$/);
 
 export const skillIdSchema = z.string().regex(/^skill_[0-9A-Za-z]{16}$/);
 
-/** API keys are `ba_` + 40 base62 characters. */
-export const apiKeyTokenSchema = z.string().regex(/^ba_[0-9A-Za-z]{40}$/);
+/** API keys are `ba_read_` or `ba_full_` + 40 base62 characters. */
+export const apiKeyTokenSchema = z
+  .string()
+  .regex(/^ba_(read|full)_[0-9A-Za-z]{40}$/);
 
 // Provider key fragment — last 4 chars of the secret, display-only.
 export const providerKeyFragmentSchema = z.string().min(1).max(4);

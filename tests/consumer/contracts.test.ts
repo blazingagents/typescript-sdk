@@ -82,7 +82,9 @@ describe("installed SDK contracts", () => {
     expect(promptIdSchema.parse("prompt_0123456789abcdef")).toBe(
       "prompt_0123456789abcdef"
     );
-    expect(apiKeyTokenSchema.parse(`ba_${"a".repeat(40)}`)).toHaveLength(43);
+    expect(apiKeyTokenSchema.parse(`ba_read_${"a".repeat(40)}`)).toHaveLength(
+      48
+    );
     expect(isAdminAgentId("ag_adm0123456789ABC")).toBe(true);
     expect(metadataSchema.parse({ source: "cli" })).toEqual({ source: "cli" });
     expect(promptVariablesSchema.parse({ topic: "release" })).toEqual({

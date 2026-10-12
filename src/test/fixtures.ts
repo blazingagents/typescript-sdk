@@ -117,7 +117,7 @@ export function agentRow(
     compactionReserveTokens: 16_384,
     workspaceId: "ws_0123456789abcdef",
     memoryInjectionEnabled: false,
-    tools: ["workspace"],
+    tools: ["read", "grep"],
     instructions: "Be helpful.",
     userId: "",
     metadata: {},

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { mcpConnectionIdSchema } from "../ids.ts";
-import { AGENT_TOOL_CATALOG, chatFunctionNameSchema } from "./agent-tools.ts";
+import { builtinToolNames, chatFunctionNameSchema } from "./agent-tools.ts";
 
 export const approvalDecisionSchema = z.enum([
   "full",
@@ -12,10 +12,7 @@ export const toolReferenceSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("builtin"),
-      name: z.enum([
-        ...AGENT_TOOL_CATALOG.flatMap((group) => group.tools),
-        "activate_skill",
-      ]),
+      name: z.enum(builtinToolNames),
     })
     .strict(),
   z

@@ -128,7 +128,7 @@ describe("Agent current and config contracts", () => {
       agentConfigSchema.safeParse({
         ...baseAgentConfig,
         providerId,
-        tools: ["workspace"],
+        tools: ["read", "grep"],
         mcpConnectionIds: [mcpConnectionId],
       }).success
     ).toBe(true);
@@ -256,14 +256,14 @@ describe("Agent mutation contracts", () => {
     expect(
       updateAgentBodySchema.parse({
         model: "openrouter/test-model",
-        tools: ["workspace"],
+        tools: ["read", "grep"],
         memoryInjectionEnabled: true,
         providerId,
         mcpConnectionIds: [mcpConnectionId],
       })
     ).toEqual({
       model: "openrouter/test-model",
-      tools: ["workspace"],
+      tools: ["read", "grep"],
       memoryInjectionEnabled: true,
       providerId,
       mcpConnectionIds: [mcpConnectionId],
@@ -317,17 +317,17 @@ describe("Agent mutation contracts", () => {
     );
   });
 
-  it("rejects duplicate and unknown Tool or MCP group values", () => {
+  it("rejects duplicate tools, retired group ids, and unknown MCP values", () => {
     expect(
       createAgentBodySchema.safeParse({
         name: "Builder",
-        tools: ["workspace", "workspace"],
+        tools: ["read", "read"],
       }).success
     ).toBe(false);
     expect(
       createAgentBodySchema.safeParse({
         name: "Builder",
-        tools: ["file_operation_workspace"],
+        tools: ["workspace"],
       }).success
     ).toBe(false);
     expect(

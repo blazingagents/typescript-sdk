@@ -1,4 +1,5 @@
 import type {
+  AgentToolName,
   ApprovalDecision,
   ApprovalPolicy,
   BlazingAgentsUIMessage,
@@ -12,6 +13,8 @@ import type {
   WorkspaceTier,
 } from "@blazingagents/sdk";
 import {
+  AGENT_TOOL_CATEGORIES,
+  AGENT_TOOLS,
   BlazingAgents,
   nextSpendingLimitReset,
   type SpendingLimit,
@@ -73,6 +76,23 @@ describe("installed SDK contracts", () => {
     expect(policy).toEqual({ default: "manual", overrides: [] });
     expect(update.approvalInTasks).toEqual({ default: "deny" });
     expect(toolReferenceSchema.parse(approval.tool)).toEqual(tool);
+  });
+
+  it("exports the flat Agent tool catalog", () => {
+    const tools: AgentToolName[] = ["read", "grep", "web_search"];
+    const create: CreateAgentBody = { name: "Researcher", tools };
+    expect(createAgentBodySchema.parse(create).tools).toEqual(tools);
+    expect(
+      AGENT_TOOLS.filter((tool) => tool.category === "web").map(
+        (tool) => tool.name
+      )
+    ).toEqual(["web_search"]);
+    expect(AGENT_TOOL_CATEGORIES.map((category) => category.id)).toEqual([
+      "files",
+      "planning",
+      "memory",
+      "web",
+    ]);
   });
 
   it("exports the curated runtime contract entry point", () => {

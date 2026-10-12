@@ -110,7 +110,7 @@ describe("client.agents", () => {
     const agent = await c.agents.create({
       name: "Builder",
       model: "openrouter/test",
-      tools: ["workspace"],
+      tools: ["read", "grep"],
       instructions: "",
       providerId: "prv_0123456789abcdef",
     });

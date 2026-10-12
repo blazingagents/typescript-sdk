@@ -14,7 +14,17 @@ export {
   toolExecutionReferenceSchema,
   toolReferenceSchema,
 } from "./entities/agent-approval.ts";
-export { chatFunctionNameSchema } from "./entities/agent-tools.ts";
+export type {
+  AgentToolCategoryId,
+  AgentToolDefinition,
+  AgentToolName,
+} from "./entities/agent-tools.ts";
+export {
+  AGENT_TOOL_CATEGORIES,
+  AGENT_TOOLS,
+  agentToolNames,
+  chatFunctionNameSchema,
+} from "./entities/agent-tools.ts";
 export {
   agentConfigSchema,
   agentResponseSchema,

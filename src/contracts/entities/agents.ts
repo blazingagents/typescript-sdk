@@ -20,7 +20,7 @@ import {
   hasUniqueValues,
 } from "../utils.ts";
 import { approvalPolicySchema } from "./agent-approval.ts";
-import { agentToolGroupIds } from "./agent-tools.ts";
+import { agentToolNames } from "./agent-tools.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 import { workspaceTierSchema } from "./workspaces.ts";
 
@@ -44,9 +44,9 @@ export const agentInstructionsSchema = z
 export const agentModelIdSchema = z.string().trim().min(1);
 
 export const agentToolsSchema = z
-  .array(z.enum(agentToolGroupIds))
+  .array(z.enum(agentToolNames))
   .refine(hasUniqueValues, {
-    message: "Tool group ids must be unique.",
+    message: "Tool names must be unique.",
   });
 
 export const agentMcpConnectionIdsSchema = z

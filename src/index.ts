@@ -17,6 +17,13 @@ export type {
   ToolExecutionReference,
   ToolReference,
 } from "./contracts/entities/agent-approval.ts";
+export {
+  AGENT_TOOL_CATEGORIES,
+  AGENT_TOOLS,
+  type AgentToolCategoryId,
+  type AgentToolDefinition,
+  type AgentToolName,
+} from "./contracts/entities/agent-tools.ts";
 export type {
   Agent,
   AgentConfig,

@@ -69,7 +69,11 @@ describe("approval contracts", () => {
     expect(
       toolReferenceSchema.parse({ type: "builtin", name: "activate_skill" })
     ).toEqual({ type: "builtin", name: "activate_skill" });
+    expect(
+      toolReferenceSchema.parse({ type: "builtin", name: "web_search" })
+    ).toEqual({ type: "builtin", name: "web_search" });
     for (const invalid of [
+      { type: "builtin", name: "workspace" },
       { ...tool, connectionId: "bad" },
       { ...tool, name: "" },
       { ...tool, extra: true },

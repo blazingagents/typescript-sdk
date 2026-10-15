@@ -174,6 +174,7 @@ const publicContractNames = [
   "toolApprovalsResponseSchema",
   "toolExecutionReferenceSchema",
   "toolReferenceSchema",
+  "turnInterruptedEventSchema",
   "updateAgentBodySchema",
   "updateChatConnectionBodySchema",
   "updateMcpAttachmentBodySchema",

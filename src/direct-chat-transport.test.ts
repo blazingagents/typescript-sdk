@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { BlazingAgentsChatTransport } from "./chat-transport.ts";
 import { BlazingAgents } from "./client.ts";
+import { turnInterruptedEventSchema } from "./contracts/entities/sessions.ts";
 import { BlazingAgentsDirectChatTransport } from "./direct-chat-transport.ts";
 import { defineFunction } from "./functions.ts";
 import { sseStream } from "./test/fixtures.ts";
@@ -592,7 +593,49 @@ describe("BlazingAgentsDirectChatTransport", () => {
   });
 });
 
-it.each(["direct", "relay"])(
+type NativeChatKind = "direct" | "relay";
+
+async function runNativeChat(kind: NativeChatKind, chunks: unknown[]) {
+  const fetch = () => Promise.resolve(new Response(sseStream(chunks)));
+  const transport =
+    kind === "direct"
+      ? new BlazingAgentsDirectChatTransport({
+          agentId,
+          sessionId: mintedSessionId,
+          getClient: () => client(fetch),
+        })
+      : new BlazingAgentsChatTransport({ sessionId: mintedSessionId, fetch });
+  const state: ChatState<UIMessage> = {
+    messages: [],
+    status: "ready",
+    error: undefined,
+    pushMessage(item) {
+      this.messages.push(item);
+    },
+    popMessage() {
+      this.messages.pop();
+    },
+    replaceMessage(index, item) {
+      this.messages[index] = item;
+    },
+    snapshot: structuredClone,
+  };
+  class TestChat extends AbstractChat<UIMessage> {}
+  const errors: Error[] = [];
+  const data: unknown[] = [];
+  const onFinish = vi.fn();
+  const chat = new TestChat({
+    state,
+    transport,
+    onError: (error) => errors.push(error),
+    onData: (chunk) => data.push(chunk),
+    onFinish,
+  });
+  await chat.sendMessage({ text: "Run" });
+  return { chat, data, errors, onFinish };
+}
+
+it.each(["direct", "relay"] as const)(
   "preserves completed text and a spending stop through native AI Chat (%s)",
   async (kind) => {
     const event = {
@@ -608,7 +651,7 @@ it.each(["direct", "relay"])(
         nextResetAt: null,
       },
     };
-    const chunks = [
+    const { chat, data, errors, onFinish } = await runNativeChat(kind, [
       { type: "start", messageId: "answer" },
       { type: "text-start", id: "text" },
       { type: "text-delta", id: "text", delta: "Completed work" },
@@ -623,43 +666,7 @@ it.each(["direct", "relay"])(
         finishReason: "error",
         messageMetadata: { trailing: true },
       },
-    ];
-    const fetch = () => Promise.resolve(new Response(sseStream(chunks)));
-    const transport =
-      kind === "direct"
-        ? new BlazingAgentsDirectChatTransport({
-            agentId,
-            sessionId: mintedSessionId,
-            getClient: () => client(fetch),
-          })
-        : new BlazingAgentsChatTransport({ sessionId: mintedSessionId, fetch });
-    const state: ChatState<UIMessage> = {
-      messages: [],
-      status: "ready",
-      error: undefined,
-      pushMessage(item) {
-        this.messages.push(item);
-      },
-      popMessage() {
-        this.messages.pop();
-      },
-      replaceMessage(index, item) {
-        this.messages[index] = item;
-      },
-      snapshot: structuredClone,
-    };
-    class TestChat extends AbstractChat<UIMessage> {}
-    const errors: Error[] = [];
-    const data: unknown[] = [];
-    const onFinish = vi.fn();
-    const chat = new TestChat({
-      state,
-      transport,
-      onError: (error) => errors.push(error),
-      onData: (chunk) => data.push(chunk),
-      onFinish,
-    });
-    await chat.sendMessage({ text: "Run" });
+    ]);
     expect(chat.status).toBe("error");
     expect(errors.map((error) => error.message)).toEqual([
       "Agent funds are reserved by unfinished work.",
@@ -677,5 +684,32 @@ it.each(["direct", "relay"])(
         providerMetadata: undefined,
       },
     ]);
+  }
+);
+
+it.each(["direct", "relay"] as const)(
+  "reports an interrupted turn as a typed event and an error through native AI Chat (%s)",
+  async (kind) => {
+    const event = {
+      type: "data-turn-interrupted",
+      transient: true,
+      data: { code: "turn_interrupted" },
+    };
+    const errorText =
+      "The turn was interrupted before it finished. Read the session's messages to see what was saved. The session may stay busy for up to a minute.";
+    const { chat, data, errors, onFinish } = await runNativeChat(kind, [
+      { type: "start", messageId: "answer" },
+      { type: "text-start", id: "text" },
+      { type: "text-delta", id: "text", delta: "Half an answ" },
+      event,
+      { type: "error", errorText },
+    ]);
+    expect(chat.status).toBe("error");
+    expect(errors.map((error) => error.message)).toEqual([errorText]);
+    expect(turnInterruptedEventSchema.parse(data[0])).toEqual(event);
+    expect(data).toHaveLength(1);
+    expect(onFinish).toHaveBeenCalledWith(
+      expect.objectContaining({ isError: true, finishReason: undefined })
+    );
   }
 );

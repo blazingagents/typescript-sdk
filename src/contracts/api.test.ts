@@ -61,6 +61,7 @@ describe("apiErrorCodeSchema", () => {
       "workspace_in_use",
       "workspace_busy",
       "session_busy",
+      "session_turn_unresponsive",
       "session_version_mismatch",
       "tool_approval_continuation_settled",
       "tool_approval_decision_conflict",

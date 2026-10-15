@@ -441,6 +441,7 @@ import type {
   ChatSteerConsumedEvent,
   SpendingLimit,
   SpendingLimitStopDetails,
+  TurnInterruptedEvent,
   UpdateSpendingLimitBody,
 } from "../../src/index.ts";
 
@@ -496,6 +497,30 @@ export function narrowSteerConsumed(
   return undefined;
 }
 export const narrowedSteerConsumed = narrowSteerConsumed(steerConsumedChunk);
+const turnInterruptedChunk: BlazingAgentsUIMessageChunk = {
+  type: "data-turn-interrupted",
+  transient: true,
+  data: { code: "turn_interrupted" },
+};
+export function narrowTurnInterrupted(
+  chunk: BlazingAgentsUIMessageChunk
+): TurnInterruptedEvent["data"] | undefined {
+  if (chunk.type === "data-turn-interrupted") {
+    // @ts-expect-error an interruption carries no spending-limit scope
+    JSON.stringify(chunk.data.scope);
+    return chunk.data;
+  }
+  return undefined;
+}
+export const narrowedTurnInterrupted =
+  narrowTurnInterrupted(turnInterruptedChunk);
+const wrongInterruptionCode: BlazingAgentsUIMessageChunk = {
+  type: "data-turn-interrupted",
+  transient: true,
+  // @ts-expect-error turn_interrupted is the only interruption code
+  data: { code: "internal" },
+};
+export const wrongInterruption = wrongInterruptionCode;
 export const updatedAgentSpending = sdk.agents.updateSpendingLimit({
   agentId: "ag_0123456789abcdef",
   ...spendingUpdate,

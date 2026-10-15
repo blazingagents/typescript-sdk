@@ -10,6 +10,7 @@ import {
   sessionsListResponseSchema,
   toolApprovalDecisionSchema,
   toolApprovalsResponseSchema,
+  turnInterruptedEventSchema,
 } from "./sessions.ts";
 
 const sessionId = "ss_xxxxxxxxxxxxxxxx";
@@ -295,4 +296,25 @@ it("requires nullable provenance and a server eligibility boolean", () => {
       data: [{ ...page.data[0], branchable: "true" }],
     }).success
   ).toBe(false);
+});
+
+describe("turnInterruptedEventSchema", () => {
+  const event = {
+    type: "data-turn-interrupted",
+    transient: true,
+    data: { code: "turn_interrupted" },
+  };
+
+  it("validates the complete transient interruption event", () => {
+    expect(turnInterruptedEventSchema.parse(event)).toStrictEqual(event);
+  });
+
+  it.each([
+    ["a persisted event", { ...event, transient: false }],
+    ["another code", { ...event, data: { code: "internal" } }],
+    ["an extra data field", { ...event, data: { ...event.data, scope: "x" } }],
+    ["another event type", { ...event, type: "data-model-spending-limit" }],
+  ])("rejects %s", (_name, value) => {
+    expect(turnInterruptedEventSchema.safeParse(value).success).toBe(false);
+  });
 });

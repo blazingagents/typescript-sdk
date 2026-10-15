@@ -124,6 +124,7 @@ export type {
   ToolApprovalDecision,
   ToolApprovalState,
   ToolApprovalsResponse,
+  TurnInterruptedEvent,
 } from "./contracts/entities/sessions.ts";
 export { sessionResponseSchema } from "./contracts/entities/sessions.ts";
 export type {

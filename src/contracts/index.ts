@@ -190,6 +190,7 @@ export type {
   ToolApprovalContinuationState,
   ToolApprovalDecision,
   ToolApprovalsResponse,
+  TurnInterruptedEvent,
 } from "./entities/sessions.ts";
 export {
   continueToolApprovalsBodySchema,
@@ -205,6 +206,7 @@ export {
   toolApprovalDecisionSchema,
   toolApprovalStateSchema,
   toolApprovalsResponseSchema,
+  turnInterruptedEventSchema,
 } from "./entities/sessions.ts";
 export {
   copySkillBodySchema,

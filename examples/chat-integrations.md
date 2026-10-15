@@ -48,6 +48,9 @@ provider health. See
 [Slack and Telegram setup](https://docs.blazingagents.com/platform/chat-integrations)
 for registration and permissions.
 
+`create()` throws a `BlazingAgentsError` with status 409 and code
+`admin_agent_managed` when `agentId` is the Admin Agent.
+
 If creation times out, use `list()` to reconcile before retrying. Use `get()`,
 `rotateCredentials()`, `disable()`, and `delete()` to manage it later. Telegram
 registration conflicts return `chat_webhook_conflict`; upstream registration

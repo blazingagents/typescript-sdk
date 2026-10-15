@@ -203,6 +203,30 @@ describe("requestJson", () => {
     expect(error.responseBody).toBeUndefined();
   });
 
+  it("keeps Retry-After and retryAfterSeconds on session_turn_unresponsive", async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          errorEnvelope(
+            "session_turn_unresponsive",
+            "The previous turn in this session stopped responding.",
+            { details: { retryAfterSeconds: 23 } }
+          ),
+          { headers: { "retry-after": "23" }, status: 409 }
+        )
+    );
+    const error = (await requestJson(config(fetch), "/x").catch(
+      (caught) => caught
+    )) as BlazingAgentsError;
+
+    expect(error).toMatchObject({
+      code: "session_turn_unresponsive",
+      details: { retryAfterSeconds: 23 },
+      status: 409,
+    });
+    expect(error.headers?.get("retry-after")).toBe("23");
+  });
+
   it("accepts future API codes and fields without body request-ID precedence", async () => {
     const fetch = vi.fn(
       async () =>

@@ -20,6 +20,7 @@ import {
   type SpendingLimit,
   type SpendingLimitResponse,
   type SpendingLimitStopEvent,
+  type TurnInterruptedEvent,
 } from "@blazingagents/sdk";
 import {
   apiKeyTokenSchema,
@@ -39,6 +40,7 @@ import {
   spendingLimitStopEventSchema,
   type ToolApprovalsResponse,
   toolReferenceSchema,
+  turnInterruptedEventSchema,
   type UsageOverviewResponse,
   type UsageSummary,
   updateWorkspaceBodySchema,
@@ -233,4 +235,22 @@ it("exports spending-limit contracts and methods from the installed package", as
     }
   };
   onData(event);
+});
+
+it("types the interruption event a cut Turn stream sends", () => {
+  const event: TurnInterruptedEvent = {
+    type: "data-turn-interrupted",
+    transient: true,
+    data: { code: "turn_interrupted" },
+  };
+  expect(turnInterruptedEventSchema.parse(event)).toEqual(event);
+  const codes: string[] = [];
+  const onData: ChatOnDataCallback<BlazingAgentsUIMessage> = (chunk) => {
+    if (chunk.type === "data-turn-interrupted") {
+      const code: "turn_interrupted" = chunk.data.code;
+      codes.push(code);
+    }
+  };
+  onData(event);
+  expect(codes).toEqual(["turn_interrupted"]);
 });

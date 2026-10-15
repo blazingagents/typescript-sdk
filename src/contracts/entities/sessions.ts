@@ -158,6 +158,21 @@ export const continueToolApprovalsBodySchema = z
     functions: chatFunctionDefinitionsSchema.optional(),
   })
   .strict();
+
+/**
+ * Transient event that precedes the `error` chunk when a Turn stream is cut
+ * after it started. The `error` chunk has no field for a code, so the code
+ * rides here. `turn_interrupted` is never an HTTP error code. The Turn may
+ * have saved its work before the cut, so read the Session's messages.
+ */
+export const turnInterruptedEventSchema = z
+  .object({
+    type: z.literal("data-turn-interrupted"),
+    data: z.object({ code: z.literal("turn_interrupted") }).strict(),
+    transient: z.literal(true),
+  })
+  .strict();
+export type TurnInterruptedEvent = z.infer<typeof turnInterruptedEventSchema>;
 export type SessionForkedFrom = z.infer<typeof sessionForkedFromSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;

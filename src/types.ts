@@ -83,6 +83,7 @@ import type {
   SessionsListResponse,
   ToolApprovalDecision,
   ToolApprovalsResponse,
+  TurnInterruptedEvent,
 } from "./contracts/entities/sessions.ts";
 import type {
   CreateSkillBody,
@@ -255,7 +256,8 @@ export type BlazingAgentsUIMessageData = Record<
   "ba-steer-consumed",
   ChatSteerConsumedEvent["data"]
 > &
-  Record<"model-spending-limit", SpendingLimitStopEvent["data"]>;
+  Record<"model-spending-limit", SpendingLimitStopEvent["data"]> &
+  Record<"turn-interrupted", TurnInterruptedEvent["data"]>;
 
 export type BlazingAgentsUIMessage = UIMessage<
   BlazingAgentsChatMessageMetadata,

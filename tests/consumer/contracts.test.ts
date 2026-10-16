@@ -1,5 +1,6 @@
 import type {
   AgentToolName,
+  AgentToolTag,
   ApprovalDecision,
   ApprovalPolicy,
   BlazingAgentsUIMessage,
@@ -13,7 +14,7 @@ import type {
   WorkspaceTier,
 } from "@blazingagents/sdk";
 import {
-  AGENT_TOOL_CATEGORIES,
+  AGENT_TOOL_GROUPS,
   AGENT_TOOLS,
   BlazingAgents,
   nextSpendingLimitReset,
@@ -85,11 +86,11 @@ describe("installed SDK contracts", () => {
     const create: CreateAgentBody = { name: "Researcher", tools };
     expect(createAgentBodySchema.parse(create).tools).toEqual(tools);
     expect(
-      AGENT_TOOLS.filter((tool) => tool.category === "web").map(
-        (tool) => tool.name
-      )
-    ).toEqual(["web_search"]);
-    expect(AGENT_TOOL_CATEGORIES.map((category) => category.id)).toEqual([
+      AGENT_TOOLS.filter((tool) =>
+        (tool.tags as readonly AgentToolTag[]).includes("file_read")
+      ).map((tool) => tool.name)
+    ).toEqual(["read", "grep", "glob"]);
+    expect(AGENT_TOOL_GROUPS.map((group) => group.tag)).toEqual([
       "files",
       "planning",
       "memory",

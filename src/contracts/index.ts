@@ -17,10 +17,17 @@ export {
 export type {
   AgentToolCategoryId,
   AgentToolDefinition,
+  AgentToolFileAccessTag,
+  AgentToolGroupTag,
   AgentToolName,
+  AgentToolTag,
+  AgentToolTags,
 } from "./entities/agent-tools.ts";
 export {
   AGENT_TOOL_CATEGORIES,
+  AGENT_TOOL_FILE_ACCESS_TAGS,
+  AGENT_TOOL_GROUPS,
+  AGENT_TOOL_TAGS,
   AGENT_TOOLS,
   agentToolNames,
   chatFunctionNameSchema,

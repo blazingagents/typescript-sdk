@@ -5,7 +5,6 @@ import {
   memoriesListResponseSchema,
   memoryResponseSchema,
   memorySchema,
-  memoryTextSchema,
   updateMemoryBodySchema,
 } from "./memories.ts";
 
@@ -25,24 +24,26 @@ const baseMemory = {
   lastAccessedAt: iso,
 };
 
-describe("memoryTextSchema", () => {
+describe("Memory text", () => {
   it("accepts text between 1 and 10240 bytes", () => {
-    expect(memoryTextSchema.safeParse("a").success).toBe(true);
-    expect(memoryTextSchema.safeParse("a".repeat(10_240)).success).toBe(true);
+    expect(createMemoryBodySchema.safeParse({ text: "a" }).success).toBe(true);
+    expect(
+      createMemoryBodySchema.safeParse({ text: "a".repeat(10_240) }).success
+    ).toBe(true);
   });
 
   it("rejects empty text", () => {
-    expect(memoryTextSchema.safeParse("").success).toBe(false);
-  });
-
-  it("rejects text over 10240 bytes", () => {
-    expect(memoryTextSchema.safeParse("a".repeat(10_241)).success).toBe(false);
+    expect(createMemoryBodySchema.safeParse({ text: "" }).success).toBe(false);
   });
 
   it("counts bytes, not characters, for multibyte text", () => {
     // "é" is 2 bytes in UTF-8 — 5120 of them fit exactly, 5121 do not.
-    expect(memoryTextSchema.safeParse("é".repeat(5120)).success).toBe(true);
-    expect(memoryTextSchema.safeParse("é".repeat(5121)).success).toBe(false);
+    expect(
+      createMemoryBodySchema.safeParse({ text: "é".repeat(5120) }).success
+    ).toBe(true);
+    expect(
+      createMemoryBodySchema.safeParse({ text: "é".repeat(5121) }).success
+    ).toBe(false);
   });
 });
 

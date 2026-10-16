@@ -9,8 +9,8 @@ import type { HttpConfig, UsageResource } from "../types.ts";
 
 /**
  * `client.usage` — get over `/v1/usage` (tenant-wide) and
- * `/v1/agents/:agentId/usage` (per-agent). The query shape is the core
- * `usageQuerySchema`; the SDK passes it through as query params.
+ * `/v1/agents/:agentId/usage` (per-agent). The query shape is `UsageQuery`;
+ * the SDK passes it through as query params.
  * @param config - Shared authentication and transport configuration.
  * @returns The configured resource client.
  */

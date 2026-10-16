@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import type { UIMessage } from "ai";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMockFetch, sseStream } from "./test/fixtures.ts";
 import {
   chatChunks,
@@ -9,6 +10,14 @@ import {
 } from "./test/generation-fixtures.ts";
 
 const turnId = "turn_0123456789abcdef";
+const agentId = "ag_0123456789abcdef";
+const message: UIMessage = {
+  id: "u1",
+  role: "user",
+  parts: [{ type: "text", text: "hi" }],
+};
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("client.chat result", () => {
   it("exposes the session id and untouched SSE relay", async () => {
@@ -76,26 +85,93 @@ describe("client.chat result", () => {
     await expect(response.text()).resolves.toContain('"type":"finish"');
   });
 
-  it("rejects a second response claim with stream_error", async () => {
-    const { fetch } = createMockCreateFetch(sseStream(chatChunks));
-    const result = await client(fetch).chat({
-      agentId: "ag_0123456789abcdef",
-      message: {
-        id: "u1",
-        role: "user",
-        parts: [{ type: "text", text: "hi" }],
-      },
+  it.each([
+    ["toResponse", "toResponse"],
+    ["toStream", "toStream"],
+    ["toStream", "toResponse"],
+    ["toResponse", "toStream"],
+  ] as const)(
+    "rejects a second claim after %s with %s as stream_error",
+    async (first, second) => {
+      const { fetch } = createMockFetch({
+        headers: { location: createLocation, "x-request-id": "stream-test" },
+        status: 201,
+        stream: sseStream(chatChunks),
+      });
+      const result = await client(fetch).chat({ agentId, message });
+
+      result[first]();
+
+      expect(() => result[second]()).toThrowError(
+        expect.objectContaining({
+          code: "stream_error",
+          message:
+            "[stream_error] The chat response body has already been claimed.",
+          requestId: "stream-test",
+        })
+      );
+    }
+  );
+
+  it("relays untouched bytes without calling the global Response constructor", async () => {
+    const bytes = new TextEncoder().encode("data: [DONE]\n\n");
+    const { fetch } = createMockFetch({
+      headers: { location: createLocation, "x-request-id": "stream-test" },
+      status: 201,
+      stream: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      }),
     });
+    const result = await client(fetch).chat({ agentId, message });
+    const responseConstructor = vi.fn(() => {
+      throw new Error("Response does not support streaming bodies");
+    });
+    vi.stubGlobal("Response", responseConstructor);
 
-    result.toResponse();
+    const reader = result.toStream().getReader();
 
-    expect(() => result.toResponse()).toThrowError(
-      expect.objectContaining({
-        code: "stream_error",
-        message:
-          "[stream_error] The chat response body has already been claimed.",
-      })
-    );
+    await expect(reader.read()).resolves.toEqual({ done: false, value: bytes });
+    await expect(reader.read()).resolves.toEqual({
+      done: true,
+      value: undefined,
+    });
+    expect(responseConstructor).not.toHaveBeenCalled();
+  });
+
+  it("preserves normalized read failures and request identity on the byte stream", async () => {
+    const { fetch } = createMockFetch({
+      headers: { location: createLocation, "x-request-id": "stream-test" },
+      status: 201,
+      stream: new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new Error("socket closed"));
+        },
+      }),
+    });
+    const result = await client(fetch).chat({ agentId, message });
+
+    await expect(result.toStream().getReader().read()).rejects.toMatchObject({
+      code: "stream_error",
+      message: "[stream_error] socket closed",
+      requestId: "stream-test",
+    });
+  });
+
+  it("forwards byte-stream cancellation to the original body", async () => {
+    const cancel = vi.fn();
+    const { fetch } = createMockFetch({
+      headers: { location: createLocation },
+      status: 201,
+      stream: new ReadableStream<Uint8Array>({ cancel }),
+    });
+    const result = await client(fetch).chat({ agentId, message });
+
+    await result.toStream().cancel("screen closed");
+
+    expect(cancel).toHaveBeenCalledWith("screen closed");
   });
 
   it.each([

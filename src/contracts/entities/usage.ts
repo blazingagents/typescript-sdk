@@ -3,10 +3,8 @@ import { agentIdSchema, sessionIdSchema } from "../ids.ts";
 import {
   DEFAULT_USAGE_OVERVIEW_TOP_N,
   DEFAULT_USAGE_RANGE_DAYS,
-  DEFAULT_USAGE_SESSION_TOP_N,
   MAX_USAGE_OVERVIEW_TOP_N,
   MAX_USAGE_RANGE_DAYS,
-  MAX_USAGE_SESSION_TOP_N,
 } from "../limitations.ts";
 import { hasUniqueValues } from "../utils.ts";
 import { userIdSchema } from "./attribution.ts";
@@ -47,56 +45,8 @@ function validateUsageRange(
 }
 
 /**
- * `GET /v1/usage` groupBy — `day|agent|model|session|user`. `session` is
- * top-N by tokens; the others are exhaustive and bounded. `user` is the
- * end-user attribution dimension (ADR-0001) — one bucket per `userId`, with
- * `''` emitted verbatim as the tenant-level bucket.
- */
-export const usageGroupBySchema = z
-  .enum(["day", "agent", "model", "session", "user"])
-  .default("day");
-
-/**
- * A `sessionId` filter value — either a real platform session id (`ss_…`)
- * or the `''` sentinel for stateless `completion`/`object` turns. The daily
- * table stores `''` for stateless turns; the bucket wire shape maps `''`
- * back to `null` on read (see `usageBucketSchema.sessionId`).
- */
-export const usageSessionFilterSchema = z
-  .string()
-  .refine((v) => v === "" || z.validate(sessionIdSchema, v), {
-    message: "Must be a session id or '' for stateless turns.",
-  });
-
-/**
- * `?from=&to=&agentId=&sessionId=&userId=&groupBy=&limit=` — `from`/`to` are
- * date strings (`YYYY-MM-DD`) since the daily table is keyed by `day date`.
- * Range capped at 31 days; default is the last 30 days ending today (UTC).
- * The `sessionId` filter accepts `''` to drill into stateless turns only.
- * The `userId` filter accepts any opaque string (including `''` for
- * tenant-level usage only) — see ADR-0001 for the three filter modes.
- */
-export const usageQuerySchema = z
-  .object({
-    from: z.iso.date().optional(),
-    to: z.iso.date().optional(),
-    agentId: agentIdSchema.optional(),
-    sessionId: usageSessionFilterSchema.optional(),
-    userId: userIdSchema.optional(),
-    groupBy: usageGroupBySchema,
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(MAX_USAGE_SESSION_TOP_N)
-      .default(DEFAULT_USAGE_SESSION_TOP_N),
-  })
-  .strict()
-  .superRefine(validateUsageRange);
-
-/**
  * Query for the bounded dashboard-oriented usage overview. The date range has
- * the same semantics as `usageQuerySchema`; `limit` bounds each ranking.
+ * the same semantics as `UsageQuery`; `limit` bounds each ranking.
  */
 export const usageOverviewQuerySchema = z
   .object({
@@ -275,7 +225,26 @@ export function usageOverviewResponseSchemaForQuery(
     }
   });
 }
-export type UsageQuery = z.infer<typeof usageQuerySchema>;
+/**
+ * `?from=&to=&agentId=&sessionId=&userId=&groupBy=&limit=` for `GET /v1/usage`.
+ * `from`/`to` are `YYYY-MM-DD` dates, both present or both absent and at most
+ * 31 days apart; the default is the last 30 days ending today (UTC). `groupBy`
+ * defaults to `day`; `session` is top-N by tokens, bounded by `limit` (default
+ * 50, at most 200), and `user` is the end-user attribution dimension
+ * (ADR-0001) with `''` emitted verbatim as the tenant-level bucket. The
+ * `sessionId` filter accepts `''` to drill into stateless `completion`/`object`
+ * turns; `userId` accepts any opaque string, including `''` for tenant-level
+ * usage only. The server enforces these rules; the SDK passes the query through.
+ */
+export interface UsageQuery {
+  agentId?: string;
+  from?: string;
+  groupBy?: "day" | "agent" | "model" | "session" | "user";
+  limit?: number;
+  sessionId?: string;
+  to?: string;
+  userId?: string;
+}
 export type UsageBucket = z.infer<typeof usageBucketSchema>;
 export type UsageTotals = z.infer<typeof usageTotalsSchema>;
 export type UsageResponse = z.infer<typeof usageResponseSchema>;

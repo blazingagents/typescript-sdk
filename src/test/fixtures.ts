@@ -1,6 +1,8 @@
-import type { BlazingAgentsFetch } from "../types.ts";
+import type { BlazingAgentsOptions } from "../types.ts";
 
 // Tests inject these through the `fetch` option instead of patching `globalThis.fetch`.
+
+export type FetchOption = NonNullable<BlazingAgentsOptions["fetch"]>;
 
 export interface FetchCall {
   init?: RequestInit;
@@ -17,12 +19,12 @@ export interface MockFetchOptions {
 }
 
 export function createMockFetch(options: MockFetchOptions = {}): {
-  fetch: BlazingAgentsFetch;
+  fetch: FetchOption;
   calls: FetchCall[];
 } {
   const calls: FetchCall[] = [];
   // biome-ignore lint/suspicious/useAwait: mock fetch is synchronous but must return a Promise
-  const fetch: BlazingAgentsFetch = async (url, init) => {
+  const fetch: FetchOption = async (url, init) => {
     calls.push({ url, init });
     const status = options.status ?? 200;
     const headers = new Headers(options.headers ?? {});

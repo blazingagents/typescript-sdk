@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  chatSteerConsumedEventSchema,
   sessionInputResponseSchema,
   sessionInputsQuerySchema,
   sessionInputsResponseSchema,
+  stopSessionBodySchema,
   submitSessionInputBodySchema,
 } from "./session-inputs.ts";
 
@@ -113,6 +115,37 @@ describe("session input contracts", () => {
     );
     expect(
       sessionInputsQuerySchema.safeParse({ after: "opaque" }).success
+    ).toBe(false);
+  });
+});
+
+describe("stopSessionBodySchema", () => {
+  it("accepts a Turn id and rejects malformed ones", () => {
+    expect(stopSessionBodySchema.parse({ turnId: activity.turnId })).toEqual({
+      turnId: activity.turnId,
+    });
+    for (const turnId of ["turn_short", "turn_xxxxxxxxxxxxxxx"]) {
+      expect(stopSessionBodySchema.safeParse({ turnId }).success).toBe(false);
+    }
+  });
+});
+
+describe("chatSteerConsumedEventSchema", () => {
+  it("validates provisional steer placement without requiring a committed receipt", () => {
+    const event = {
+      type: "data-ba-steer-consumed",
+      transient: true,
+      data: {
+        requestId: "request-1",
+        turnId: activity.turnId,
+        sequence: 1,
+        message,
+      },
+    };
+    expect(chatSteerConsumedEventSchema.parse(event)).toEqual(event);
+    expect(
+      chatSteerConsumedEventSchema.safeParse({ ...event, transient: false })
+        .success
     ).toBe(false);
   });
 });

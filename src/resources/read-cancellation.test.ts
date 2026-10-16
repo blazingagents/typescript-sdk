@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { BlazingAgents } from "../client.ts";
 import { BlazingAgentsError } from "../errors.ts";
-import type { BlazingAgentsFetch, ResourceRequestOptions } from "../types.ts";
+import type { FetchOption } from "../test/fixtures.ts";
+import type { ResourceRequestOptions } from "../types.ts";
 
 const requests: [
   string,
@@ -382,7 +383,7 @@ describe("resource request cancellation", () => {
     "%s cancels fetch without serializing the signal",
     async (_, read) => {
       const abort = new AbortController();
-      const fetch = vi.fn<BlazingAgentsFetch>(
+      const fetch = vi.fn<FetchOption>(
         (_url, requestInit) =>
           new Promise((resolve, reject) => {
             requestInit?.signal?.addEventListener(

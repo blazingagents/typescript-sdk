@@ -55,13 +55,9 @@ export const MAX_ARTIFACT_BYTES = 10 * 1024 * 1024;
 /** Memories — 10 KiB of text per memory. */
 export const MAX_MEMORY_TEXT_BYTES = 10 * 1024;
 
-/**
- * Usage — range cap 31 days, default 30 days; top-N sessions default 50, max 200.
- */
+// Usage — range cap 31 days, default 30 days; overview rankings default 5, max 20.
 export const MAX_USAGE_RANGE_DAYS = 31;
 export const DEFAULT_USAGE_RANGE_DAYS = 30;
-export const DEFAULT_USAGE_SESSION_TOP_N = 50;
-export const MAX_USAGE_SESSION_TOP_N = 200;
 export const DEFAULT_USAGE_OVERVIEW_TOP_N = 5;
 export const MAX_USAGE_OVERVIEW_TOP_N = 20;
 

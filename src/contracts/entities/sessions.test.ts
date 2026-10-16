@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { agentConfigFixture } from "../test/fixtures/tasks.ts";
 
 import {
+  continueToolApprovalsBodySchema,
   latestSessionListItemSchema,
   latestSessionsListResponseSchema,
   sessionListItemSchema,
@@ -316,5 +317,28 @@ describe("turnInterruptedEventSchema", () => {
     ["another event type", { ...event, type: "data-model-spending-limit" }],
   ])("rejects %s", (_name, value) => {
     expect(turnInterruptedEventSchema.safeParse(value).success).toBe(false);
+  });
+});
+
+describe("continueToolApprovalsBodySchema", () => {
+  it("validates nonempty full-round decisions and rejects duplicate approval identities", () => {
+    const decision = {
+      approvalId: "approval-1",
+      approved: false,
+      reason: "Keep it",
+    };
+    expect(
+      continueToolApprovalsBodySchema.parse({ decisions: [decision] })
+    ).toEqual({ decisions: [decision] });
+    for (const body of [
+      { decisions: [] },
+      { decisions: [decision, decision] },
+      { decisions: [{ approved: true }] },
+      { decisions: [decision], continuationId: "old" },
+    ]) {
+      expect(continueToolApprovalsBodySchema.safeParse(body).success).toBe(
+        false
+      );
+    }
   });
 });

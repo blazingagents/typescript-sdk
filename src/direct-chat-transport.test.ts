@@ -453,6 +453,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
         },
       ],
     };
+    const snapshot = structuredClone(assistant);
     expect(
       await collect(
         await transport.sendMessages({
@@ -461,6 +462,7 @@ describe("BlazingAgentsDirectChatTransport", () => {
         })
       )
     ).toEqual(chatChunks);
+    expect(assistant).toEqual(snapshot);
     const base = `${BASE}/v1/agents/${agentId}/sessions/${mintedSessionId}`;
     expect(requests).toEqual([
       {

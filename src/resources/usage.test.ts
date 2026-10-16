@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
 import { createMockFetch } from "../test/fixtures.ts";
+import type { UsageResource } from "../types.ts";
 
 const BASE = "http://localhost:8787";
 const usageResponse = {
@@ -164,5 +165,15 @@ describe("client.usage", () => {
         to: "2026-01-31",
       })
     ).rejects.toBeDefined();
+  });
+});
+
+describe("client.usage query types", () => {
+  it("limits groupBy to the five dimensions", () => {
+    expectTypeOf<
+      NonNullable<Parameters<UsageResource["get"]>[0]>["groupBy"]
+    >().toEqualTypeOf<
+      "day" | "agent" | "model" | "session" | "user" | undefined
+    >();
   });
 });

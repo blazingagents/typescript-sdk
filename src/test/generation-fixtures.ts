@@ -1,9 +1,6 @@
 import { BlazingAgents } from "../client.ts";
-import type {
-  BlazingAgentsFetch,
-  BlazingAgentsUIMessageChunk,
-} from "../types.ts";
-import { createMockFetch } from "./fixtures.ts";
+import type { BlazingAgentsUIMessageChunk } from "../types.ts";
+import { createMockFetch, type FetchOption } from "./fixtures.ts";
 
 export const BASE = "http://localhost:8787";
 export const mintedSessionId = "ss_0123456789abcdef";
@@ -148,7 +145,7 @@ export const chatAbortChunks = [
   { type: "abort", reason: "caller cancelled" },
 ] satisfies BlazingAgentsUIMessageChunk[];
 
-export function client(fetch: BlazingAgentsFetch): BlazingAgents {
+export function client(fetch: FetchOption): BlazingAgents {
   return new BlazingAgents({
     apiKey: "ba_test",
     baseUrl: BASE,

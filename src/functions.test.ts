@@ -4,7 +4,7 @@ import { BlazingAgents } from "./client.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import { type ChatFunctions, defineFunction } from "./functions.ts";
 import { createChatRelay } from "./relay.ts";
-import type { BlazingAgentsFetch } from "./types.ts";
+import type { FetchOption } from "./test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
 const agentId = "ag_0123456789abcdef";
@@ -89,7 +89,7 @@ function harness(
   const claim = [...(responders.claim ?? [])];
   const result = [...(responders.result ?? [])];
   // biome-ignore lint/suspicious/useAwait: mock fetch returns a Promise
-  const fetch: BlazingAgentsFetch = async (url, init = {}) => {
+  const fetch: FetchOption = async (url, init = {}) => {
     const path = url.slice(BASE.length);
     const call: Call = {
       body: typeof init.body === "string" ? JSON.parse(init.body) : undefined,

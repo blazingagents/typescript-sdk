@@ -5,7 +5,6 @@ import {
   mcpAttachmentResponseSchema,
   mcpAttachmentsResponseSchema,
   mcpConnectionAuthTypeSchema,
-  mcpConnectionLiveDetailsSchema,
   mcpConnectionOauthConnectResponseSchema,
   mcpConnectionReconnectResultSchema,
   mcpConnectionResponseSchema,
@@ -84,27 +83,24 @@ describe("MCP connection schemas", () => {
 
     expect(mcpConnectionResponseSchema.parse(response)).toEqual(response);
     expect(
+      mcpConnectionResponseSchema.safeParse({
+        ...response,
+        id: "wrong_xxxxxxxxxxxxxxxx",
+      }).success
+    ).toBe(false);
+    expect(
       mcpConnectionsResponseSchema.parse({ mcpConnections: [response] })
     ).toEqual({ mcpConnections: [response] });
   });
 
   it("parses strict typed live-test outcomes", () => {
     expect(
-      mcpConnectionLiveDetailsSchema.parse({
-        server: { name: " fixture ", version: " 1.0.0 " },
-        toolNames: [" search ", "fetch"],
-      })
-    ).toEqual({
-      server: { name: "fixture", version: "1.0.0" },
-      toolNames: ["search", "fetch"],
-    });
-    expect(
       mcpConnectionTestResponseSchema.parse({
         ok: true,
         latencyMs: 42,
-        server: { name: "fixture", version: "1.0.0" },
+        server: { name: " fixture ", version: " 1.0.0 " },
         toolCount: 2,
-        toolNames: ["search", "fetch"],
+        toolNames: [" search ", "fetch"],
       })
     ).toEqual({
       ok: true,

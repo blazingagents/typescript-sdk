@@ -96,6 +96,32 @@ describe("providerResponseSchema", () => {
       providerResponseSchema.parse({ ...baseProviderResponse, extra: true })
     ).not.toHaveProperty("extra");
   });
+
+  it("rejects a malformed Provider id", () => {
+    expect(
+      providerResponseSchema.safeParse({
+        ...baseProviderResponse,
+        id: "wrong_xxxxxxxxxxxxxxxx",
+      }).success
+    ).toBe(false);
+  });
+
+  it("bounds the key fragment to one to four characters", () => {
+    for (const keyFragment of ["a", "abcd"]) {
+      expect(
+        providerResponseSchema.parse({ ...baseProviderResponse, keyFragment })
+          .keyFragment
+      ).toBe(keyFragment);
+    }
+    for (const keyFragment of ["", "abcde"]) {
+      expect(
+        providerResponseSchema.safeParse({
+          ...baseProviderResponse,
+          keyFragment,
+        }).success
+      ).toBe(false);
+    }
+  });
 });
 
 describe("providersResponseSchema", () => {

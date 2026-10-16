@@ -34,6 +34,13 @@ describe("taskResponseSchema", () => {
     ).not.toHaveProperty("extra");
   });
 
+  it("rejects a malformed Task id", () => {
+    expect(
+      taskResponseSchema.safeParse(createTaskFixture({ id: "tk_short" }))
+        .success
+    ).toBe(false);
+  });
+
   it("requires and validates the next fire time on a single task", () => {
     expect(
       taskResponseSchema.parse(createTaskFixture({ nextFireAt: iso }))
@@ -54,6 +61,13 @@ describe("taskRunResponseSchema", () => {
     expect(
       taskRunResponseSchema.safeParse(createTaskRunFixture()).success
     ).toBe(true);
+  });
+
+  it("rejects a malformed run id", () => {
+    expect(
+      taskRunResponseSchema.safeParse(createTaskRunFixture({ id: "tr_short" }))
+        .success
+    ).toBe(false);
   });
 
   it("requires saved Agent config", () => {

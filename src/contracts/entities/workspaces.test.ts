@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   createWorkspaceBodySchema,
   updateWorkspaceBodySchema,
-  workspaceNetworkPolicySchema,
   workspaceSchema,
 } from "./workspaces.ts";
 
@@ -39,35 +38,34 @@ describe("Workspace contracts", () => {
   });
 
   it("supports exactly the three Workspace network policies", () => {
+    const policy = (networkPolicy: unknown) =>
+      createWorkspaceBodySchema.safeParse({ networkPolicy });
+    expect(policy({ mode: "unrestricted" }).data?.networkPolicy).toEqual({
+      mode: "unrestricted",
+    });
     expect(
-      workspaceNetworkPolicySchema.parse({ mode: "unrestricted" })
-    ).toEqual({ mode: "unrestricted" });
-    expect(
-      workspaceNetworkPolicySchema.parse({
+      policy({
         allowedHosts: ["registry.npmjs.org", "*.github.com"],
         mode: "allowlist",
-      })
+      }).data?.networkPolicy
     ).toEqual({
       allowedHosts: ["registry.npmjs.org", "*.github.com"],
       mode: "allowlist",
     });
-    expect(workspaceNetworkPolicySchema.parse({ mode: "offline" })).toEqual({
+    expect(policy({ mode: "offline" }).data?.networkPolicy).toEqual({
       mode: "offline",
     });
+    expect(policy({ mode: "deny" }).success).toBe(false);
+    expect(policy({ allowedHosts: [], mode: "allowlist" }).success).toBe(false);
     expect(
-      workspaceNetworkPolicySchema.safeParse({ mode: "deny" }).success
+      policy({ allowedHosts: ["stale.example.com"], mode: "offline" }).success
     ).toBe(false);
+  });
+
+  it("rejects a malformed Workspace id", () => {
     expect(
-      workspaceNetworkPolicySchema.safeParse({
-        allowedHosts: [],
-        mode: "allowlist",
-      }).success
-    ).toBe(false);
-    expect(
-      workspaceNetworkPolicySchema.safeParse({
-        allowedHosts: ["stale.example.com"],
-        mode: "offline",
-      }).success
+      workspaceSchema.safeParse({ ...workspace, id: "sb_xxxxxxxxxxxxxxxx" })
+        .success
     ).toBe(false);
   });
 

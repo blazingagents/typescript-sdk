@@ -1,14 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { KnownBlazingAgentsErrorCode } from "../types.ts";
+import { receivedApiErrorResponseSchema } from "./api.ts";
 import {
-  apiErrorCodeSchema,
-  cursorSchema,
-  paginatedResponseSchema,
-  receivedApiErrorResponseSchema,
-} from "./api.ts";
+  agentsListQuerySchema,
+  agentsResponseSchema,
+} from "./entities/agents.ts";
 
-describe("apiErrorCodeSchema", () => {
-  it("defines the closed public error-code contract", () => {
+describe("known error codes", () => {
+  it("names every code the client can raise", () => {
     const codes = [
       "invalid_request",
       "idempotency_conflict",
@@ -94,15 +93,13 @@ describe("apiErrorCodeSchema", () => {
       "tenant_deletion_not_ready",
       "tenant_not_deleting",
     ] as const;
-    expect(apiErrorCodeSchema.options).toStrictEqual(codes);
-    for (const code of codes) {
-      expect(apiErrorCodeSchema.parse(code)).toBe(code);
-    }
-  });
-
-  it("rejects unknown codes", () => {
-    expect(apiErrorCodeSchema.safeParse("unknown_outcome").success).toBe(false);
-    expect(apiErrorCodeSchema.safeParse("").success).toBe(false);
+    expectTypeOf<KnownBlazingAgentsErrorCode>().toEqualTypeOf<
+      | (typeof codes)[number]
+      | "invalid_response"
+      | "network_error"
+      | "request_aborted"
+      | "stream_error"
+    >();
   });
 });
 
@@ -150,48 +147,41 @@ describe("receivedApiErrorResponseSchema", () => {
   });
 });
 
-describe("cursorSchema", () => {
-  it("accepts a non-empty trimmed string", () => {
-    expect(cursorSchema.parse("  abc  ")).toBe("abc");
+describe("list cursors", () => {
+  it("accepts a non-empty trimmed cursor", () => {
+    expect(agentsListQuerySchema.parse({ cursor: "  abc  " }).cursor).toBe(
+      "abc"
+    );
   });
 
-  it("rejects empty/whitespace", () => {
-    expect(cursorSchema.safeParse("").success).toBe(false);
-    expect(cursorSchema.safeParse("   ").success).toBe(false);
+  it("rejects an empty or whitespace cursor", () => {
+    expect(agentsListQuerySchema.safeParse({ cursor: "" }).success).toBe(false);
+    expect(agentsListQuerySchema.safeParse({ cursor: "   " }).success).toBe(
+      false
+    );
   });
 });
 
-describe("paginatedResponseSchema", () => {
-  const itemSchema = z.object({ id: z.string() });
-  const schema = paginatedResponseSchema(itemSchema);
-
-  it("accepts a populated list with a cursor", () => {
+describe("paginated list envelopes", () => {
+  it("accepts an empty page with or without a next cursor", () => {
     expect(
-      schema.parse({
-        data: [{ id: "a" }, { id: "b" }],
-        nextCursor: "next",
-      })
+      agentsResponseSchema.parse({ data: [], nextCursor: "next" })
     ).toStrictEqual({
-      data: [{ id: "a" }, { id: "b" }],
+      data: [],
       nextCursor: "next",
     });
-  });
-
-  it("accepts an empty list with a null cursor", () => {
-    expect(schema.parse({ data: [], nextCursor: null })).toStrictEqual({
+    expect(
+      agentsResponseSchema.parse({ data: [], nextCursor: null })
+    ).toStrictEqual({
       data: [],
       nextCursor: null,
     });
   });
 
-  it("strips extra fields and missing cursor", () => {
+  it("strips extra fields and requires the cursor field", () => {
     expect(
-      schema.parse({
-        data: [],
-        nextCursor: null,
-        extra: true,
-      })
+      agentsResponseSchema.parse({ data: [], nextCursor: null, extra: true })
     ).not.toHaveProperty("extra");
-    expect(schema.safeParse({ data: [] }).success).toBe(false);
+    expect(agentsResponseSchema.safeParse({ data: [] }).success).toBe(false);
   });
 });

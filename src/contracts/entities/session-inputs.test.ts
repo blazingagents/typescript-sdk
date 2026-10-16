@@ -3,6 +3,7 @@ import {
   sessionInputResponseSchema,
   sessionInputsQuerySchema,
   sessionInputsResponseSchema,
+  stopSessionBodySchema,
   submitSessionInputBodySchema,
 } from "./session-inputs.ts";
 
@@ -114,5 +115,16 @@ describe("session input contracts", () => {
     expect(
       sessionInputsQuerySchema.safeParse({ after: "opaque" }).success
     ).toBe(false);
+  });
+});
+
+describe("stopSessionBodySchema", () => {
+  it("accepts a Turn id and rejects malformed ones", () => {
+    expect(stopSessionBodySchema.parse({ turnId: activity.turnId })).toEqual({
+      turnId: activity.turnId,
+    });
+    for (const turnId of ["turn_short", "turn_xxxxxxxxxxxxxxx"]) {
+      expect(stopSessionBodySchema.safeParse({ turnId }).success).toBe(false);
+    }
   });
 });

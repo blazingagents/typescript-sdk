@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   artifactDownloadUrlResponseSchema,
-  artifactFilenameSchema,
   artifactListItemSchema,
   artifactsListResponseSchema,
 } from "./artifacts.ts";
@@ -27,15 +26,22 @@ const artifact = {
   updatedAt: iso,
 };
 
-describe("artifactFilenameSchema", () => {
-  it.each(["report.pdf", "résumé 2026.txt"])("accepts flat name %s", (name) => {
-    expect(artifactFilenameSchema.parse(name)).toBe(name);
-  });
+describe("Artifact filenames", () => {
+  it.each(["report.pdf", "résumé 2026.txt"])(
+    "accepts flat name %s",
+    (filename) => {
+      expect(
+        artifactListItemSchema.parse({ ...artifact, filename }).filename
+      ).toBe(filename);
+    }
+  );
 
   it.each(["", " ", ".", "..", "folder/report.pdf", String.raw`folder\file`])(
     "rejects non-flat name %j",
-    (name) => {
-      expect(artifactFilenameSchema.safeParse(name).success).toBe(false);
+    (filename) => {
+      expect(
+        artifactListItemSchema.safeParse({ ...artifact, filename }).success
+      ).toBe(false);
     }
   );
 });
@@ -49,6 +55,13 @@ describe("active Artifact responses", () => {
     expect(
       artifactListItemSchema.parse({ ...artifact, deletedAt: null })
     ).not.toHaveProperty("deletedAt");
+  });
+
+  it("rejects a malformed Artifact id", () => {
+    expect(
+      artifactListItemSchema.safeParse({ ...artifact, artifactId: "at_short" })
+        .success
+    ).toBe(false);
   });
 
   it("uses a paginated list envelope", () => {

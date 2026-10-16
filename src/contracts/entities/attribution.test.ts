@@ -1,23 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  attributionCreateInputSchema,
-  metadataSchema,
-  userIdSchema,
-} from "./attribution.ts";
+import { attributionCreateInputSchema, metadataSchema } from "./attribution.ts";
 
-describe("userIdSchema", () => {
+describe("userId", () => {
   it("accepts an opaque tenant-chosen string", () => {
-    expect(userIdSchema.safeParse("cohand-user-42").success).toBe(true);
+    expect(
+      attributionCreateInputSchema.parse({ userId: "cohand-user-42" }).userId
+    ).toBe("cohand-user-42");
   });
 
   it("accepts the tenant-level sentinel ''", () => {
-    expect(userIdSchema.safeParse("").success).toBe(true);
+    expect(attributionCreateInputSchema.parse({ userId: "" }).userId).toBe("");
   });
 
   it("rejects non-strings", () => {
-    expect(userIdSchema.safeParse(42).success).toBe(false);
-    expect(userIdSchema.safeParse(null).success).toBe(false);
+    expect(attributionCreateInputSchema.safeParse({ userId: 42 }).success).toBe(
+      false
+    );
+    expect(
+      attributionCreateInputSchema.safeParse({ userId: null }).success
+    ).toBe(false);
   });
 });
 

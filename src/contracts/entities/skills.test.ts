@@ -2,11 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   copySkillBodySchema,
   createSkillBodySchema,
-  skillCopyResultSchema,
+  skillCopyResultsSchema,
   skillDetailSchema,
-  skillFilePathSchema,
-  skillNameSchema,
-  skillSchema,
+  skillsListResponseSchema,
 } from "./skills.ts";
 
 const iso = "2026-07-04T00:00:00.000Z";
@@ -23,7 +21,9 @@ const skill = {
 
 describe("Agent-owned Skill resources", () => {
   it("accepts the exact indexed Skill and detail projections", () => {
-    expect(skillSchema.parse(skill)).toEqual(skill);
+    expect(
+      skillsListResponseSchema.parse({ data: [skill], nextCursor: null })
+    ).toEqual({ data: [skill], nextCursor: null });
     expect(
       skillDetailSchema.parse({
         ...skill,
@@ -37,13 +37,27 @@ describe("Agent-owned Skill resources", () => {
 
   it("permits omitted indexed metadata and strips legacy ownership fields", () => {
     const { metadata: _metadata, ...withoutMetadata } = skill;
-    expect(skillSchema.parse(withoutMetadata)).toEqual(withoutMetadata);
+    expect(skillDetailSchema.parse({ ...withoutMetadata, files: [] })).toEqual({
+      ...withoutMetadata,
+      files: [],
+    });
     expect(
-      skillSchema.parse({ ...skill, ownerKind: "tenant" })
+      skillDetailSchema.parse({ ...skill, files: [], ownerKind: "tenant" })
     ).not.toHaveProperty("ownerKind");
-    expect(skillSchema.parse({ ...skill, userId: "" })).not.toHaveProperty(
-      "userId"
-    );
+    expect(
+      skillDetailSchema.parse({ ...skill, files: [], userId: "" })
+    ).not.toHaveProperty("userId");
+  });
+
+  it.each([
+    "skill_short",
+    "skill_platform_",
+    "skill_platform_Bad",
+    "skill_platform_airtable",
+  ])("rejects malformed or platform Skill id %s", (id) => {
+    expect(
+      skillDetailSchema.safeParse({ ...skill, id, files: [] }).success
+    ).toBe(false);
   });
 });
 
@@ -67,14 +81,22 @@ describe("Skill creation, upload, file, and copy contracts", () => {
   it.each(["SKILL.md", "references/guide.md", ".config/file"])(
     "accepts safe relative file path %s",
     (path) => {
-      expect(skillFilePathSchema.parse(path)).toBe(path);
+      expect(
+        skillDetailSchema.parse({ ...skill, files: [{ path, sizeBytes: 1 }] })
+          .files[0]?.path
+      ).toBe(path);
     }
   );
 
   it.each(["", "/SKILL.md", "../secret", "a/../secret", "a//b", "a\u0000b"])(
     "rejects unsafe file path %s",
     (path) => {
-      expect(skillFilePathSchema.safeParse(path).success).toBe(false);
+      expect(
+        skillDetailSchema.safeParse({
+          ...skill,
+          files: [{ path, sizeBytes: 1 }],
+        }).success
+      ).toBe(false);
     }
   );
 
@@ -97,15 +119,13 @@ describe("Skill creation, upload, file, and copy contracts", () => {
   });
 
   it("parses ordered created and failed copy outcomes", () => {
-    expect(
-      skillCopyResultSchema.parse({
+    const results = skillCopyResultsSchema.parse([
+      {
         agentId: skill.agentId,
         status: "created",
         skill: { ...skill, files: [] },
-      })
-    ).toMatchObject({ status: "created" });
-    expect(
-      skillCopyResultSchema.parse({
+      },
+      {
         agentId: skill.agentId,
         status: "failed",
         error: {
@@ -113,10 +133,8 @@ describe("Skill creation, upload, file, and copy contracts", () => {
           message: "Name already exists.",
           details: { name: skill.name },
         },
-      })
-    ).toMatchObject({ status: "failed" });
-    expect(
-      skillCopyResultSchema.parse({
+      },
+      {
         agentId: skill.agentId,
         status: "failed",
         error: {
@@ -124,16 +142,24 @@ describe("Skill creation, upload, file, and copy contracts", () => {
           message: "Name already exists.",
           param: "name",
         },
-      })
-    ).not.toHaveProperty("error.param");
+      },
+    ]);
+    expect(results.map((result) => result.status)).toEqual([
+      "created",
+      "failed",
+      "failed",
+    ]);
+    expect(results[2]).not.toHaveProperty("error.param");
   });
 });
 
-describe("SKILL.md frontmatter", () => {
+describe("Skill names", () => {
   it.each(["ppt-writer", "skill123", "a", "1"])(
     "accepts valid name %s",
     (name) => {
-      expect(skillNameSchema.safeParse(name).success).toBe(true);
+      expect(
+        skillDetailSchema.safeParse({ ...skill, name, files: [] }).success
+      ).toBe(true);
     }
   );
 
@@ -149,6 +175,8 @@ describe("SKILL.md frontmatter", () => {
     "",
     "x".repeat(65),
   ])("rejects invalid or reserved name %s", (name) => {
-    expect(skillNameSchema.safeParse(name).success).toBe(false);
+    expect(
+      skillDetailSchema.safeParse({ ...skill, name, files: [] }).success
+    ).toBe(false);
   });
 });

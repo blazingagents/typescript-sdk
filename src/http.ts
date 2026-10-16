@@ -415,7 +415,7 @@ function decodeChunks(
 export function parseErrorEnvelope(
   bodyText: string,
   status: number,
-  headers: Headers = new Headers()
+  headers: Headers
 ): BlazingAgentsError {
   let parsed: unknown;
   if (bodyText.length === 0) {

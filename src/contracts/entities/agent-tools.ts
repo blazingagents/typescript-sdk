@@ -55,8 +55,14 @@ export const AGENT_TOOL_TAGS = [
 
 export type AgentToolTag = AgentToolGroupTag | AgentToolFileAccessTag;
 
-/** The group tag comes first; only a file operation tool adds a file access tag. */
-export type AgentToolTags =
+/** The group tag comes first. Only a file operation tool adds a file access tag, and at most one. */
+export type AgentToolTags = readonly [
+  AgentToolGroupTag,
+  ...AgentToolFileAccessTag[],
+];
+
+/** The catalog's exact tag shapes, checked where it is declared. */
+type CatalogTags =
   | readonly ["files"]
   | readonly ["files", AgentToolFileAccessTag]
   | readonly [Exclude<AgentToolGroupTag, "files">];
@@ -81,7 +87,7 @@ export interface AgentToolDefinition {
   tags: AgentToolTags;
 }
 
-export const AGENT_TOOLS = [
+const CATALOG = [
   {
     name: "read",
     tags: ["files", "file_read"],
@@ -181,9 +187,14 @@ export const AGENT_TOOLS = [
     description:
       "Search the public web for current results. Each search consumes Usage credit.",
   },
-] as const satisfies readonly AgentToolDefinition[];
+] as const satisfies readonly (AgentToolDefinition & { tags: CatalogTags })[];
 
-export type AgentToolName = (typeof AGENT_TOOLS)[number]["name"];
+export type AgentToolName = (typeof CATALOG)[number]["name"];
+
+/** Declared rather than inferred, so `tool.tags.includes(tag)` accepts any tag. */
+export const AGENT_TOOLS: readonly (AgentToolDefinition & {
+  name: AgentToolName;
+})[] = CATALOG;
 
 export const agentToolNames: readonly AgentToolName[] = AGENT_TOOLS.map(
   (tool) => tool.name

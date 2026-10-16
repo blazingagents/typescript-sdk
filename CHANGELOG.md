@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.28.1
+
+### Fixed
+
+- `tool.tags.includes("file_read")` typechecks. `AgentToolTags` is now `readonly [AgentToolGroupTag, ...AgentToolFileAccessTag[]]`, and `AGENT_TOOLS` has that declared type instead of one literal tuple per tool.
+
 ## 0.28.0
 
 ### Added

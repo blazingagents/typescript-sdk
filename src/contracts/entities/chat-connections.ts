@@ -215,3 +215,35 @@ export const chatDeliveriesResponseSchema = z
 export type ChatDeliveriesResponse = z.infer<
   typeof chatDeliveriesResponseSchema
 >;
+
+export const chatDeliveryListSchema = z
+  .object({
+    data: z.array(chatDeliverySchema),
+    nextCursor: z.string().nullable(),
+  })
+  .strip();
+export type ChatDeliveryList = z.infer<typeof chatDeliveryListSchema>;
+
+export const repairChatDeliveryBodySchema = z
+  .object({
+    expectedAttempt: z.number().int().min(0).max(99),
+    previousSenderStopped: z.literal(true),
+    acceptDuplicateRisk: z.literal(true),
+  })
+  .strict();
+export type RepairChatDeliveryBody = z.input<
+  typeof repairChatDeliveryBodySchema
+>;
+
+export const chatDeliveryResultSchema = z
+  .object({
+    id: chatDeliveryIdSchema,
+    sessionId: z.string(),
+    threadId: z.string(),
+    connectionId: chatConnectionIdSchema,
+    kind: z.enum(["reply", "card"]),
+    status: z.enum(["confirmed", "failed", "ambiguous"]),
+    attempt: z.number().int().nonnegative(),
+  })
+  .strip();
+export type ChatDeliveryResult = z.infer<typeof chatDeliveryResultSchema>;

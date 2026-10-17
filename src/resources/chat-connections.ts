@@ -1,6 +1,8 @@
 import {
   chatConnectionSchema,
   chatConnectionsResponseSchema,
+  chatDeliveryListSchema,
+  chatDeliveryResultSchema,
 } from "../contracts/entities/chat-connections.ts";
 import { apiPath, requestJson } from "../http.ts";
 import type { ChatConnectionsResource, HttpConfig } from "../types.ts";
@@ -78,6 +80,33 @@ export function createChatConnectionsResource(
         apiPath`/v1/chat-connections/${chatConnectionId}/health`,
         { signal: abortSignal, method: "POST" },
         chatConnectionSchema
+      );
+    },
+    /**
+     * Lists one page of the Chat Connection's deliveries.
+     */
+    async listDeliveries({ chatConnectionId, abortSignal, ...query }) {
+      return await requestJson(
+        config,
+        apiPath`/v1/chat-connections/${chatConnectionId}/deliveries`,
+        { signal: abortSignal, query },
+        chatDeliveryListSchema
+      );
+    },
+    /**
+     * Sends a stuck Chat delivery again.
+     */
+    async repairDelivery({
+      chatConnectionId,
+      deliveryId,
+      abortSignal,
+      ...body
+    }) {
+      return await requestJson(
+        config,
+        apiPath`/v1/chat-connections/${chatConnectionId}/deliveries/${deliveryId}/repair`,
+        { signal: abortSignal, method: "POST", json: body },
+        chatDeliveryResultSchema
       );
     },
     /**

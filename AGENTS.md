@@ -2,6 +2,8 @@ All changes must use a topic branch and merge through a PR after required checks
 
 README.md is the repository's brief for Tenants: what it is, features, installation, a quick start, and links to the documentation. Document feature behavior on the documentation site (`blazingagents/docs`), not in the README.
 
+`spec/openapi.json` is a copy of the platform's API contract, which marks each API-key operation `"x-scope": "end-user"` or `"x-scope": "tenant"`. The npm package does not ship it. `src/client.user-scope-contract.test.ts` calls every `forUser()` method and fails when the user client sends a tenant operation or misses an end-user one. After a platform contract change, refresh it with `cp ../ba-platform/servers/api/openapi.json spec/openapi.json` and run `npm run check`. Keep the copy byte-identical; Biome skips it.
+
 Database integration tests run through the shared platform pool: `npm --prefix ../ba-platform run test:integration:sdk:typescript`. Independent integration commands can run concurrently; a focused command fails clearly when the pool is full. See [pool configuration and concurrency rules](../ba-platform/docs/test-pool.md). Ordinary unit and protocol-fixture tests need no Supabase.
 
 Breaking changes (a removed or renamed method, field, enum value, or endpoint, or a `!` commit) break Tenant apps already in production, so ship them in two steps. First release the new shape while the old one still works: the server and this SDK keep accepting the old input, and the old input is marked deprecated in its doc comment. Remove the old shape only in a later release. Every release that deprecates or removes something adds a `CHANGELOG.md` entry under its version that names what changed and shows the migration from the old call to the new one.

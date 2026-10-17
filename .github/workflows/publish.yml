@@ -1,29 +1,164 @@
+# Pushing a tag vX.Y.Z is the whole release. npm's trusted publisher is bound
+# to this file name and the npm environment; keep both names.
 name: Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
+  # A dry run: every check for the given tag against the dispatched commit,
+  # without publishing to npm or creating the GitHub release.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to check, such as v0.31.0. It need not exist.
+        required: true
+        type: string
 
 permissions:
   contents: read
-  id-token: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  verify:
+    name: Verify the tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+      notes: ${{ steps.check.outputs.notes }}
+      published: ${{ steps.registry.outputs.published }}
+    env:
+      TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tagged commit is on main
+        if: github.event_name == 'push'
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$TAG points at $GITHUB_SHA, which is not on main"
+            exit 1
+          fi
+      - name: Check the tag against package.json and CHANGELOG.md
+        id: check
+        run: |
+          .github/scripts/release-check.sh "$TAG" "$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
+          delim=RELEASE_NOTES_$(openssl rand -hex 16)
+          {
+            echo "notes<<$delim"
+            cat "$RUNNER_TEMP/notes.md"
+            echo "$delim"
+          } >> "$GITHUB_OUTPUT"
+      # A rerun must not fail on a version npm already has.
+      - name: Check whether the version is already on npm
+        id: registry
+        if: steps.check.outputs.prerelease == 'false'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://registry.npmjs.org/@blazingagents%2Fsdk/$VERSION")
+          case "$status" in
+            200) echo "published=true" >> "$GITHUB_OUTPUT"
+                 echo "::notice::@blazingagents/sdk $VERSION is already on npm; skipping the upload" ;;
+            404) echo "published=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::registry.npmjs.org answered $status"; exit 1 ;;
+          esac
+      - name: Summarize the release
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+          PRERELEASE: ${{ steps.check.outputs.prerelease }}
+          PUBLISHED: ${{ steps.registry.outputs.published }}
+        run: |
+          if [ "$PRERELEASE" = true ]; then
+            npm="skipped: prereleases are not published to npm"
+          elif [ "$PUBLISHED" = true ]; then
+            npm="skipped: $VERSION is already on npm"
+          else
+            npm="publish @blazingagents/sdk $VERSION"
+          fi
+          {
+            [ "$GITHUB_EVENT_NAME" = push ] || echo "**Dry run: nothing below is published.**"
+            echo
+            echo "- npm: $npm"
+            echo "- GitHub release: $TAG (prerelease: $PRERELEASE)"
+            echo
+            echo "### Release notes"
+            echo
+            cat "$RUNNER_TEMP/notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   publish:
-    if: ${{ !github.event.release.prerelease }}
+    name: Publish to npm
+    if: >-
+      github.event_name == 'push'
+      && needs.verify.outputs.prerelease == 'false'
+      && needs.verify.outputs.published == 'false'
+    needs: [ci, verify]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v6
-      - name: Verify release tag matches package version
-        run: test "v$(npm pkg get version | tr -d '\"')" = "$GITHUB_REF_NAME"
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
       - run: npm ci
-      - run: npm run check
-      - run: npm run test:consumer
-      - run: npm publish --provenance
+      # prepack builds dist. A rerun of this job after an upload that went
+      # through finds the version on npm and skips it.
+      - env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            "https://registry.npmjs.org/@blazingagents%2Fsdk/$VERSION")
+          if [ "$status" = 200 ]; then
+            echo "::notice::@blazingagents/sdk $VERSION is already on npm; skipping the upload"
+            exit 0
+          fi
+          npm publish --provenance
+
+  release:
+    name: Create the GitHub release
+    # publish is skipped for a prerelease or a version already on npm; the
+    # release still goes out then, but never after a failed check.
+    if: >-
+      !cancelled()
+      && github.event_name == 'push'
+      && needs.ci.result == 'success'
+      && needs.verify.result == 'success'
+      && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    needs: [ci, verify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # A rerun must not fail on a release an earlier attempt already created.
+      - name: Create the release unless it exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ needs.verify.outputs.notes }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json url -q .url; then
+            echo "::notice::release $GITHUB_REF_NAME already exists; leaving it as it is"
+            exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --notes "$NOTES" --prerelease="$PRERELEASE"

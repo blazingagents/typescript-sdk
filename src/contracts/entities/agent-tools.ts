@@ -67,19 +67,7 @@ type CatalogTags =
   | readonly ["files", AgentToolFileAccessTag]
   | readonly [Exclude<AgentToolGroupTag, "files">];
 
-/** @deprecated Use `AgentToolGroupTag`. */
-export type AgentToolCategoryId = AgentToolGroupTag;
-
-/** @deprecated Use `AGENT_TOOL_GROUPS`, keyed by `tag`. */
-export const AGENT_TOOL_CATEGORIES: readonly {
-  description: string;
-  id: AgentToolGroupTag;
-  name: string;
-}[] = AGENT_TOOL_GROUPS.map(({ tag, ...group }) => ({ id: tag, ...group }));
-
 export interface AgentToolDefinition {
-  /** @deprecated Use the group tag in `tags`. */
-  category: AgentToolGroupTag;
   description: string;
   name: string;
   /** The tool runs in the Agent's attached Workspace. */
@@ -91,98 +79,84 @@ const CATALOG = [
   {
     name: "read",
     tags: ["files", "file_read"],
-    category: "files",
     requiresWorkspace: true,
     description: "Read a file from the Workspace.",
   },
   {
     name: "write",
     tags: ["files", "file_write"],
-    category: "files",
     requiresWorkspace: true,
     description: "Create or overwrite a file in the Workspace.",
   },
   {
     name: "edit",
     tags: ["files", "file_write"],
-    category: "files",
     requiresWorkspace: true,
     description: "Replace exact text in a Workspace file.",
   },
   {
     name: "grep",
     tags: ["files", "file_read"],
-    category: "files",
     requiresWorkspace: true,
     description: "Search Workspace file contents with a regular expression.",
   },
   {
     name: "glob",
     tags: ["files", "file_read"],
-    category: "files",
     requiresWorkspace: true,
     description: "Find Workspace files by path pattern.",
   },
   {
     name: "bash",
     tags: ["files", "execute"],
-    category: "files",
     requiresWorkspace: true,
     description: "Run shell commands in the Workspace.",
   },
   {
     name: "publish_artifacts",
     tags: ["files"],
-    category: "files",
     requiresWorkspace: true,
     description: "Publish Workspace files as downloadable Artifacts.",
   },
   {
     name: "write_todos",
     tags: ["planning"],
-    category: "planning",
     requiresWorkspace: false,
     description: "Plan and track multi-step work with a todo list.",
   },
   {
     name: "save_memory",
     tags: ["memory"],
-    category: "memory",
     requiresWorkspace: false,
     description: "Save a durable note.",
   },
   {
     name: "get_memory",
     tags: ["memory"],
-    category: "memory",
     requiresWorkspace: false,
     description: "Read one saved note.",
   },
   {
     name: "search_memories",
     tags: ["memory"],
-    category: "memory",
     requiresWorkspace: false,
     description: "Search saved notes.",
   },
   {
     name: "update_memory",
     tags: ["memory"],
-    category: "memory",
     requiresWorkspace: false,
     description: "Update a saved note.",
   },
   {
     name: "delete_memory",
     tags: ["memory"],
-    category: "memory",
     requiresWorkspace: false,
     description: "Delete a saved note.",
   },
   {
     name: "web_search",
     tags: ["web"],
-    category: "web",
     requiresWorkspace: false,
     description:
       "Search the public web for current results. Each search consumes Usage credit.",

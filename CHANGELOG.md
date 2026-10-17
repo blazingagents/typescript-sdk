@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.0
+
+### Removed
+
+- `AgentToolDefinition.category`, `AGENT_TOOL_CATEGORIES`, and `AgentToolCategoryId`, deprecated in 0.28.0. Group tools by their first tag and `AGENT_TOOL_GROUPS`, as the 0.28.0 entry shows.
+
 ## 0.28.1
 
 ### Fixed

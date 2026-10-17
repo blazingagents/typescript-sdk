@@ -1,8 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  // biome-ignore lint/suspicious/noDeprecatedImports: the deprecated alias stays tested until it is removed
-  AGENT_TOOL_CATEGORIES,
   AGENT_TOOL_GROUPS,
   AGENT_TOOL_TAGS,
   AGENT_TOOLS,
@@ -37,21 +35,11 @@ describe("AGENT_TOOLS", () => {
     expect(agentToolNames).toEqual(AGENT_TOOLS.map((tool) => tool.name));
   });
 
-  it("gives every group a tool and keeps the deprecated category equal to the group tag", () => {
+  it("gives every tool one declared group tag and every group a tool", () => {
     const groupTags = AGENT_TOOL_GROUPS.map((group) => group.tag);
     expect(groupTags).toEqual(["files", "planning", "memory", "web"]);
     expect(new Set(AGENT_TOOLS.map((tool) => tool.tags[0]))).toEqual(
       new Set(groupTags)
-    );
-    for (const tool of AGENT_TOOLS) {
-      expect(tool.category).toBe(tool.tags[0]);
-    }
-    expect(AGENT_TOOL_CATEGORIES).toEqual(
-      AGENT_TOOL_GROUPS.map(({ tag, name, description }) => ({
-        id: tag,
-        name,
-        description,
-      }))
     );
   });
 
@@ -65,7 +53,7 @@ describe("AGENT_TOOLS", () => {
     expect(committed, "run npm run agent-tools:json").toEqual({
       tags: AGENT_TOOL_TAGS,
       groups: AGENT_TOOL_GROUPS,
-      tools: AGENT_TOOLS.map(({ category: _category, ...tool }) => tool),
+      tools: AGENT_TOOLS,
     });
   });
 });

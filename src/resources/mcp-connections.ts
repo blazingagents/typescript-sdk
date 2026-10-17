@@ -34,7 +34,8 @@ export function createMcpConnectionsResource(
     )) as McpConnectionsResource["create"];
   return {
     /**
-     * Starts OAuth authorization for mcp connections.
+     * Starts OAuth authorization for mcp connections. The API serves this
+     * route only to a dashboard session and refuses an API key.
      */
     async connect({ mcpConnectionId, abortSignal }) {
       return await requestJson(

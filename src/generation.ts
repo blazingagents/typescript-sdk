@@ -257,12 +257,10 @@ function buildChatResult(
  * Creates single-owner SSE response and byte-stream accessors.
  * @param response - Upstream HTTP response.
  * @param resourceName - Resource label used in stream errors.
- * @param filter - Transforms upstream SSE bytes before exposing them to the caller.
  */
 export function buildTerminalStreamResult(
   response: Response,
-  resourceName: string,
-  filter?: (body: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>
+  resourceName: string
 ): TerminalStreamResult {
   const requestId = response.headers.get("x-request-id") ?? undefined;
   const location = response.headers.get("location");
@@ -288,7 +286,7 @@ export function buildTerminalStreamResult(
     bodyClaimed = true;
     const body = responseBodyStream(response, requestId, resourceName);
     return normalizeStreamErrors(
-      filter ? filter(body) : body,
+      body,
       requestId,
       `The ${resourceName} response stream failed.`
     );

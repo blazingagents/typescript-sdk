@@ -23,7 +23,6 @@ describe("forUser", () => {
     expect("mcpConnections" in user).toBe(false);
     expect("merchantConnection" in user).toBe(false);
     expect("overview" in user.usage).toBe(false);
-    expect("getForAgent" in user.usage).toBe(false);
     await user.withOptions({ clientRequestId: "trace-1" }).agents.list();
     await tenant.agents.list();
 
@@ -34,6 +33,28 @@ describe("forUser", () => {
       "trace-1"
     );
     expect(new Headers(calls[1].init?.headers).get("X-BA-User-Id")).toBeNull();
+  });
+
+  it("reads one Agent's usage for the scoped user", async () => {
+    const { fetch, calls } = createMockFetch({
+      body: {
+        buckets: [],
+        totals: {
+          inputTokens: 0,
+          outputTokens: 0,
+          requestCount: 0,
+          durationMs: 0,
+        },
+      },
+    });
+    await new BlazingAgents({ apiKey: "ba_test", fetch })
+      .forUser("user-42")
+      .usage.getForAgent({ agentId });
+
+    expect(new URL(calls[0].url).pathname).toBe(`/v1/agents/${agentId}/usage`);
+    expect(new Headers(calls[0].init?.headers).get("X-BA-User-Id")).toBe(
+      "user-42"
+    );
   });
 
   it("sends scope on multipart uploads", async () => {

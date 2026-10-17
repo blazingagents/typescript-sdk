@@ -74,7 +74,11 @@ function createUserClient(config: HttpConfig): UserClient {
     artifacts: createArtifactsResource(config),
     workspaces: createWorkspacesResource(config),
     memories: createMemoriesResource(config),
-    usage: { get: usage.get, sessions: usage.sessions },
+    usage: {
+      get: usage.get,
+      getForAgent: usage.getForAgent,
+      sessions: usage.sessions,
+    },
     /** Returns Skill operations for the selected Agent. */
     agent: ({ agentId }) => ({
       skills: createAgentSkillsResource(config, agentId),

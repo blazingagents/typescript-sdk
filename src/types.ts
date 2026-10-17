@@ -194,6 +194,26 @@ export interface BlazingAgentsRequestOptions {
   clientRequestId: string;
 }
 
+/**
+ * Agent operations on a user-scoped client. The API refuses the spending limit
+ * methods for user-scoped callers.
+ */
+export interface UserAgentsResource
+  extends Omit<AgentsResource, "getSpendingLimit" | "updateSpendingLimit"> {
+  /**
+   * @deprecated The API always refuses this for user-scoped callers with
+   * `forbidden` (403). Call it on the tenant client instead. It is removed
+   * from user-scoped clients in a later release.
+   */
+  getSpendingLimit: AgentsResource["getSpendingLimit"];
+  /**
+   * @deprecated The API always refuses this for user-scoped callers with
+   * `forbidden` (403). Call it on the tenant client instead. It is removed
+   * from user-scoped clients in a later release.
+   */
+  updateSpendingLimit: AgentsResource["updateSpendingLimit"];
+}
+
 export interface UserClient {
   /**
    * Returns the Skill operations for the selected Agent.
@@ -201,7 +221,7 @@ export interface UserClient {
    * @returns The selected Agent Skill client.
    */
   agent(input: { agentId: string }): AgentClient;
-  readonly agents: AgentsResource;
+  readonly agents: UserAgentsResource;
   readonly artifacts: ArtifactsResource;
   /**
    * Creates or resumes a Session and returns its SSE stream and Session ID.
@@ -231,7 +251,7 @@ export interface UserClient {
   readonly prompts: PromptsResource;
   readonly sessions: SessionsResource;
   readonly tasks: TasksResource;
-  readonly usage: Pick<UsageResource, "get" | "sessions">;
+  readonly usage: Pick<UsageResource, "get" | "getForAgent" | "sessions">;
   /**
    * Creates a client view with the supplied request correlation ID.
    * @param options - Caller-owned request correlation ID for subsequent calls.

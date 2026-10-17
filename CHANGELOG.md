@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.30.0
+
+### Added
+
+- `forUser(...).usage.getForAgent()` reads one Agent's usage for the scoped user. The API already allowed it.
+
+### Deprecated
+
+- `forUser(...).agents.getSpendingLimit()` and `forUser(...).agents.updateSpendingLimit()`. The API always refuses them for user-scoped callers with `forbidden` (403), so they never worked there. They are removed from user-scoped clients in a later release. Call them on the tenant client:
+
+```ts
+// Before
+await client.forUser(userId).agents.getSpendingLimit({ agentId });
+
+// After
+await client.agents.getSpendingLimit({ agentId });
+```
+
 ## 0.29.0
 
 ### Removed

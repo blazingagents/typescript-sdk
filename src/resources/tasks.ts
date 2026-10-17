@@ -7,7 +7,7 @@ import {
   taskRunsListResponseSchema,
   tasksListResponseSchema,
 } from "../contracts/entities/tasks.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, TasksResource } from "../types.ts";
 
 /**
@@ -60,7 +60,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async get({ taskId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/tasks/${taskId}`,
+        apiPath`/v1/tasks/${taskId}`,
         { signal: abortSignal },
         taskResponseSchema
       );
@@ -71,7 +71,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async update({ taskId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/tasks/${taskId}`,
+        apiPath`/v1/tasks/${taskId}`,
         {
           json: body,
           signal: abortSignal,
@@ -84,7 +84,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
      * Deletes tasks.
      */
     async delete({ taskId, abortSignal }) {
-      await requestJson<void>(config, `/v1/tasks/${taskId}`, {
+      await requestJson<void>(config, apiPath`/v1/tasks/${taskId}`, {
         method: "DELETE",
         signal: abortSignal,
       });
@@ -95,7 +95,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async createRun({ taskId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/tasks/${taskId}/runs`,
+        apiPath`/v1/tasks/${taskId}/runs`,
         { json: body, method: "POST", signal: abortSignal },
         createTaskRunResponseSchema
       );
@@ -106,7 +106,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async listRuns({ taskId, ...options }) {
       return await requestJson(
         config,
-        `/v1/tasks/${taskId}/runs`,
+        apiPath`/v1/tasks/${taskId}/runs`,
         {
           signal: options.abortSignal,
           query: { cursor: options.cursor, limit: options.limit },
@@ -120,7 +120,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async getRun({ taskId, runId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/tasks/${taskId}/runs/${runId}`,
+        apiPath`/v1/tasks/${taskId}/runs/${runId}`,
         { signal: abortSignal },
         taskRunResponseSchema
       );
@@ -131,7 +131,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async runMessages({ taskId, runId, ...options }) {
       return await requestJson(
         config,
-        `/v1/tasks/${taskId}/runs/${runId}/messages`,
+        apiPath`/v1/tasks/${taskId}/runs/${runId}/messages`,
         {
           signal: options.abortSignal,
           query: {
@@ -149,7 +149,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
     async cancelRun({ taskId, runId, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/tasks/${taskId}/runs/${runId}/cancel`,
+        apiPath`/v1/tasks/${taskId}/runs/${runId}/cancel`,
         { method: "POST", signal: abortSignal }
       );
     },

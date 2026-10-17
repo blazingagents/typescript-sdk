@@ -4,7 +4,7 @@ import {
   usageOverviewResponseSchemaForQuery,
   usageResponseSchema,
 } from "../contracts/entities/usage.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, UsageResource } from "../types.ts";
 
 /**
@@ -52,7 +52,7 @@ export function createUsageResource(config: HttpConfig): UsageResource {
     async getForAgent({ agentId, abortSignal, ...query }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/usage`,
+        apiPath`/v1/agents/${agentId}/usage`,
         { query, signal: abortSignal },
         usageResponseSchema
       );

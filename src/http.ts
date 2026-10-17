@@ -18,6 +18,17 @@ interface BodyReadResult {
 }
 
 /**
+ * Builds an endpoint path, encoding each interpolated value so it stays inside
+ * one path segment or query value.
+ */
+export function apiPath(
+  template: TemplateStringsArray,
+  ...values: string[]
+): string {
+  return String.raw({ raw: template }, ...values.map(encodeURIComponent));
+}
+
+/**
  * Appends query values while omitting null and undefined entries.
  */
 function buildUrl(

@@ -2,7 +2,7 @@ import {
   chatConnectionSchema,
   chatConnectionsResponseSchema,
 } from "../contracts/entities/chat-connections.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { ChatConnectionsResource, HttpConfig } from "../types.ts";
 
 /**
@@ -42,7 +42,7 @@ export function createChatConnectionsResource(
     async get({ chatConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}`,
+        apiPath`/v1/chat-connections/${chatConnectionId}`,
         { signal: abortSignal, method: "GET" },
         chatConnectionSchema
       );
@@ -53,7 +53,7 @@ export function createChatConnectionsResource(
     async update({ chatConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}`,
+        apiPath`/v1/chat-connections/${chatConnectionId}`,
         { signal: abortSignal, method: "PATCH", json: body },
         chatConnectionSchema
       );
@@ -64,7 +64,7 @@ export function createChatConnectionsResource(
     async rotateCredentials({ chatConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}/credentials`,
+        apiPath`/v1/chat-connections/${chatConnectionId}/credentials`,
         { signal: abortSignal, method: "POST", json: body },
         chatConnectionSchema
       );
@@ -75,7 +75,7 @@ export function createChatConnectionsResource(
     async checkHealth({ chatConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}/health`,
+        apiPath`/v1/chat-connections/${chatConnectionId}/health`,
         { signal: abortSignal, method: "POST" },
         chatConnectionSchema
       );
@@ -86,7 +86,7 @@ export function createChatConnectionsResource(
     async enable({ chatConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}/enable`,
+        apiPath`/v1/chat-connections/${chatConnectionId}/enable`,
         { signal: abortSignal, method: "POST" },
         chatConnectionSchema
       );
@@ -97,7 +97,7 @@ export function createChatConnectionsResource(
     async disable({ chatConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}/disable`,
+        apiPath`/v1/chat-connections/${chatConnectionId}/disable`,
         { signal: abortSignal, method: "POST" },
         chatConnectionSchema
       );
@@ -108,7 +108,7 @@ export function createChatConnectionsResource(
     async delete({ chatConnectionId, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/chat-connections/${encodeURIComponent(chatConnectionId)}`,
+        apiPath`/v1/chat-connections/${chatConnectionId}`,
         { signal: abortSignal, method: "DELETE" }
       );
     },

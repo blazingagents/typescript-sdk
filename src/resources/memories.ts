@@ -2,7 +2,7 @@ import {
   memoriesListResponseSchema,
   memoryResponseSchema,
 } from "../contracts/entities/memories.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, MemoriesResource } from "../types.ts";
 
 /**
@@ -20,7 +20,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
     async list({ agentId, abortSignal, ...options }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/memories`,
+        apiPath`/v1/agents/${agentId}/memories`,
         {
           signal: abortSignal,
           query: {
@@ -39,7 +39,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
     async create({ agentId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/memories`,
+        apiPath`/v1/agents/${agentId}/memories`,
         { json: body, signal: abortSignal, method: "POST" },
         memoryResponseSchema
       );
@@ -50,7 +50,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
     async get({ agentId, memoryId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/memories/${memoryId}`,
+        apiPath`/v1/agents/${agentId}/memories/${memoryId}`,
         { signal: abortSignal },
         memoryResponseSchema
       );
@@ -61,7 +61,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
     async update({ agentId, memoryId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/memories/${memoryId}`,
+        apiPath`/v1/agents/${agentId}/memories/${memoryId}`,
         { json: body, signal: abortSignal, method: "PATCH" },
         memoryResponseSchema
       );
@@ -72,7 +72,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
     async delete({ agentId, memoryId, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/agents/${agentId}/memories/${memoryId}`,
+        apiPath`/v1/agents/${agentId}/memories/${memoryId}`,
         { method: "DELETE", signal: abortSignal }
       );
     },

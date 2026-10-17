@@ -2,7 +2,7 @@ import {
   promptResponseSchema,
   promptsResponseSchema,
 } from "../contracts/entities/prompts.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, PromptsResource } from "../types.ts";
 
 /**
@@ -47,7 +47,7 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
     async get({ promptId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/prompts/${promptId}`,
+        apiPath`/v1/prompts/${promptId}`,
         { signal: abortSignal },
         promptResponseSchema
       );
@@ -58,7 +58,7 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
     async update({ promptId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/prompts/${promptId}`,
+        apiPath`/v1/prompts/${promptId}`,
         {
           json: body,
           signal: abortSignal,
@@ -71,7 +71,7 @@ export function createPromptsResource(config: HttpConfig): PromptsResource {
      * Deletes prompts.
      */
     async delete({ promptId, abortSignal }) {
-      await requestJson<void>(config, `/v1/prompts/${promptId}`, {
+      await requestJson<void>(config, apiPath`/v1/prompts/${promptId}`, {
         method: "DELETE",
         signal: abortSignal,
       });

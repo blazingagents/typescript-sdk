@@ -4,6 +4,7 @@ import {
   skillsListResponseSchema,
 } from "../contracts/entities/skills.ts";
 import {
+  apiPath,
   isRequestAborted,
   requestAbortedError,
   requestJson,
@@ -18,7 +19,7 @@ function fileUrl(
   agentId: string,
   input: { path: string; skillId: string }
 ): string {
-  return `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(input.skillId)}/files?path=${encodeURIComponent(input.path)}`;
+  return apiPath`/v1/agents/${agentId}/skills/${input.skillId}/files?path=${input.path}`;
 }
 
 /**
@@ -37,7 +38,7 @@ export function createAgentSkillsResource(
     async copy({ skillId, to, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}/copies`,
+        apiPath`/v1/agents/${agentId}/skills/${skillId}/copies`,
         { json: to, method: "POST", signal: abortSignal },
         skillCopyResultsSchema
       );
@@ -48,7 +49,7 @@ export function createAgentSkillsResource(
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/agents/${encodeURIComponent(agentId)}/skills`,
+        apiPath`/v1/agents/${agentId}/skills`,
         { json: body, method: "POST", signal: abortSignal },
         skillDetailSchema
       );
@@ -59,7 +60,7 @@ export function createAgentSkillsResource(
     async delete({ skillId, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`,
+        apiPath`/v1/agents/${agentId}/skills/${skillId}`,
         { method: "DELETE", signal: abortSignal }
       );
     },
@@ -83,7 +84,7 @@ export function createAgentSkillsResource(
     async get({ skillId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`,
+        apiPath`/v1/agents/${agentId}/skills/${skillId}`,
         { signal: abortSignal },
         skillDetailSchema
       );
@@ -110,7 +111,7 @@ export function createAgentSkillsResource(
     async list({ cursor, limit, abortSignal } = {}) {
       return await requestJson(
         config,
-        `/v1/agents/${encodeURIComponent(agentId)}/skills`,
+        apiPath`/v1/agents/${agentId}/skills`,
         { signal: abortSignal, query: { cursor, limit } },
         skillsListResponseSchema
       );
@@ -143,7 +144,7 @@ export function createAgentSkillsResource(
       form.set("file", file, `skill.${source.type}`);
       return await requestJson(
         config,
-        `/v1/agents/${encodeURIComponent(agentId)}/skills/upload`,
+        apiPath`/v1/agents/${agentId}/skills/upload`,
         { body: form, method: "POST", signal: abortSignal },
         skillDetailSchema
       );

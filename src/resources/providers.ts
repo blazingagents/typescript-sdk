@@ -4,7 +4,7 @@ import {
   providersResponseSchema,
   thinkingLevelsResponseSchema,
 } from "../contracts/entities/providers.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, ProvidersResource } from "../types.ts";
 
 /**
@@ -46,7 +46,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
     async get({ providerId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/providers/${providerId}`,
+        apiPath`/v1/providers/${providerId}`,
         { signal: abortSignal },
         providerResponseSchema
       );
@@ -57,7 +57,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
     async listModels({ providerId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/providers/${providerId}/models`,
+        apiPath`/v1/providers/${providerId}/models`,
         { signal: abortSignal },
         providerModelsResponseSchema
       );
@@ -68,7 +68,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
     async getThinkingLevels({ providerId, model, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/providers/${providerId}/thinking-levels`,
+        apiPath`/v1/providers/${providerId}/thinking-levels`,
         { signal: abortSignal, query: { model } },
         thinkingLevelsResponseSchema
       );
@@ -79,7 +79,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
     async update({ providerId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/providers/${providerId}`,
+        apiPath`/v1/providers/${providerId}`,
         {
           json: body,
           signal: abortSignal,
@@ -92,7 +92,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
      * Deletes providers.
      */
     async delete({ providerId, abortSignal, ...options }) {
-      await requestJson<void>(config, `/v1/providers/${providerId}`, {
+      await requestJson<void>(config, apiPath`/v1/providers/${providerId}`, {
         method: "DELETE",
         signal: abortSignal,
         query: {

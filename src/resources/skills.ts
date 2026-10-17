@@ -125,6 +125,7 @@ export function createAgentSkillsResource(
         fileUrl(agentId, input),
         {
           body: content as BodyInit,
+          headers: { "content-type": "application/octet-stream" },
           method: "PUT",
           signal: abortSignal,
         },

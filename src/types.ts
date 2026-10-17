@@ -194,25 +194,11 @@ export interface BlazingAgentsRequestOptions {
   clientRequestId: string;
 }
 
-/**
- * Agent operations on a user-scoped client. The API refuses the spending limit
- * methods for user-scoped callers.
- */
-export interface UserAgentsResource
-  extends Omit<AgentsResource, "getSpendingLimit" | "updateSpendingLimit"> {
-  /**
-   * @deprecated The API always refuses this for user-scoped callers with
-   * `forbidden` (403). Call it on the tenant client instead. It is removed
-   * from user-scoped clients in a later release.
-   */
-  getSpendingLimit: AgentsResource["getSpendingLimit"];
-  /**
-   * @deprecated The API always refuses this for user-scoped callers with
-   * `forbidden` (403). Call it on the tenant client instead. It is removed
-   * from user-scoped clients in a later release.
-   */
-  updateSpendingLimit: AgentsResource["updateSpendingLimit"];
-}
+/** Agent operations on a user-scoped client, which has no spending limits. */
+export type UserAgentsResource = Omit<
+  AgentsResource,
+  "getSpendingLimit" | "updateSpendingLimit"
+>;
 
 export interface UserClient {
   /**

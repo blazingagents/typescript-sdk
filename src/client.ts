@@ -5,7 +5,10 @@ import {
   continueChat,
   objectGeneration,
 } from "./generation.ts";
-import { createAgentsResource } from "./resources/agents.ts";
+import {
+  createAgentsResource,
+  createUserAgentsResource,
+} from "./resources/agents.ts";
 import { createArtifactsResource } from "./resources/artifacts.ts";
 import { createChatConnectionsResource } from "./resources/chat-connections.ts";
 import { createChatDeliveriesResource } from "./resources/chat-deliveries.ts";
@@ -67,7 +70,7 @@ const scopedUserIdSchema = z
 function createUserClient(config: HttpConfig): UserClient {
   const usage = createUsageResource(config);
   return {
-    agents: createAgentsResource(config),
+    agents: createUserAgentsResource(config),
     sessions: createSessionsResource(config),
     prompts: createPromptsResource(config),
     tasks: createTasksResource(config),

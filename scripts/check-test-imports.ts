@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -15,7 +15,12 @@ const unsupportedExportPattern =
 const importPattern =
   /^(?:import|export)\s+(?:type\s+)?(?:(?<default>[\w$]+)\s*,?\s*)?(?:(?<namespace>\*)(?:\s+as\s+[\w$]+)?|\{(?<named>[^}]*)\})?\s*from\s+["'](?<specifier>\.[^"']*)["']/dgm;
 const wholeModulePattern =
-  /^import\s+["'](\.[^"']*)["']|\b(?:import|vi\.mock|vi\.doMock)\(\s*["'](\.[^"']*)["']/gm;
+  /^import\s+["'](\.[^"']*)["']|\b(?:import|require|vi\.(?:mock|doMock|importActual|importMock))(?:<[^>]*>)?\(\s*["'`](\.[^"'`]*)["'`]/gm;
+// Vitest's default include: any *.test.* or *.spec.* JS/TS file.
+const testFilePattern = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
+const sourceFilePattern = /\.[cm]?[jt]sx?$/;
+const jsExtensionPattern = /\.([cm]?)js$/;
+const skippedDirs = new Set([".git", "dist", "node_modules"]);
 const specifierPattern = /(?:\btype\s+)?([\w$]+)(?:\s+as\s+[\w$]+)?/g;
 
 function specifierNames(list: string): { name: string; offset: number }[] {
@@ -52,14 +57,42 @@ function isTestSupport(path: string): boolean {
   return relative(root, path).split(sep).includes("test");
 }
 
-function testFiles(dir: string, all: boolean): string[] {
-  return readdirSync(dir, { recursive: true, encoding: "utf8" })
+/** Every file a test runner or test typecheck can load: test files anywhere, plus test support and `tests/`. */
+function testFiles(): string[] {
+  return readdirSync(root, { withFileTypes: true })
+    .filter((entry) => !skippedDirs.has(entry.name))
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? readdirSync(join(root, entry.name), {
+            recursive: true,
+            encoding: "utf8",
+          }).map((path) => join(entry.name, path))
+        : [entry.name]
+    )
     .filter(
       (path) =>
-        path.endsWith(".ts") &&
-        (all || path.endsWith(".test.ts") || isTestSupport(join(dir, path)))
+        sourceFilePattern.test(path) &&
+        (testFilePattern.test(path) ||
+          path.startsWith(`tests${sep}`) ||
+          isTestSupport(join(root, path)))
     )
-    .map((path) => join(dir, path));
+    .map((path) => join(root, path));
+}
+
+/** Resolves a relative specifier the way TypeScript and Vite do: `.js` to `.ts`, no extension, or a directory index. */
+function resolveSpecifier(file: string, specifier: string): string {
+  const path = resolve(dirname(file), specifier);
+  const candidates = [
+    path,
+    path.replace(jsExtensionPattern, ".$1ts"),
+    `${path}.ts`,
+    join(path, "index.ts"),
+  ];
+  return (
+    candidates.find(
+      (candidate) => existsSync(candidate) && statSync(candidate).isFile()
+    ) ?? path
+  );
 }
 
 const allowed = publicExports();
@@ -72,7 +105,7 @@ function check(
   specifier: string,
   name: string
 ) {
-  const target = resolve(dirname(file), specifier);
+  const target = resolveSpecifier(file, specifier);
   if (
     entries.includes(target) ||
     isTestSupport(target) ||
@@ -87,10 +120,7 @@ function check(
   );
 }
 
-for (const file of [
-  ...testFiles(join(root, "src"), false),
-  ...testFiles(join(root, "tests"), true),
-]) {
+for (const file of testFiles()) {
   const text = readFileSync(file, "utf8");
   for (const match of text.matchAll(importPattern)) {
     const { groups, indices } = match;

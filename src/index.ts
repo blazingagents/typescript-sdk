@@ -18,12 +18,10 @@ export type {
   ToolReference,
 } from "./contracts/entities/agent-approval.ts";
 export {
-  AGENT_TOOL_CATEGORIES,
   AGENT_TOOL_FILE_ACCESS_TAGS,
   AGENT_TOOL_GROUPS,
   AGENT_TOOL_TAGS,
   AGENT_TOOLS,
-  type AgentToolCategoryId,
   type AgentToolDefinition,
   type AgentToolFileAccessTag,
   type AgentToolGroupTag,

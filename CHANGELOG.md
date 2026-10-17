@@ -48,7 +48,21 @@ await client.agents.getSpendingLimit({ agentId });
 
 ### Removed
 
-- `AgentToolDefinition.category`, `AGENT_TOOL_CATEGORIES`, and `AgentToolCategoryId`, deprecated in 0.28.0. Group tools by their first tag and `AGENT_TOOL_GROUPS`, as the 0.28.0 entry shows.
+- `AgentToolDefinition.category`, `AGENT_TOOL_CATEGORIES`, and `AgentToolCategoryId`, deprecated in 0.28.0. Group tools by their first tag and `AGENT_TOOL_GROUPS`:
+
+```ts
+// Before
+AGENT_TOOL_CATEGORIES.map((category) => ({
+  ...category,
+  tools: AGENT_TOOLS.filter((tool) => tool.category === category.id),
+}));
+
+// After
+AGENT_TOOL_GROUPS.map((group) => ({
+  ...group,
+  tools: AGENT_TOOLS.filter((tool) => tool.tags[0] === group.tag),
+}));
+```
 
 ## 0.28.1
 

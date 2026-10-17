@@ -86,6 +86,9 @@ npm run check
 npm run test:consumer
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the changelog convention and how
+to release.
+
 ## License
 
 [MIT](LICENSE)

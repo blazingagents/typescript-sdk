@@ -346,6 +346,8 @@ export type ChatFunctionDefinitions = z.infer<
 >;
 export type ChatFunctionCallEvent = z.infer<typeof chatFunctionCallEventSchema>;
 export type ChatFunctionOutcome = z.infer<typeof chatFunctionOutcomeSchema>;
+export type ChatRequestBody = z.input<typeof chatRequestBodySchema>;
+export type GenerationRequestBody = z.input<typeof generationRequestBodySchema>;
 export type ClaimChatFunctionBody = z.infer<typeof claimChatFunctionBodySchema>;
 export type ResolveChatFunctionBody = z.infer<
   typeof resolveChatFunctionBodySchema

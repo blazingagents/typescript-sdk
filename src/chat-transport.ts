@@ -94,9 +94,7 @@ export class BlazingAgentsChatTransport<
             ...body,
             message,
             messageId,
-            ...(this.#sessionId === undefined
-              ? { sessionId: undefined }
-              : { sessionId: this.#sessionId }),
+            sessionId: this.#sessionId,
             trigger,
           },
         };

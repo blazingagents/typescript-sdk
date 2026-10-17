@@ -1,4 +1,8 @@
 import { createTextStreamResponse, parsePartialJson } from "ai";
+import type {
+  ChatRequestBody,
+  GenerationRequestBody,
+} from "./contracts/entities/chat.ts";
 import { sessionIdSchema, turnIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import {
@@ -111,36 +115,22 @@ export function withFilteredBody(
 /**
  * Builds a chat request body from messages or a stored Prompt.
  */
-function buildChatBody(input: ChatInput): Record<string, unknown> {
-  const base: Record<string, unknown> = {};
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined trigger.
-  if (input.trigger !== undefined) {
-    base.trigger = input.trigger;
-  }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined message id.
-  if (input.messageId !== undefined) {
-    base.messageId = input.messageId;
-  }
+function buildChatBody(input: ChatInput): ChatRequestBody {
+  const body: ChatRequestBody = {
+    trigger: input.trigger,
+    messageId: input.messageId,
+  };
   if ("message" in input) {
-    base.messages = [input.message];
+    body.messages = [input.message];
   } else if ("messages" in input) {
-    base.messages = input.messages;
+    body.messages = input.messages;
   } else {
-    base.promptId = input.promptId;
-    // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined variables.
-    if (input.variables !== undefined) {
-      base.variables = input.variables;
-    }
+    body.promptId = input.promptId;
+    body.variables = input.variables;
   }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined user id.
-  if (input.userId !== undefined) {
-    base.userId = input.userId;
-  }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined metadata.
-  if (input.metadata !== undefined) {
-    base.metadata = input.metadata;
-  }
-  return base;
+  body.userId = input.userId;
+  body.metadata = input.metadata;
+  return body;
 }
 
 /**
@@ -453,26 +443,17 @@ function replacementResponseHeaders(
  */
 function buildStatelessGenerationBody(
   input: CompletionInput | ObjectInput,
-  output: Record<string, unknown>
-): Record<string, unknown> {
-  const body: Record<string, unknown> = { output };
+  output: GenerationRequestBody["output"]
+): GenerationRequestBody {
+  const body: GenerationRequestBody = { output };
   if ("prompt" in input) {
     body.prompt = input.prompt;
   } else {
     body.promptId = input.promptId;
-    // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined variables.
-    if (input.variables !== undefined) {
-      body.variables = input.variables;
-    }
+    body.variables = input.variables;
   }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined user id.
-  if (input.userId !== undefined) {
-    body.userId = input.userId;
-  }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined metadata.
-  if (input.metadata !== undefined) {
-    body.metadata = input.metadata;
-  }
+  body.userId = input.userId;
+  body.metadata = input.metadata;
   return body;
 }
 

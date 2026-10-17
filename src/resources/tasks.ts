@@ -47,8 +47,7 @@ export function createTasksResource(config: HttpConfig): TasksResource {
             agentId: options.agentId,
             cursor: options.cursor,
             limit: options.limit,
-            // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
-            ...(options.userId === undefined ? {} : { userId: options.userId }),
+            userId: options.userId,
           },
         },
         tasksListResponseSchema

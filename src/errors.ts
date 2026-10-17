@@ -23,7 +23,6 @@ export class BlazingAgentsError extends Error {
   readonly responseBody?: string;
   readonly responseBodyTruncated?: boolean;
   readonly status?: number;
-  // Stryker disable BooleanLiteral: cross-realm identity depends on marker presence, not its value.
   /**
    * Marker property used by `isInstance` for cross-realm `instanceof`
    * checks — the symbol is checked via `in`, not direct property access,
@@ -31,7 +30,6 @@ export class BlazingAgentsError extends Error {
    * biome-ignore lint/correctness/noUnusedPrivateClassMembers: marker pattern
    */
   private readonly [BLAZING_AGENTS_ERROR_SYMBOL] = true;
-  // Stryker restore BooleanLiteral
 
   /**
    * Creates an SDK error with its code, diagnostics, and optional cause.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.32.0
+
+### Added
+
+- `chatConnections.listDeliveries()` lists one page of a Chat Connection's deliveries in every status, newest first. Pass `nextCursor` as `cursor` to fetch older records.
+- `chatConnections.repairDelivery()` sends a stuck reply or approval card again without running a turn. Pass the delivery's current `attempt` as `expectedAttempt`, and set `previousSenderStopped` and `acceptDuplicateRisk` to `true`. The message can appear twice, so check `status` in the result.
+
+### Fixed
+
+- Every method encodes the IDs it puts into a request path. Before, an ID with `/`, `?`, `#` or `..` could leave its path segment and reach a different endpoint.
+- `agent(...).skills.putFile()` sends its content as `application/octet-stream`, as the API contract requires.
+
 ## 0.31.0
 
 ### Removed
@@ -36,7 +48,21 @@ await client.agents.getSpendingLimit({ agentId });
 
 ### Removed
 
-- `AgentToolDefinition.category`, `AGENT_TOOL_CATEGORIES`, and `AgentToolCategoryId`, deprecated in 0.28.0. Group tools by their first tag and `AGENT_TOOL_GROUPS`, as the 0.28.0 entry shows.
+- `AgentToolDefinition.category`, `AGENT_TOOL_CATEGORIES`, and `AgentToolCategoryId`, deprecated in 0.28.0. Group tools by their first tag and `AGENT_TOOL_GROUPS`:
+
+```ts
+// Before
+AGENT_TOOL_CATEGORIES.map((category) => ({
+  ...category,
+  tools: AGENT_TOOLS.filter((tool) => tool.category === category.id),
+}));
+
+// After
+AGENT_TOOL_GROUPS.map((group) => ({
+  ...group,
+  tools: AGENT_TOOLS.filter((tool) => tool.tags[0] === group.tag),
+}));
+```
 
 ## 0.28.1
 

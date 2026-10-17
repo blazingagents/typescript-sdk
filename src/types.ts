@@ -16,8 +16,11 @@ import type {
   ChatConnection,
   ChatConnectionsResponse,
   ChatDeliveriesResponse,
+  ChatDeliveryList,
   ChatDeliveryListStatus,
+  ChatDeliveryResult,
   CreateChatConnectionBody,
+  RepairChatDeliveryBody,
   RotateChatConnectionBody,
   UpdateChatConnectionBody,
 } from "./contracts/entities/chat-connections.ts";
@@ -850,7 +853,9 @@ export interface ProvidersResource {
 
 export interface McpConnectionsResource {
   /**
-   * Starts OAuth authorization for the MCP Connection.
+   * Starts OAuth authorization for the MCP Connection. The API serves this
+   * route only to a dashboard session (`DashboardJwt`) and refuses an API
+   * key, so a client built with an API key gets an error.
    * @param input - `mcpConnectionId`; optional abortSignal.
    * @returns The mcp connection oauth connect response.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
@@ -1527,6 +1532,39 @@ export interface ChatConnectionsResource {
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   list(input?: ResourceRequestOptions): Promise<ChatConnectionsResponse>;
+  /**
+   * Lists one page of the replies and approval cards the Chat Connection has
+   * sent or tried to send, newest first, in every status. Pass `nextCursor`
+   * as `cursor` to fetch older records.
+   * @param input - `chatConnectionId`; optional `cursor`, `limit` (1 to 100, default 100), and abortSignal.
+   * @returns The page of chat deliveries.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  listDeliveries(
+    input: {
+      chatConnectionId: string;
+      cursor?: string;
+      limit?: number;
+    } & ResourceRequestOptions
+  ): Promise<ChatDeliveryList>;
+  /**
+   * Sends a stuck reply or approval card again, without running a turn or
+   * tool. Use it when the previous send stopped before its outcome was known.
+   * Pass the delivery's current `attempt` as `expectedAttempt`; the repair is
+   * refused if it has changed. `previousSenderStopped` and
+   * `acceptDuplicateRisk` must be `true`: the message can appear twice. The
+   * connection must be enabled. Check `status` in the result, because a
+   * successful request does not by itself mean the message was delivered.
+   * @param input - `chatConnectionId`, `deliveryId`, the repair confirmations, and optional abortSignal.
+   * @returns The delivery outcome.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  repairDelivery(
+    input: RepairChatDeliveryBody & {
+      chatConnectionId: string;
+      deliveryId: string;
+    } & ResourceRequestOptions
+  ): Promise<ChatDeliveryResult>;
   /**
    * Replaces the Chat Connection credentials.
    * @param input - `chatConnectionId`; fields to change; optional abortSignal.

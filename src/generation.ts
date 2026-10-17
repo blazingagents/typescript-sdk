@@ -1,4 +1,8 @@
 import { createTextStreamResponse, parsePartialJson } from "ai";
+import type {
+  ChatRequestBody,
+  GenerationRequestBody,
+} from "./contracts/entities/chat.ts";
 import { sessionIdSchema, turnIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import {
@@ -111,36 +115,22 @@ export function withFilteredBody(
 /**
  * Builds a chat request body from messages or a stored Prompt.
  */
-function buildChatBody(input: ChatInput): Record<string, unknown> {
-  const base: Record<string, unknown> = {};
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined trigger.
-  if (input.trigger !== undefined) {
-    base.trigger = input.trigger;
-  }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined message id.
-  if (input.messageId !== undefined) {
-    base.messageId = input.messageId;
-  }
+function buildChatBody(input: ChatInput): ChatRequestBody {
+  const body: ChatRequestBody = {
+    trigger: input.trigger,
+    messageId: input.messageId,
+  };
   if ("message" in input) {
-    base.messages = [input.message];
+    body.messages = [input.message];
   } else if ("messages" in input) {
-    base.messages = input.messages;
+    body.messages = input.messages;
   } else {
-    base.promptId = input.promptId;
-    // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined variables.
-    if (input.variables !== undefined) {
-      base.variables = input.variables;
-    }
+    body.promptId = input.promptId;
+    body.variables = input.variables;
   }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined user id.
-  if (input.userId !== undefined) {
-    base.userId = input.userId;
-  }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined metadata.
-  if (input.metadata !== undefined) {
-    base.metadata = input.metadata;
-  }
-  return base;
+  body.userId = input.userId;
+  body.metadata = input.metadata;
+  return body;
 }
 
 /**
@@ -257,12 +247,10 @@ function buildChatResult(
  * Creates single-owner SSE response and byte-stream accessors.
  * @param response - Upstream HTTP response.
  * @param resourceName - Resource label used in stream errors.
- * @param filter - Transforms upstream SSE bytes before exposing them to the caller.
  */
 export function buildTerminalStreamResult(
   response: Response,
-  resourceName: string,
-  filter?: (body: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>
+  resourceName: string
 ): TerminalStreamResult {
   const requestId = response.headers.get("x-request-id") ?? undefined;
   const location = response.headers.get("location");
@@ -274,21 +262,12 @@ export function buildTerminalStreamResult(
    */
   const claimBody = (): ReadableStream<Uint8Array> => {
     if (bodyClaimed) {
-      const message = `The ${resourceName} response body has already been claimed.`;
-      const cause = new Error(message);
-      throw new BlazingAgentsError(
-        {
-          code: "stream_error",
-          message,
-          requestId,
-        },
-        { cause }
-      );
+      throw alreadyClaimedError(resourceName, requestId);
     }
     bodyClaimed = true;
     const body = responseBodyStream(response, requestId, resourceName);
     return normalizeStreamErrors(
-      filter ? filter(body) : body,
+      body,
       requestId,
       `The ${resourceName} response stream failed.`
     );
@@ -320,6 +299,35 @@ export function buildTerminalStreamResult(
       }
     },
   };
+}
+
+function alreadyClaimedError(
+  resourceName: string,
+  requestId: string | undefined
+): BlazingAgentsError {
+  const message = `The ${resourceName} response body has already been claimed.`;
+  return new BlazingAgentsError(
+    { code: "stream_error", message, requestId },
+    { cause: new Error(message) }
+  );
+}
+
+/**
+ * Parses the complete generated text, reporting malformed JSON as a stream error.
+ */
+function parseFinalJson(text: string, requestId: string | undefined): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (cause) {
+    throw new BlazingAgentsError(
+      {
+        code: "stream_error",
+        message: "The agent produced invalid JSON.",
+        requestId,
+      },
+      { cause }
+    );
+  }
 }
 
 /**
@@ -455,26 +463,17 @@ function replacementResponseHeaders(
  */
 function buildStatelessGenerationBody(
   input: CompletionInput | ObjectInput,
-  output: Record<string, unknown>
-): Record<string, unknown> {
-  const body: Record<string, unknown> = { output };
+  output: GenerationRequestBody["output"]
+): GenerationRequestBody {
+  const body: GenerationRequestBody = { output };
   if ("prompt" in input) {
     body.prompt = input.prompt;
   } else {
     body.promptId = input.promptId;
-    // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined variables.
-    if (input.variables !== undefined) {
-      body.variables = input.variables;
-    }
+    body.variables = input.variables;
   }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits an undefined user id.
-  if (input.userId !== undefined) {
-    body.userId = input.userId;
-  }
-  // Stryker disable next-line ConditionalExpression: JSON serialization omits undefined metadata.
-  if (input.metadata !== undefined) {
-    body.metadata = input.metadata;
-  }
+  body.userId = input.userId;
+  body.metadata = input.metadata;
   return body;
 }
 
@@ -573,18 +572,7 @@ function buildObjectResult(response: Response): ObjectResult {
        * Rejects malformed final JSON when the text stream ends.
        */
       flush() {
-        try {
-          JSON.parse(accumulatedText);
-        } catch (cause) {
-          throw new BlazingAgentsError(
-            {
-              code: "stream_error",
-              message: "The agent produced invalid JSON.",
-              requestId,
-            },
-            { cause }
-          );
-        }
+        parseFinalJson(accumulatedText, requestId);
       },
     })
   );
@@ -594,18 +582,7 @@ function buildObjectResult(response: Response): ObjectResult {
     for await (const delta of finalStream) {
       text += delta;
     }
-    try {
-      return JSON.parse(text) as unknown;
-    } catch (cause) {
-      throw new BlazingAgentsError(
-        {
-          code: "stream_error",
-          message: "The agent produced invalid JSON.",
-          requestId,
-        },
-        { cause }
-      );
-    }
+    return parseFinalJson(text, requestId);
   })();
   objectPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
@@ -655,15 +632,7 @@ function buildStatelessGenerationStreams(
     /** Claims the response relay once. */
     toResponse: () => {
       if (responseBodyClaimed) {
-        const message = `The ${resourceName} response body has already been claimed.`;
-        throw new BlazingAgentsError(
-          {
-            code: "stream_error",
-            message,
-            requestId,
-          },
-          { cause: new Error(message) }
-        );
+        throw alreadyClaimedError(resourceName, requestId);
       }
       responseBodyClaimed = true;
       const headers = replacementResponseHeaders(requestId, location, null);

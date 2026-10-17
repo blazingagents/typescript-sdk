@@ -108,36 +108,29 @@ export class BlazingAgentsDirectChatTransport<
       abortSignal: input.abortSignal,
     };
     let result: ChatResult;
-    if (this.#sessionId === undefined) {
-      const create = {
-        ...common,
-        trigger: "submit-message" as const,
-        userId: this.#options.userId,
-        metadata: this.#options.metadata,
-      };
-      if (this.#options.promptId === undefined) {
-        const message = input.messages.findLast((item) => item.role === "user");
-        if (!message) {
-          throw new Error("Chat submission requires a user message.");
-        }
-        result = await client.chat({ ...create, message });
-      } else {
-        result = await client.chat({
-          ...create,
-          promptId: this.#options.promptId,
-          variables: this.#options.variables,
-        });
-      }
-    } else {
-      const message = input.messages.findLast((item) => item.role === "user");
-      if (!message) {
-        throw new Error("Chat submission requires a user message.");
-      }
+    if (this.#sessionId !== undefined) {
       result = await client.chat({
         ...common,
-        message,
+        message: lastUserMessage(input.messages),
         sessionId: this.#sessionId,
         trigger: input.trigger,
+      });
+    } else if (this.#options.promptId === undefined) {
+      result = await client.chat({
+        ...common,
+        trigger: "submit-message",
+        userId: this.#options.userId,
+        metadata: this.#options.metadata,
+        message: lastUserMessage(input.messages),
+      });
+    } else {
+      result = await client.chat({
+        ...common,
+        trigger: "submit-message",
+        userId: this.#options.userId,
+        metadata: this.#options.metadata,
+        promptId: this.#options.promptId,
+        variables: this.#options.variables,
       });
     }
     return this.#processChatResult(result);
@@ -155,7 +148,10 @@ export class BlazingAgentsDirectChatTransport<
         this.#sessionId = sessionId;
         await this.#options.onSessionId?.(sessionId);
       }
-      await this.#reportTurnId(result);
+      const turnId = await result.turnId.catch(() => undefined);
+      if (turnId !== undefined) {
+        await this.#options.onTurnId?.(turnId);
+      }
     } catch (error) {
       await stream.cancel(error).catch(() => undefined);
       throw error;
@@ -197,21 +193,14 @@ export class BlazingAgentsDirectChatTransport<
       decisions,
       functions: this.#options.functions ?? {},
     });
-    const stream = continuation.toStream();
-    try {
-      await this.#reportTurnId(continuation);
-    } catch (error) {
-      await stream.cancel(error).catch(() => undefined);
-      throw error;
-    }
-    return this.processResponseStream(stream);
+    return this.#processChatResult(continuation);
   }
+}
 
-  /** Reports the Turn ID when the response names one. */
-  async #reportTurnId(result: ChatResult) {
-    const turnId = await result.turnId.catch(() => undefined);
-    if (turnId !== undefined) {
-      await this.#options.onTurnId?.(turnId);
-    }
+function lastUserMessage<M extends UIMessage>(messages: M[]): M {
+  const message = messages.findLast((item) => item.role === "user");
+  if (!message) {
+    throw new Error("Chat submission requires a user message.");
   }
+  return message;
 }

@@ -187,3 +187,108 @@ describe("chatConnections", () => {
     ).rejects.toMatchObject({ status: 404, code: "not_found" });
   });
 });
+
+describe("chatConnections deliveries", () => {
+  const delivery = {
+    id: "cd_0123456789abcdef",
+    kind: "reply" as const,
+    status: "ambiguous" as const,
+    attempt: 0,
+    credentialVersion: 1,
+    representation: "native",
+    diagnostic: "send_interrupted",
+    receipts: [{ attempt: 0, messageId: "412" }],
+    sessionId: "ss_0123456789abcdef",
+    messageId: null,
+    approvalId: null,
+    threadId: "telegram:5012345678",
+    createdAt: "2026-07-10T10:05:00.000Z",
+    updatedAt: "2026-07-10T10:05:02.000Z",
+  };
+  const result = {
+    id: delivery.id,
+    sessionId: delivery.sessionId,
+    threadId: delivery.threadId,
+    connectionId: connection.id,
+    kind: "reply" as const,
+    status: "confirmed" as const,
+    attempt: 1,
+  };
+
+  it("lists one page of a connection's deliveries", async () => {
+    const { client, calls } = setup({
+      data: [{ ...delivery, futureField: 1 }],
+      nextCursor: "older",
+    });
+    await expect(
+      client.chatConnections.listDeliveries({ chatConnectionId: "cc/id" })
+    ).resolves.toEqual({ data: [delivery], nextCursor: "older" });
+    expect(calls[0].url).toBe(
+      "https://api.example.com/v1/chat-connections/cc%2Fid/deliveries"
+    );
+    expect(calls[0].init?.method).toBe("GET");
+  });
+
+  it("passes cursor and limit as query parameters, not the abort signal", async () => {
+    const { client, calls } = setup({ data: [], nextCursor: null });
+    const abortSignal = new AbortController().signal;
+    await client.chatConnections.listDeliveries({
+      chatConnectionId: connection.id,
+      cursor: "cursor 1",
+      limit: 10,
+      abortSignal,
+    });
+    expect(calls[0].url).toBe(
+      `https://api.example.com/v1/chat-connections/${connection.id}/deliveries?cursor=cursor+1&limit=10`
+    );
+    expect(calls[0].init?.signal).toBe(abortSignal);
+  });
+
+  it("rejects a delivery page missing a required field as invalid_response", async () => {
+    const { threadId: _, ...withoutThread } = delivery;
+    const { client } = setup({ data: [withoutThread], nextCursor: null });
+    await expect(
+      client.chatConnections.listDeliveries({
+        chatConnectionId: connection.id,
+      })
+    ).rejects.toMatchObject({ code: "invalid_response", status: 200 });
+  });
+
+  it("repairs a delivery with the confirmations and an expected attempt of 0", async () => {
+    const { client, calls } = setup(result);
+    const abortSignal = new AbortController().signal;
+    await expect(
+      client.chatConnections.repairDelivery({
+        chatConnectionId: "cc/id",
+        deliveryId: "cd/id",
+        expectedAttempt: 0,
+        previousSenderStopped: true,
+        acceptDuplicateRisk: true,
+        abortSignal,
+      })
+    ).resolves.toEqual(result);
+    expect(calls[0].url).toBe(
+      "https://api.example.com/v1/chat-connections/cc%2Fid/deliveries/cd%2Fid/repair"
+    );
+    expect(calls[0].init?.method).toBe("POST");
+    expect(calls[0].init?.signal).toBe(abortSignal);
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+      expectedAttempt: 0,
+      previousSenderStopped: true,
+      acceptDuplicateRisk: true,
+    });
+  });
+
+  it("rejects a repair result still pending as invalid_response", async () => {
+    const { client } = setup({ ...result, status: "pending" });
+    await expect(
+      client.chatConnections.repairDelivery({
+        chatConnectionId: connection.id,
+        deliveryId: delivery.id,
+        expectedAttempt: 1,
+        previousSenderStopped: true,
+        acceptDuplicateRisk: true,
+      })
+    ).rejects.toMatchObject({ code: "invalid_response", status: 200 });
+  });
+});

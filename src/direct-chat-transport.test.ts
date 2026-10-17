@@ -548,6 +548,48 @@ describe("BlazingAgentsDirectChatTransport", () => {
     expect(requests).toHaveLength(0);
   });
 
+  it("reports the continuation Turn ID and cancels the body when that fails", async () => {
+    const cancel = vi.fn();
+    const onTurnId = vi.fn(() => Promise.reject(new Error("record failed")));
+    const transport = new BlazingAgentsDirectChatTransport({
+      agentId,
+      getClient: () =>
+        client(() =>
+          Promise.resolve(
+            new Response(new ReadableStream({ cancel }), {
+              headers: { "x-ba-turn-id": "turn_0123456789abcdef" },
+            })
+          )
+        ),
+      onTurnId,
+      sessionId: mintedSessionId,
+    });
+    await expect(
+      transport.sendMessages({
+        ...input,
+        messages: [
+          message,
+          {
+            id: "assistant-1",
+            role: "assistant",
+            parts: [
+              {
+                type: "dynamic-tool",
+                toolName: "bash",
+                toolCallId: "call-1",
+                state: "approval-responded",
+                input: {},
+                approval: { id: "approval-1", approved: true },
+              },
+            ],
+          },
+        ],
+      })
+    ).rejects.toThrow("record failed");
+    expect(onTurnId).toHaveBeenCalledWith("turn_0123456789abcdef");
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
   it("requires a Session before deciding an approval", async () => {
     const fetch = vi.fn();
     const transport = new BlazingAgentsDirectChatTransport({

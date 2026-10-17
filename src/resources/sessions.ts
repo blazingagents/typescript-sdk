@@ -104,8 +104,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
           query: {
             cursor: options.cursor,
             limit: options.limit,
-            // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
-            ...(options.userId === undefined ? {} : { userId: options.userId }),
+            userId: options.userId,
           },
         },
         sessionsListResponseSchema
@@ -123,11 +122,8 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
           query: {
             cursor: options.cursor,
             limit: options.limit,
-            // Stryker disable next-line ConditionalExpression: URL serialization omits an undefined query value.
-            ...(options.userId === undefined ? {} : { userId: options.userId }),
-            ...(options.byAgent === undefined
-              ? {}
-              : { byAgent: options.byAgent }),
+            userId: options.userId,
+            byAgent: options.byAgent,
           },
         },
         latestSessionsListResponseSchema

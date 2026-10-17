@@ -423,7 +423,7 @@ function decodeChunks(
  * @param headers - Response headers to preserve or inspect.
  * @returns The server error, or invalid_response when the envelope is malformed.
  */
-export function parseErrorEnvelope(
+function parseErrorEnvelope(
   bodyText: string,
   status: number,
   headers: Headers

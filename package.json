@@ -35,7 +35,7 @@
     "fix": "ultracite fix",
     "lint": "ultracite check",
     "prepack": "npm run build",
-    "test": "vitest run --coverage",
+    "test": "node scripts/check-test-imports.ts && vitest run --coverage",
     "test:consumer": "node test-consumer.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
     "unused": "knip && knip --production --include exports,types,duplicates"

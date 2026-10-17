@@ -8,34 +8,20 @@ import {
 } from "../contracts/entities/mcp-connections.ts";
 import { spendingLimitResponseSchema } from "../contracts/entities/spending-limits.ts";
 import { requestJson } from "../http.ts";
-import type { AgentsResource, HttpConfig } from "../types.ts";
+import type {
+  AgentsResource,
+  HttpConfig,
+  UserAgentsResource,
+} from "../types.ts";
 
 /**
- * Builds the Agents operations using the shared HTTP configuration.
+ * Builds the Agents operations, including the spending limits that need tenant authority.
  * @param config - Shared authentication and transport configuration.
  * @returns The configured resource client.
  */
 export function createAgentsResource(config: HttpConfig): AgentsResource {
-  /**
-   * Updates agents.
-   */
-  const update: AgentsResource["update"] = async ({
-    agentId,
-    abortSignal,
-    ...body
-  }) =>
-    requestJson(
-      config,
-      `/v1/agents/${agentId}`,
-      {
-        json: body,
-        signal: abortSignal,
-        method: "PUT",
-      },
-      agentResponseSchema
-    );
-
   return {
+    ...createUserAgentsResource(config),
     /** Retrieves the model spending limit using tenant authority. */
     async getSpendingLimit({ agentId, abortSignal }) {
       return await requestJson(
@@ -54,6 +40,37 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         spendingLimitResponseSchema
       );
     },
+  };
+}
+
+/**
+ * Builds the Agents operations a user-scoped client may call.
+ * @param config - Shared authentication and transport configuration.
+ * @returns The configured resource client.
+ */
+export function createUserAgentsResource(
+  config: HttpConfig
+): UserAgentsResource {
+  /**
+   * Updates agents.
+   */
+  const update: UserAgentsResource["update"] = async ({
+    agentId,
+    abortSignal,
+    ...body
+  }) =>
+    requestJson(
+      config,
+      `/v1/agents/${agentId}`,
+      {
+        json: body,
+        signal: abortSignal,
+        method: "PUT",
+      },
+      agentResponseSchema
+    );
+
+  return {
     /**
      * Creates agents.
      */

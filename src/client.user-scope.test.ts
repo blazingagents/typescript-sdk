@@ -23,6 +23,10 @@ describe("forUser", () => {
     expect("mcpConnections" in user).toBe(false);
     expect("merchantConnection" in user).toBe(false);
     expect("overview" in user.usage).toBe(false);
+    expect("getSpendingLimit" in user.agents).toBe(false);
+    expect("updateSpendingLimit" in user.agents).toBe(false);
+    expect("getSpendingLimit" in tenant.agents).toBe(true);
+    expect("updateSpendingLimit" in tenant.agents).toBe(true);
     await user.withOptions({ clientRequestId: "trace-1" }).agents.list();
     await tenant.agents.list();
 

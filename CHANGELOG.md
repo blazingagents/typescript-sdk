@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.31.0
+
+### Removed
+
+- `forUser(...).agents.getSpendingLimit()` and `forUser(...).agents.updateSpendingLimit()`, deprecated in 0.30.0. The API always refused them for user-scoped callers. `UserAgentsResource` no longer has them. Call them on the tenant client:
+
+```ts
+// Before
+await client.forUser(userId).agents.getSpendingLimit({ agentId });
+
+// After
+await client.agents.getSpendingLimit({ agentId });
+```
+
 ## 0.30.0
 
 ### Added

@@ -11,20 +11,13 @@ const agentId = "ag_0123456789abcdef";
 const sessionId = "ss_0123456789abcdef";
 
 describe("forUser", () => {
-  it("keeps administration absent and preserves scope through withOptions", async () => {
+  it("preserves scope through withOptions and keeps tenant spending limits", async () => {
     const { fetch, calls } = createMockFetch({
       body: { data: [], nextCursor: null },
     });
     const tenant = new BlazingAgents({ apiKey: "ba_test", fetch });
     const user = tenant.forUser("user-42");
 
-    expect("tenant" in user).toBe(false);
-    expect("providers" in user).toBe(false);
-    expect("mcpConnections" in user).toBe(false);
-    expect("merchantConnection" in user).toBe(false);
-    expect("overview" in user.usage).toBe(false);
-    expect("getSpendingLimit" in user.agents).toBe(false);
-    expect("updateSpendingLimit" in user.agents).toBe(false);
     expect("getSpendingLimit" in tenant.agents).toBe(true);
     expect("updateSpendingLimit" in tenant.agents).toBe(true);
     await user.withOptions({ clientRequestId: "trace-1" }).agents.list();

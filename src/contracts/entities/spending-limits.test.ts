@@ -4,7 +4,6 @@ import {
   spendingLimitResponseSchema,
   spendingLimitSchema,
   spendingLimitStopDetailsSchema,
-  spendingLimitStopEventSchema,
   updateSpendingLimitBodySchema,
 } from "./spending-limits.ts";
 
@@ -111,32 +110,20 @@ describe("next spending-limit reset", () => {
   });
 });
 
-it("validates the complete transient spending-limit event", () => {
-  const event = {
-    type: "data-model-spending-limit",
-    transient: true,
-    data: {
-      code: "model_spending_limit_exceeded",
-      scope: "agent",
-      reason: "unknown_usage",
-      spentUsd: 5,
-      reservedUsd: 0,
-      availableUsd: 0,
-      nextResetAt: null,
-    },
+it("validates the details a spending stop carries", () => {
+  const details = {
+    scope: "agent",
+    reason: "unknown_usage",
+    spentUsd: 5,
+    reservedUsd: 0,
+    availableUsd: 0,
+    nextResetAt: null,
   };
-  expect(spendingLimitStopEventSchema.parse(event)).toEqual(event);
+  expect(spendingLimitStopDetailsSchema.parse(details)).toEqual(details);
   expect(
-    spendingLimitStopEventSchema.safeParse({ ...event, transient: false })
-      .success
-  ).toBe(false);
-  expect(
-    spendingLimitStopEventSchema.safeParse({
-      ...event,
-      data: { ...event.data, code: "other" },
+    spendingLimitStopDetailsSchema.safeParse({
+      ...details,
+      code: "model_spending_limit_exceeded",
     }).success
   ).toBe(false);
-  expect(spendingLimitStopDetailsSchema.safeParse(event.data).success).toBe(
-    false
-  );
 });

@@ -131,7 +131,7 @@ export type {
   ToolApprovalDecision,
   ToolApprovalState,
   ToolApprovalsResponse,
-  TurnInterruptedEvent,
+  TurnStreamErrorEvent,
 } from "./contracts/entities/sessions.ts";
 export { sessionResponseSchema } from "./contracts/entities/sessions.ts";
 export type {
@@ -148,7 +148,6 @@ export type {
   SpendingLimit,
   SpendingLimitResponse,
   SpendingLimitStopDetails,
-  SpendingLimitStopEvent,
   UpdateSpendingLimitBody,
 } from "./contracts/entities/spending-limits.ts";
 export { nextSpendingLimitReset } from "./contracts/entities/spending-limits.ts";

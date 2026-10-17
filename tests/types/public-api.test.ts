@@ -440,8 +440,7 @@ import type {
   BlazingAgentsUIMessageChunk,
   ChatSteerConsumedEvent,
   SpendingLimit,
-  SpendingLimitStopDetails,
-  TurnInterruptedEvent,
+  TurnStreamErrorEvent,
   UpdateSpendingLimitBody,
 } from "../../src/index.ts";
 
@@ -452,26 +451,25 @@ const spendingLimit: SpendingLimit = {
 };
 export const spendingUpdate: UpdateSpendingLimitBody = { spendingLimit };
 const spendingStopChunk: BlazingAgentsUIMessageChunk = {
-  type: "data-model-spending-limit",
+  type: "data-ba-error",
   transient: true,
   data: {
     code: "model_spending_limit_exceeded",
-    scope: "tenant",
-    reason: "exhausted",
-    spentUsd: 25,
-    reservedUsd: 0,
-    availableUsd: 0,
-    nextResetAt: null,
+    details: { scope: "tenant", reason: "exhausted" },
+    message: "Account spending limit reached.",
   },
 };
-export function narrowSpendingStop(
+export function narrowStreamError(
   chunk: BlazingAgentsUIMessageChunk
-): SpendingLimitStopDetails | undefined {
-  if (chunk.type === "data-model-spending-limit") {
+): TurnStreamErrorEvent["data"] | undefined {
+  if (chunk.type === "data-ba-error") {
+    // @ts-expect-error a stream error keeps its numbers in details
+    JSON.stringify(chunk.data.scope);
     return chunk.data;
   }
   return undefined;
 }
+export const narrowedSpendingStop = narrowStreamError(spendingStopChunk);
 const steerConsumedChunk: BlazingAgentsUIMessageChunk = {
   type: "data-ba-steer-consumed",
   transient: true,
@@ -490,37 +488,25 @@ export function narrowSteerConsumed(
     JSON.stringify(chunk.data.code);
     return chunk.data;
   }
-  if (chunk.type === "data-model-spending-limit") {
-    // @ts-expect-error spending stops carry no steer request ID
+  if (chunk.type === "data-ba-error") {
+    // @ts-expect-error stream errors carry no steer request ID
     JSON.stringify(chunk.data.requestId);
   }
   return undefined;
 }
 export const narrowedSteerConsumed = narrowSteerConsumed(steerConsumedChunk);
-const turnInterruptedChunk: BlazingAgentsUIMessageChunk = {
-  type: "data-turn-interrupted",
+export const turnInterrupted = narrowStreamError({
+  type: "data-ba-error",
   transient: true,
+  data: { code: "turn_interrupted", message: "The turn was cut." },
+});
+const streamErrorWithoutMessage: BlazingAgentsUIMessageChunk = {
+  type: "data-ba-error",
+  transient: true,
+  // @ts-expect-error a stream error always carries its message
   data: { code: "turn_interrupted" },
 };
-export function narrowTurnInterrupted(
-  chunk: BlazingAgentsUIMessageChunk
-): TurnInterruptedEvent["data"] | undefined {
-  if (chunk.type === "data-turn-interrupted") {
-    // @ts-expect-error an interruption carries no spending-limit scope
-    JSON.stringify(chunk.data.scope);
-    return chunk.data;
-  }
-  return undefined;
-}
-export const narrowedTurnInterrupted =
-  narrowTurnInterrupted(turnInterruptedChunk);
-const wrongInterruptionCode: BlazingAgentsUIMessageChunk = {
-  type: "data-turn-interrupted",
-  transient: true,
-  // @ts-expect-error turn_interrupted is the only interruption code
-  data: { code: "internal" },
-};
-export const wrongInterruption = wrongInterruptionCode;
+export const missingMessage = streamErrorWithoutMessage;
 export const updatedAgentSpending = sdk.agents.updateSpendingLimit({
   agentId: "ag_0123456789abcdef",
   ...spendingUpdate,
@@ -538,4 +524,3 @@ sdk.tenant.updateSpendingLimit({
     resetInterval: "yearly",
   },
 });
-export const narrowedSpendingStop = narrowSpendingStop(spendingStopChunk);

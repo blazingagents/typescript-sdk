@@ -5,7 +5,7 @@ import {
   type BlazingAgentsUIMessage,
   type BlazingAgentsUIMessageChunk,
   type ChatSteerConsumedEvent,
-  type SpendingLimitStopEvent,
+  type TurnStreamErrorEvent,
 } from "@blazingagents/sdk";
 import { taskOnceConfigSchema } from "@blazingagents/sdk/contracts";
 import {
@@ -98,17 +98,20 @@ it.each(["direct", "relay"])(
         },
       },
     };
-    const event: SpendingLimitStopEvent = {
-      type: "data-model-spending-limit",
+    const event: TurnStreamErrorEvent = {
+      type: "data-ba-error",
       transient: true,
       data: {
         code: "model_spending_limit_exceeded",
-        scope: "tenant",
-        reason: "exhausted",
-        spentUsd: 5,
-        reservedUsd: 0,
-        availableUsd: 0,
-        nextResetAt: null,
+        details: {
+          scope: "tenant",
+          reason: "exhausted",
+          spentUsd: 5,
+          reservedUsd: 0,
+          availableUsd: 0,
+          nextResetAt: null,
+        },
+        message: "Tenant model spending limit reached.",
       },
     };
     const chunks: BlazingAgentsUIMessageChunk[] = [
@@ -124,8 +127,8 @@ it.each(["direct", "relay"])(
     const steerRequestIds: string[] = chunks
       .filter((chunk) => chunk.type === "data-ba-steer-consumed")
       .map((chunk) => chunk.data.requestId);
-    const spendingStopCodes: "model_spending_limit_exceeded"[] = chunks
-      .filter((chunk) => chunk.type === "data-model-spending-limit")
+    const spendingStopCodes: TurnStreamErrorEvent["data"]["code"][] = chunks
+      .filter((chunk) => chunk.type === "data-ba-error")
       .map((chunk) => chunk.data.code);
     expect(steerRequestIds).toEqual([steerEvent.data.requestId]);
     expect(spendingStopCodes).toEqual([event.data.code]);
@@ -162,7 +165,7 @@ it.each(["direct", "relay"])(
     class TestChat extends AbstractChat<BlazingAgentsUIMessage> {}
     const onError = vi.fn();
     const onFinish = vi.fn();
-    const data: SpendingLimitStopEvent["data"][] = [];
+    const data: TurnStreamErrorEvent["data"][] = [];
     const consumedSteers: ChatSteerConsumedEvent["data"][] = [];
     const chat = new TestChat({
       state,
@@ -172,7 +175,7 @@ it.each(["direct", "relay"])(
       onData(chunk) {
         if (chunk.type === "data-ba-steer-consumed") {
           consumedSteers.push(chunk.data);
-        } else if (chunk.type === "data-model-spending-limit") {
+        } else if (chunk.type === "data-ba-error") {
           data.push(chunk.data);
         }
       },

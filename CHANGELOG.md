@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.34.0
+
+### Changed
+
+- A Turn stream that fails after it starts now names its error in one transient `data-ba-error` event before the `error` chunk. Its `data` has the shape of an HTTP error body's `error`: `code`, `message` and optional `details`. `code` is an `ApiErrorCode` or `turn_interrupted`, which only a stream sends, and stays open to codes added later, as an HTTP error code does. `turnStreamErrorEventSchema` and `TurnStreamErrorEvent` describe it, and `BlazingAgentsUIMessage` types it as the `ba-error` data part.
+
+### Removed
+
+- `spendingLimitStopEventSchema`, `SpendingLimitStopEvent`, `turnInterruptedEventSchema` and `TurnInterruptedEvent`, with the `data-model-spending-limit` and `data-turn-interrupted` events they described. A spending stop now arrives as `data-ba-error` with code `model_spending_limit_exceeded`, and its numbers move to `details`:
+
+```ts
+// Before
+onData: (chunk) => {
+  if (chunk.type === "data-model-spending-limit") {
+    showSpendingStop(chunk.data);
+  }
+  if (chunk.type === "data-turn-interrupted") {
+    reloadMessages();
+  }
+};
+
+// After
+onData: (chunk) => {
+  if (chunk.type !== "data-ba-error") {
+    return;
+  }
+  if (chunk.data.code === "model_spending_limit_exceeded") {
+    showSpendingStop(spendingLimitStopDetailsSchema.parse(chunk.data.details));
+  }
+  if (chunk.data.code === "turn_interrupted") {
+    reloadMessages();
+  }
+};
+```
+
 ## 0.33.0
 
 ### Removed

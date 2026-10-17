@@ -11,7 +11,7 @@ import {
   sessionsListResponseSchema,
   toolApprovalDecisionSchema,
   toolApprovalsResponseSchema,
-  turnInterruptedEventSchema,
+  turnStreamErrorEventSchema,
 } from "./sessions.ts";
 
 const sessionId = "ss_xxxxxxxxxxxxxxxx";
@@ -299,24 +299,47 @@ it("requires nullable provenance and a server eligibility boolean", () => {
   ).toBe(false);
 });
 
-describe("turnInterruptedEventSchema", () => {
+describe("turnStreamErrorEventSchema", () => {
   const event = {
-    type: "data-turn-interrupted",
+    type: "data-ba-error",
     transient: true,
-    data: { code: "turn_interrupted" },
+    data: {
+      code: "turn_interrupted",
+      message: "The turn was interrupted before it finished.",
+    },
   };
 
-  it("validates the complete transient interruption event", () => {
-    expect(turnInterruptedEventSchema.parse(event)).toStrictEqual(event);
+  it.each([
+    ["the stream-only interruption code", event],
+    [
+      "a code added after this release",
+      { ...event, data: { ...event.data, code: "future_code" } },
+    ],
+    [
+      "a public error code with details",
+      {
+        ...event,
+        data: {
+          code: "model_spending_limit_exceeded",
+          details: { scope: "agent" },
+          message: "Agent spending limit reached.",
+        },
+      },
+    ],
+  ])("validates %s", (_name, value) => {
+    expect(turnStreamErrorEventSchema.parse(value)).toStrictEqual(value);
   });
 
   it.each([
     ["a persisted event", { ...event, transient: false }],
-    ["another code", { ...event, data: { code: "internal" } }],
+    ["an empty code", { ...event, data: { ...event.data, code: "" } }],
+    ["a non-string code", { ...event, data: { ...event.data, code: 409 } }],
+    ["empty details", { ...event, data: { ...event.data, details: {} } }],
+    ["an empty message", { ...event, data: { ...event.data, message: "" } }],
     ["an extra data field", { ...event, data: { ...event.data, scope: "x" } }],
-    ["another event type", { ...event, type: "data-model-spending-limit" }],
+    ["another event type", { ...event, type: "data-turn-interrupted" }],
   ])("rejects %s", (_name, value) => {
-    expect(turnInterruptedEventSchema.safeParse(value).success).toBe(false);
+    expect(turnStreamErrorEventSchema.safeParse(value).success).toBe(false);
   });
 });
 

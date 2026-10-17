@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paginatedResponseSchema } from "../api.ts";
+import { type ApiErrorCode, paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, sessionIdSchema } from "../ids.ts";
 import { toolExecutionReferenceSchema } from "./agent-approval.ts";
 import { agentConfigSchema, agentResponseSchema } from "./agents.ts";
@@ -160,19 +160,34 @@ export const continueToolApprovalsBodySchema = z
   .strict();
 
 /**
- * Transient event that precedes the `error` chunk when a Turn stream is cut
+ * Transient event that precedes the `error` chunk when a Turn stream fails
  * after it started. The `error` chunk has no field for a code, so the code
- * rides here. `turn_interrupted` is never an HTTP error code. The Turn may
- * have saved its work before the cut, so read the Session's messages.
+ * rides here, in the shape of an HTTP error body's `error`. `turn_interrupted`
+ * is the one stream-only code: the stream was cut, and the Turn may have saved
+ * its work before the cut, so read the Session's messages.
  */
-export const turnInterruptedEventSchema = z
+/** Open like an HTTP error code, so a code added after this release still parses. */
+const turnStreamErrorCodeSchema = z.custom<
+  ApiErrorCode | "turn_interrupted" | (string & {})
+>((value) => typeof value === "string" && value.length > 0);
+
+export const turnStreamErrorEventSchema = z
   .object({
-    type: z.literal("data-turn-interrupted"),
-    data: z.object({ code: z.literal("turn_interrupted") }).strict(),
+    type: z.literal("data-ba-error"),
     transient: z.literal(true),
+    data: z
+      .object({
+        code: turnStreamErrorCodeSchema,
+        details: z
+          .record(z.string(), z.unknown())
+          .refine((value) => Object.keys(value).length > 0)
+          .optional(),
+        message: z.string().min(1),
+      })
+      .strict(),
   })
   .strict();
-export type TurnInterruptedEvent = z.infer<typeof turnInterruptedEventSchema>;
+export type TurnStreamErrorEvent = z.infer<typeof turnStreamErrorEventSchema>;
 export type SessionForkedFrom = z.infer<typeof sessionForkedFromSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;

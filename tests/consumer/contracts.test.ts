@@ -19,8 +19,7 @@ import {
   nextSpendingLimitReset,
   type SpendingLimit,
   type SpendingLimitResponse,
-  type SpendingLimitStopEvent,
-  type TurnInterruptedEvent,
+  type TurnStreamErrorEvent,
 } from "@blazingagents/sdk";
 import {
   apiKeyTokenSchema,
@@ -37,10 +36,10 @@ import {
   sessionIdSchema,
   spendingLimitResponseSchema,
   spendingLimitSchema,
-  spendingLimitStopEventSchema,
+  spendingLimitStopDetailsSchema,
   type ToolApprovalsResponse,
   toolReferenceSchema,
-  turnInterruptedEventSchema,
+  turnStreamErrorEventSchema,
   type UsageOverviewResponse,
   type UsageSummary,
   updateWorkspaceBodySchema,
@@ -212,45 +211,47 @@ it("exports spending-limit contracts and methods from the installed package", as
   expect(
     await client.tenant.updateSpendingLimit({ spendingLimit: null })
   ).toEqual(status);
-  const event: SpendingLimitStopEvent = {
-    type: "data-model-spending-limit",
-    transient: true,
-    data: {
-      code: "model_spending_limit_exceeded",
-      scope: "tenant",
-      reason: "exhausted",
-      spentUsd: 5,
-      reservedUsd: 0,
-      availableUsd: 0,
-      nextResetAt: null,
-    },
-  };
-  expect(spendingLimitStopEventSchema.parse(event)).toEqual(event);
-  const onData: ChatOnDataCallback<BlazingAgentsUIMessage> = (chunk) => {
-    if (chunk.type === "data-model-spending-limit") {
-      const details: SpendingLimitStopDetails = chunk.data;
-      const code: "model_spending_limit_exceeded" = chunk.data.code;
-      expect(details.reason).toBe("exhausted");
-      expect(code).toBe("model_spending_limit_exceeded");
-    }
-  };
-  onData(event);
 });
 
-it("types the interruption event a cut Turn stream sends", () => {
-  const event: TurnInterruptedEvent = {
-    type: "data-turn-interrupted",
-    transient: true,
-    data: { code: "turn_interrupted" },
+it("types the error event a failed Turn stream sends", () => {
+  const details: SpendingLimitStopDetails = {
+    scope: "tenant",
+    reason: "exhausted",
+    spentUsd: 5,
+    reservedUsd: 0,
+    availableUsd: 0,
+    nextResetAt: null,
   };
-  expect(turnInterruptedEventSchema.parse(event)).toEqual(event);
+  const events: TurnStreamErrorEvent[] = [
+    {
+      type: "data-ba-error",
+      transient: true,
+      data: {
+        code: "model_spending_limit_exceeded",
+        details,
+        message: "Account spending limit reached.",
+      },
+    },
+    {
+      type: "data-ba-error",
+      transient: true,
+      data: { code: "turn_interrupted", message: "The turn was cut." },
+    },
+  ];
   const codes: string[] = [];
   const onData: ChatOnDataCallback<BlazingAgentsUIMessage> = (chunk) => {
-    if (chunk.type === "data-turn-interrupted") {
-      const code: "turn_interrupted" = chunk.data.code;
-      codes.push(code);
+    if (chunk.type === "data-ba-error") {
+      codes.push(chunk.data.code);
+      if (chunk.data.code === "model_spending_limit_exceeded") {
+        expect(
+          spendingLimitStopDetailsSchema.parse(chunk.data.details)
+        ).toEqual(details);
+      }
     }
   };
-  onData(event);
-  expect(codes).toEqual(["turn_interrupted"]);
+  for (const event of events) {
+    expect(turnStreamErrorEventSchema.parse(event)).toEqual(event);
+    onData(event);
+  }
+  expect(codes).toEqual(["model_spending_limit_exceeded", "turn_interrupted"]);
 });

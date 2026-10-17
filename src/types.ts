@@ -28,7 +28,6 @@ import type {
   CreateMcpConnectionBody,
   McpAttachmentResponse,
   McpAttachmentsResponse,
-  McpConnectionOauthConnectResponse,
   McpConnectionReconnectResult,
   McpConnectionResponse,
   McpConnectionsResponse,
@@ -852,17 +851,6 @@ export interface ProvidersResource {
 }
 
 export interface McpConnectionsResource {
-  /**
-   * Starts OAuth authorization for the MCP Connection. The API serves this
-   * route only to a dashboard session (`DashboardJwt`) and refuses an API
-   * key, so a client built with an API key gets an error.
-   * @param input - `mcpConnectionId`; optional abortSignal.
-   * @returns The mcp connection oauth connect response.
-   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
-   */
-  connect(
-    input: { mcpConnectionId: string } & ResourceRequestOptions
-  ): Promise<McpConnectionOauthConnectResponse>;
   /**
    * Creates the MCP Connection.
    * @param input - creation fields; optional abortSignal.

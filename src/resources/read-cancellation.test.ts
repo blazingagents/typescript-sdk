@@ -263,10 +263,6 @@ const requests: [
     (c, o) => c.mcpConnections.delete({ mcpConnectionId: "connection", ...o }),
   ],
   [
-    "mcpConnections.connect",
-    (c, o) => c.mcpConnections.connect({ mcpConnectionId: "connection", ...o }),
-  ],
-  [
     "mcpConnections.reconnect",
     (c, o) =>
       c.mcpConnections.reconnect({

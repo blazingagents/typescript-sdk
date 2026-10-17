@@ -23,20 +23,6 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 }
 
 describe("client.mcpConnections", () => {
-  it("starts Authorization Code through the Blazing initiation URL", async () => {
-    const setupToken = "A".repeat(43);
-    const body = {
-      authorizationUrl: `https://app.example.com/app/mcp-connections?mcpOAuthSetup=${setupToken}`,
-    };
-    const { fetch, calls } = createMockFetch({ body });
-
-    await expect(
-      client(fetch).mcpConnections.connect({ mcpConnectionId: row.id })
-    ).resolves.toEqual(body);
-    expect(calls[0].url).toBe(`${BASE}/v1/mcp-connections/${row.id}/connect`);
-    expect(calls[0].init?.method).toBe("POST");
-  });
-
   it("creates", async () => {
     const { fetch, calls } = createMockFetch({ body: row });
     const result = await client(fetch).mcpConnections.create({

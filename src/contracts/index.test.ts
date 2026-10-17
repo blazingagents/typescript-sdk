@@ -80,7 +80,6 @@ const publicContractNames = [
   "mcpAttachmentResponseSchema",
   "mcpAttachmentsResponseSchema",
   "mcpConnectionAuthTypeSchema",
-  "mcpConnectionOauthConnectResponseSchema",
   "mcpConnectionReconnectResultSchema",
   "mcpConnectionResponseSchema",
   "mcpConnectionStatusSchema",

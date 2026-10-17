@@ -1,23 +1,31 @@
 import { readFileSync } from "node:fs";
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { BlazingAgents } from "./client.ts";
 import type { UserClient } from "./index.ts";
-import { createMockFetch } from "./test/fixtures.ts";
+import { createMockFetch, type FetchOption } from "./test/fixtures.ts";
 
 interface ContractOperation {
   literalSegments: number;
   method: string;
   operationId: string;
   pattern: RegExp;
-  scope: string | undefined;
+  scope: string;
 }
 
-interface UserMethod {
-  invoke: (user: UserClient, input: unknown) => unknown;
+interface ClientMethod<C> {
+  invoke: (client: C, input: unknown) => unknown;
   name: string;
 }
 
-type Reach = (user: UserClient) => object;
+type Reach<C> = (client: C) => object;
+
+/** A client the SDK exposes, and the contract operations it must cover. */
+interface ClientUnderTest<C> {
+  create: (fetch?: FetchOption) => C;
+  /** The `X-BA-User-Id` every request carries, or `null` for none. */
+  scopedUserId: string | null;
+  scopes: readonly string[];
+}
 
 const contract = JSON.parse(
   readFileSync(new URL("../spec/openapi.json", import.meta.url), "utf8")
@@ -28,10 +36,11 @@ const contract = JSON.parse(
   >;
 };
 
+/** API-key operations: the contract marks each with an `x-scope`. */
 const operations: ContractOperation[] = Object.entries(contract.paths).flatMap(
   ([path, item]) =>
     Object.entries(item).flatMap(([method, operation]) =>
-      operation.operationId === undefined
+      operation.operationId === undefined || operation["x-scope"] === undefined
         ? []
         : [
             {
@@ -69,7 +78,7 @@ const message = {
 /**
  * Inputs for methods that validate more than IDs before sending. Every
  * other method is called once with `ids`. Several entries observe each
- * operation a method can send.
+ * operation a method can send. Keys name a method on either client.
  */
 const samples: Record<string, unknown[]> = {
   "agent({agentId}).skills.upload": [
@@ -78,6 +87,16 @@ const samples: Record<string, unknown[]> = {
   chat: [
     { agentId: ids.agentId, message },
     { agentId: ids.agentId, sessionId: ids.sessionId, message },
+  ],
+  "mcpConnections.reconnect": [
+    {
+      mcpConnectionId: ids.mcpConnectionId,
+      authType: "none",
+      url: "https://mcp.example.com/mcp",
+    },
+  ],
+  "mcpConnections.update": [
+    { mcpConnectionId: ids.mcpConnectionId, name: "Docs" },
   ],
   "usage.sessions": [{ sessionIds: [ids.sessionId] }],
 };
@@ -93,8 +112,39 @@ const internalOperations: Record<string, string[]> = {
   resolveChatFunctionCall: ["chat", "continueChat"],
 };
 
+const userClient: ClientUnderTest<UserClient> = {
+  create: (fetch) =>
+    new BlazingAgents({ apiKey: "ba_test", fetch }).forUser("user-42"),
+  scopedUserId: "user-42",
+  scopes: ["end-user"],
+};
+
+const tenantClient: ClientUnderTest<BlazingAgents> = {
+  create: (fetch) => new BlazingAgents({ apiKey: "ba_test", fetch }),
+  scopedUserId: null,
+  scopes: ["end-user", "tenant"],
+};
+
+/** Client views that return another client rather than sending a request. */
+const clientViews = new Set(["forUser", "withOptions"]);
+
 function member(target: object, key: string): unknown {
   return (target as Record<string, unknown>)[key];
+}
+
+/** Own fields plus class methods, so `BlazingAgents` and plain objects walk alike. */
+function publicEntries(target: object): [string, unknown][] {
+  const prototype = Object.getPrototypeOf(target) as object;
+  const methods =
+    prototype === Object.prototype
+      ? []
+      : Object.getOwnPropertyNames(prototype).filter(
+          (key) => key !== "constructor"
+        );
+  return [...Object.keys(target), ...methods].map((key) => [
+    key,
+    member(target, key),
+  ]);
 }
 
 /**
@@ -102,39 +152,47 @@ function member(target: object, key: string): unknown {
  * without editing this test. `agent()` builds a nested client; `withOptions`
  * returns this same client shape and is compared separately.
  */
-function userMethods(
+function clientMethods<C>(
   target: object,
   prefix: string,
-  reach: Reach
-): UserMethod[] {
-  return Object.entries(target).flatMap(([key, value]): UserMethod[] => {
+  reach: Reach<C>
+): ClientMethod<C>[] {
+  return publicEntries(target).flatMap(([key, value]): ClientMethod<C>[] => {
     const name = `${prefix}${key}`;
-    if (name === "withOptions") {
+    if (clientViews.has(name)) {
       return [];
     }
     if (name === "agent") {
-      const nested: Reach = (user) => user.agent({ agentId: ids.agentId });
-      return userMethods(
-        (value as UserClient["agent"])({ agentId: ids.agentId }),
-        "agent({agentId}).",
-        nested
+      const select = (client: object) =>
+        (client as Pick<UserClient, "agent">).agent({ agentId: ids.agentId });
+      return clientMethods<C>(select(target), "agent({agentId}).", (client) =>
+        select(reach(client))
       );
     }
     if (typeof value === "function") {
       return [
         {
           name,
-          invoke: (user, input) =>
-            (member(reach(user), key) as (input: unknown) => unknown)(input),
+          invoke: (client, input) => {
+            const owner = reach(client);
+            return (member(owner, key) as (input: unknown) => unknown).call(
+              owner,
+              input
+            );
+          },
         },
       ];
     }
-    return userMethods(
+    return clientMethods<C>(
       value as object,
       `${name}.`,
-      (user) => member(reach(user), key) as object
+      (client) => member(reach(client), key) as object
     );
   });
+}
+
+function methodsOf<C>(client: C & object): ClientMethod<C>[] {
+  return clientMethods<C>(client, "", (root) => root as object);
 }
 
 function operationFor(method: string, pathname: string) {
@@ -143,29 +201,30 @@ function operationFor(method: string, pathname: string) {
     .sort((a, b) => b.literalSegments - a.literalSegments)[0];
 }
 
-async function sentRequests(method: UserMethod, input: unknown) {
+async function sentRequests<C>(
+  subject: ClientUnderTest<C>,
+  method: ClientMethod<C>,
+  input: unknown
+) {
   const { fetch, calls } = createMockFetch({
     status: 400,
     body: { error: { code: "validation_error", message: "Observed" } },
   });
-  const user = new BlazingAgents({ apiKey: "ba_test", fetch }).forUser(
-    "user-42"
-  );
   try {
-    await method.invoke(user, input);
+    await method.invoke(subject.create(fetch), input);
   } catch {
     /** The 400 ends each call right after its request is recorded. */
   }
   return calls.map((call) => ({
     method: call.init?.method ?? "GET",
     pathname: new URL(call.url).pathname,
-    scoped: new Headers(call.init?.headers).get("X-BA-User-Id") === "user-42",
+    userId: new Headers(call.init?.headers).get("X-BA-User-Id"),
   }));
 }
 
-it("sends exactly the contract's end-user operations from the user client", async () => {
-  const user = new BlazingAgents({ apiKey: "ba_test" }).forUser("user-42");
-  const methods = userMethods(user, "", (client) => client);
+/** Lists every way the client's requests diverge from its contract operations. */
+async function contractProblems<C>(subject: ClientUnderTest<C>) {
+  const methods = methodsOf(subject.create() as C & object);
   const names = new Set(methods.map((method) => method.name));
   const problems: string[] = [];
   const sentBy = new Map<string, string>();
@@ -174,7 +233,7 @@ it("sends exactly the contract's end-user operations from the user client", asyn
     const requests = (
       await Promise.all(
         (samples[method.name] ?? [ids]).map((input) =>
-          sentRequests(method, input)
+          sentRequests(subject, method, input)
         )
       )
     ).flat();
@@ -186,14 +245,14 @@ it("sends exactly the contract's end-user operations from the user client", asyn
     for (const request of requests) {
       const label = `${method.name} sends ${request.method} ${request.pathname}`;
       const operation = operationFor(request.method, request.pathname);
-      if (!request.scoped) {
-        problems.push(`${label} without X-BA-User-Id`);
+      if (request.userId !== subject.scopedUserId) {
+        problems.push(`${label} with X-BA-User-Id ${request.userId}`);
       }
       if (operation === undefined) {
         problems.push(
           `${label}, which is not an API-key operation in the contract`
         );
-      } else if (operation.scope === "end-user") {
+      } else if (subject.scopes.includes(operation.scope)) {
         sentBy.set(operation.operationId, method.name);
       } else {
         problems.push(
@@ -203,18 +262,7 @@ it("sends exactly the contract's end-user operations from the user client", asyn
     }
   }
 
-  for (const name of Object.keys(samples)) {
-    if (!names.has(name)) {
-      problems.push(`\`samples\` names ${name}, which the user client lacks`);
-    }
-  }
   for (const [operationId, senders] of Object.entries(internalOperations)) {
-    const operation = operations.find((op) => op.operationId === operationId);
-    if (operation?.scope !== "end-user") {
-      problems.push(
-        `internal operation ${operationId} is not an end-user operation in the contract`
-      );
-    }
     if (sentBy.has(operationId)) {
       problems.push(
         `internal operation ${operationId} is sent by ${sentBy.get(operationId)}; remove it from \`internalOperations\``
@@ -222,28 +270,64 @@ it("sends exactly the contract's end-user operations from the user client", asyn
     }
     for (const sender of senders.filter((name) => !names.has(name))) {
       problems.push(
-        `internal operation ${operationId} names ${sender}, which the user client lacks`
+        `internal operation ${operationId} names ${sender}, which this client lacks`
       );
     }
   }
   for (const operation of operations) {
     if (
-      operation.scope === "end-user" &&
+      subject.scopes.includes(operation.scope) &&
       !sentBy.has(operation.operationId) &&
       !(operation.operationId in internalOperations)
     ) {
       problems.push(
-        `end-user operation ${operation.operationId} (${operation.method}) is not sent by any user-client method`
+        `${operation.scope} operation ${operation.operationId} (${operation.method}) is not sent by any method`
       );
     }
   }
 
-  expect(problems).toStrictEqual([]);
-  expect(
-    userMethods(
-      user.withOptions({ clientRequestId: "trace-1" }),
-      "",
-      (client) => client
-    ).map((method) => method.name)
-  ).toStrictEqual([...names]);
+  return { names, problems };
+}
+
+describe("contract coverage", () => {
+  it("sends exactly the contract's end-user operations from the user client", async () => {
+    const { names, problems } = await contractProblems(userClient);
+
+    expect(problems).toStrictEqual([]);
+    const user = userClient.create();
+    expect(
+      methodsOf(user.withOptions({ clientRequestId: "trace-1" })).map(
+        (method) => method.name
+      )
+    ).toStrictEqual([...names]);
+  });
+
+  it("sends every API-key operation from the tenant client", async () => {
+    const { names, problems } = await contractProblems(tenantClient);
+
+    expect(problems).toStrictEqual([]);
+    const tenant = tenantClient.create();
+    expect(
+      methodsOf(tenant.withOptions({ clientRequestId: "trace-1" })).map(
+        (method) => method.name
+      )
+    ).toStrictEqual([...names]);
+  });
+
+  it("names only methods and end-user operations that exist", () => {
+    const names = new Set(
+      [userClient.create(), tenantClient.create()].flatMap((client) =>
+        methodsOf<object>(client).map((method) => method.name)
+      )
+    );
+
+    expect(Object.keys(samples).filter((name) => !names.has(name))).toEqual([]);
+    expect(
+      Object.keys(internalOperations).filter(
+        (operationId) =>
+          operations.find((op) => op.operationId === operationId)?.scope !==
+          "end-user"
+      )
+    ).toEqual([]);
+  });
 });

@@ -272,27 +272,6 @@ export const reconnectMcpConnectionBodySchema = z
     }
   });
 
-export const mcpConnectionOauthConnectResponseSchema = z
-  .object({
-    authorizationUrl: z
-      .string()
-      .url()
-      .refine((value) => {
-        const url = new URL(value);
-        return (
-          url.pathname === "/app/mcp-connections" &&
-          url.username === "" &&
-          url.password === "" &&
-          url.hash === "" &&
-          url.searchParams.size === 1 &&
-          OPAQUE_MCP_OAUTH_TOKEN_PATTERN.test(
-            url.searchParams.get("mcpOAuthSetup") ?? ""
-          )
-        );
-      }),
-  })
-  .strip();
-
 export const mcpOauthAuthorizationLaunchResponseSchema = z
   .object({
     authorizationUrl: z
@@ -402,9 +381,6 @@ export type McpConnectionTestResponse = z.infer<
 >;
 export type McpConnectionReconnectResult = z.infer<
   typeof mcpConnectionReconnectResultSchema
->;
-export type McpConnectionOauthConnectResponse = z.infer<
-  typeof mcpConnectionOauthConnectResponseSchema
 >;
 export type McpAttachmentResponse = z.infer<typeof mcpAttachmentResponseSchema>;
 export type McpAttachmentsResponse = z.infer<

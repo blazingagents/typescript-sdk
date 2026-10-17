@@ -105,7 +105,6 @@ export {
   mcpAttachmentResponseSchema,
   mcpAttachmentsResponseSchema,
   mcpConnectionAuthTypeSchema,
-  mcpConnectionOauthConnectResponseSchema,
   mcpConnectionReconnectResultSchema,
   mcpConnectionResponseSchema,
   mcpConnectionStatusSchema,

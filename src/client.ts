@@ -101,7 +101,7 @@ function createUserClient(config: HttpConfig): UserClient {
 }
 
 export class BlazingAgents {
-  private readonly config: HttpConfig;
+  readonly #config: HttpConfig;
 
   readonly chatConnections: ChatConnectionsResource;
   readonly chatDeliveries: ChatDeliveriesResource;
@@ -125,7 +125,7 @@ export class BlazingAgents {
    * @param options - Configuration for this operation.
    */
   constructor(options: BlazingAgentsOptions) {
-    this.config = {
+    this.#config = {
       apiKey: options.apiKey,
       baseUrl: (options.baseUrl ?? DEFAULT_BASE_URL).replace(
         TRAILING_SLASH_RE,
@@ -137,22 +137,22 @@ export class BlazingAgents {
         : { clientRequestId: options.clientRequestId }),
       onResponse: options.onResponse,
     };
-    this.chatConnections = createChatConnectionsResource(this.config);
-    this.chatDeliveries = createChatDeliveriesResource(this.config);
-    this.agents = createAgentsResource(this.config);
-    this.sessions = createSessionsResource(this.config);
-    this.providers = createProvidersResource(this.config);
-    this.mcpConnections = createMcpConnectionsResource(this.config);
-    this.memories = createMemoriesResource(this.config);
-    this.prompts = createPromptsResource(this.config);
-    this.usage = createUsageResource(this.config);
-    this.artifacts = createArtifactsResource(this.config);
-    this.tasks = createTasksResource(this.config);
-    this.tenant = createTenantResource(this.config);
-    this.workspaces = createWorkspacesResource(this.config);
-    this.merchantConnection = createMerchantConnectionResource(this.config);
-    this.merchantBindings = createMerchantBindingsResource(this.config);
-    this.merchantUsageEvents = createMerchantUsageEventsResource(this.config);
+    this.chatConnections = createChatConnectionsResource(this.#config);
+    this.chatDeliveries = createChatDeliveriesResource(this.#config);
+    this.agents = createAgentsResource(this.#config);
+    this.sessions = createSessionsResource(this.#config);
+    this.providers = createProvidersResource(this.#config);
+    this.mcpConnections = createMcpConnectionsResource(this.#config);
+    this.memories = createMemoriesResource(this.#config);
+    this.prompts = createPromptsResource(this.#config);
+    this.usage = createUsageResource(this.#config);
+    this.artifacts = createArtifactsResource(this.#config);
+    this.tasks = createTasksResource(this.#config);
+    this.tenant = createTenantResource(this.#config);
+    this.workspaces = createWorkspacesResource(this.#config);
+    this.merchantConnection = createMerchantConnectionResource(this.#config);
+    this.merchantBindings = createMerchantBindingsResource(this.#config);
+    this.merchantUsageEvents = createMerchantUsageEventsResource(this.#config);
   }
 
   /**
@@ -160,7 +160,7 @@ export class BlazingAgents {
    * @returns The selected Agent Skill client.
    */
   agent({ agentId }: { agentId: string }): AgentClient {
-    return { skills: createAgentSkillsResource(this.config, agentId) };
+    return { skills: createAgentSkillsResource(this.#config, agentId) };
   }
 
   /**
@@ -171,7 +171,7 @@ export class BlazingAgents {
    */
   forUser(userId: string): UserClient {
     return createUserClient({
-      ...this.config,
+      ...this.#config,
       scopeUserId: scopedUserIdSchema.parse(userId),
     });
   }
@@ -184,7 +184,7 @@ export class BlazingAgents {
    * @returns The Session ID promise and single-owner SSE accessors.
    */
   chat(input: ChatInput): Promise<ChatResult> {
-    return chat(this.config, input);
+    return chat(this.#config, input);
   }
 
   /**
@@ -194,7 +194,7 @@ export class BlazingAgents {
    * @returns The Session ID promise and continuation SSE accessors.
    */
   continueChat(input: ContinueChatInput): Promise<ChatResult> {
-    return continueChat(this.config, input);
+    return continueChat(this.#config, input);
   }
 
   /**
@@ -204,7 +204,7 @@ export class BlazingAgents {
    * @returns Independent text stream, final text promise, and response relay.
    */
   completion(input: CompletionInput): Promise<CompletionResult> {
-    return completion(this.config, input);
+    return completion(this.#config, input);
   }
 
   /**
@@ -214,7 +214,7 @@ export class BlazingAgents {
    * @returns Partial JSON objects, a final JSON promise, and a text response relay.
    */
   object(input: ObjectInput): Promise<ObjectResult> {
-    return objectGeneration(this.config, input);
+    return objectGeneration(this.#config, input);
   }
 
   /**
@@ -225,7 +225,7 @@ export class BlazingAgents {
    */
   withOptions(options: BlazingAgentsRequestOptions): BlazingAgents {
     return new BlazingAgents({
-      ...this.config,
+      ...this.#config,
       clientRequestId: options.clientRequestId,
     });
   }

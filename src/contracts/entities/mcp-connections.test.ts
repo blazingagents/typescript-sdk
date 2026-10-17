@@ -5,7 +5,6 @@ import {
   mcpAttachmentResponseSchema,
   mcpAttachmentsResponseSchema,
   mcpConnectionAuthTypeSchema,
-  mcpConnectionOauthConnectResponseSchema,
   mcpConnectionReconnectResultSchema,
   mcpConnectionResponseSchema,
   mcpConnectionStatusSchema,
@@ -383,28 +382,10 @@ describe("MCP connection schemas", () => {
   it("parses only a Blazing OAuth initiation URL", () => {
     const setupToken = "A".repeat(43);
     expect(
-      mcpConnectionOauthConnectResponseSchema.parse({
-        authorizationUrl: `https://app.example.com/app/mcp-connections?mcpOAuthSetup=${setupToken}`,
-      })
-    ).toEqual({
-      authorizationUrl: `https://app.example.com/app/mcp-connections?mcpOAuthSetup=${setupToken}`,
-    });
-    expect(
-      mcpConnectionOauthConnectResponseSchema.safeParse({
-        authorizationUrl: `https://auth.example.com/authorize?mcpOAuthSetup=${setupToken}`,
-      }).success
-    ).toBe(false);
-    expect(
       mcpOauthAuthorizationLaunchResponseSchema.parse({
         authorizationUrl: `https://app.example.com/v1/mcp/oauth/authorize?setup=${setupToken}`,
       })
     ).toBeDefined();
-    expect(
-      mcpConnectionOauthConnectResponseSchema.safeParse({
-        authorizationUrl:
-          "https://app.example.com/app/mcp-connections?wrong=value",
-      }).success
-    ).toBe(false);
     expect(
       mcpOauthAuthorizationLaunchResponseSchema.safeParse({
         authorizationUrl:

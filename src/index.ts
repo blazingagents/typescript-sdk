@@ -68,7 +68,6 @@ export type {
   McpAttachmentResponse,
   McpAttachmentsResponse,
   McpConnectionAuthType,
-  McpConnectionOauthConnectResponse,
   McpConnectionReconnectResult,
   McpConnectionResponse,
   McpConnectionStatus,

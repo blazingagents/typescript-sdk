@@ -3,7 +3,7 @@ import {
   artifactListItemSchema,
   artifactsListResponseSchema,
 } from "../contracts/entities/artifacts.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { ArtifactsResource, HttpConfig } from "../types.ts";
 
 /**
@@ -19,7 +19,7 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
     async createDownloadUrl({ artifactId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/artifacts/${artifactId}/download-url`,
+        apiPath`/v1/artifacts/${artifactId}/download-url`,
         { method: "POST", signal: abortSignal },
         artifactDownloadUrlResponseSchema
       );
@@ -30,7 +30,7 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
     async get({ artifactId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/artifacts/${artifactId}`,
+        apiPath`/v1/artifacts/${artifactId}`,
         { signal: abortSignal },
         artifactListItemSchema
       );
@@ -57,7 +57,7 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
      * Deletes artifacts.
      */
     async delete({ artifactId, abortSignal }) {
-      await requestJson<void>(config, `/v1/artifacts/${artifactId}`, {
+      await requestJson<void>(config, apiPath`/v1/artifacts/${artifactId}`, {
         method: "DELETE",
         signal: abortSignal,
       });

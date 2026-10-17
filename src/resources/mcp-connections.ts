@@ -7,7 +7,7 @@ import {
   reconnectMcpConnectionBodySchema,
   updateMcpConnectionBodySchema,
 } from "../contracts/entities/mcp-connections.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, McpConnectionsResource } from "../types.ts";
 
 /**
@@ -39,7 +39,7 @@ export function createMcpConnectionsResource(
     async connect({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${mcpConnectionId}/connect`,
+        apiPath`/v1/mcp-connections/${mcpConnectionId}/connect`,
         { method: "POST", signal: abortSignal },
         mcpConnectionOauthConnectResponseSchema
       );
@@ -62,7 +62,7 @@ export function createMcpConnectionsResource(
     async get({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${mcpConnectionId}`,
+        apiPath`/v1/mcp-connections/${mcpConnectionId}`,
         { signal: abortSignal },
         mcpConnectionResponseSchema
       );
@@ -73,7 +73,7 @@ export function createMcpConnectionsResource(
     async update({ mcpConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${mcpConnectionId}`,
+        apiPath`/v1/mcp-connections/${mcpConnectionId}`,
         {
           json: updateMcpConnectionBodySchema.parse(body),
           signal: abortSignal,
@@ -88,7 +88,7 @@ export function createMcpConnectionsResource(
     async delete({ mcpConnectionId, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/mcp-connections/${mcpConnectionId}`,
+        apiPath`/v1/mcp-connections/${mcpConnectionId}`,
         {
           method: "DELETE",
           signal: abortSignal,
@@ -101,7 +101,7 @@ export function createMcpConnectionsResource(
     async test({ mcpConnectionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${mcpConnectionId}/test`,
+        apiPath`/v1/mcp-connections/${mcpConnectionId}/test`,
         { method: "POST", signal: abortSignal },
         mcpConnectionTestResponseSchema
       );
@@ -112,7 +112,7 @@ export function createMcpConnectionsResource(
     async reconnect({ mcpConnectionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/mcp-connections/${mcpConnectionId}/reconnect`,
+        apiPath`/v1/mcp-connections/${mcpConnectionId}/reconnect`,
         {
           json: reconnectMcpConnectionBodySchema.parse(body),
           signal: abortSignal,

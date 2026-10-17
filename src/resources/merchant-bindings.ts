@@ -2,7 +2,7 @@ import {
   merchantBindingResponseSchema,
   merchantBindingsResponseSchema,
 } from "../contracts/entities/merchant.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, MerchantBindingsResource } from "../types.ts";
 
 /**
@@ -34,7 +34,7 @@ export function createMerchantBindingsResource(
     async put({ userId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/merchant-connection/bindings/${encodeURIComponent(userId)}`,
+        apiPath`/v1/merchant-connection/bindings/${userId}`,
         { json: body, method: "PUT", signal: abortSignal },
         merchantBindingResponseSchema
       );
@@ -45,7 +45,7 @@ export function createMerchantBindingsResource(
     async delete({ userId, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/merchant-connection/bindings/${encodeURIComponent(userId)}`,
+        apiPath`/v1/merchant-connection/bindings/${userId}`,
         { method: "DELETE", signal: abortSignal }
       );
     },

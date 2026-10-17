@@ -220,6 +220,25 @@ describe("client.agent(agentId).skills", () => {
     expect(calls[0].init?.body).toBe(bytes);
   });
 
+  it.each([
+    ["text", "# Notes"],
+    ["bytes", Uint8Array.from([1, 2])],
+    ["a typed Blob", new Blob(["<p></p>"], { type: "text/html" })],
+  ])(
+    "sends %s file content as application/octet-stream",
+    async (_, content) => {
+      const { fetch, calls } = createMockFetch({ body: skill });
+
+      await client(fetch)
+        .agent({ agentId })
+        .skills.putFile({ content, path: "notes.md", skillId });
+
+      expect(new Headers(calls[0].init?.headers).get("content-type")).toBe(
+        "application/octet-stream"
+      );
+    }
+  );
+
   it("deletes one supporting file and parses the updated Skill", async () => {
     const { fetch, calls } = createMockFetch({ body: skill });
 

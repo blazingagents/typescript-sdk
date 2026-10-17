@@ -7,7 +7,7 @@ import {
   mcpAttachmentsResponseSchema,
 } from "../contracts/entities/mcp-connections.ts";
 import { spendingLimitResponseSchema } from "../contracts/entities/spending-limits.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type {
   AgentsResource,
   HttpConfig,
@@ -26,7 +26,7 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
     async getSpendingLimit({ agentId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/spending-limit`,
+        apiPath`/v1/agents/${agentId}/spending-limit`,
         { signal: abortSignal },
         spendingLimitResponseSchema
       );
@@ -35,7 +35,7 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
     async updateSpendingLimit({ agentId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/spending-limit`,
+        apiPath`/v1/agents/${agentId}/spending-limit`,
         { method: "PUT", json: body, signal: abortSignal },
         spendingLimitResponseSchema
       );
@@ -61,7 +61,7 @@ export function createUserAgentsResource(
   }) =>
     requestJson(
       config,
-      `/v1/agents/${agentId}`,
+      apiPath`/v1/agents/${agentId}`,
       {
         json: body,
         signal: abortSignal,
@@ -111,7 +111,7 @@ export function createUserAgentsResource(
     async get({ agentId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}`,
+        apiPath`/v1/agents/${agentId}`,
         { signal: abortSignal },
         agentResponseSchema
       );
@@ -122,7 +122,7 @@ export function createUserAgentsResource(
     async disable({ agentId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/disable`,
+        apiPath`/v1/agents/${agentId}/disable`,
         { method: "POST", signal: abortSignal },
         agentResponseSchema
       );
@@ -133,7 +133,7 @@ export function createUserAgentsResource(
     async enable({ agentId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/enable`,
+        apiPath`/v1/agents/${agentId}/enable`,
         { method: "POST", signal: abortSignal },
         agentResponseSchema
       );
@@ -144,7 +144,7 @@ export function createUserAgentsResource(
     async listMcpAttachments({ agentId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/mcp-attachments`,
+        apiPath`/v1/agents/${agentId}/mcp-attachments`,
         { signal: abortSignal },
         mcpAttachmentsResponseSchema
       );
@@ -161,7 +161,7 @@ export function createUserAgentsResource(
     }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/mcp-attachments/${mcpConnectionId}`,
+        apiPath`/v1/agents/${agentId}/mcp-attachments/${mcpConnectionId}`,
         { json: body, method: "PATCH", signal: abortSignal },
         mcpAttachmentResponseSchema
       );
@@ -170,7 +170,7 @@ export function createUserAgentsResource(
      * Deletes agents.
      */
     async delete({ agentId, includeArtifacts, abortSignal }) {
-      await requestJson<void>(config, `/v1/agents/${agentId}`, {
+      await requestJson<void>(config, apiPath`/v1/agents/${agentId}`, {
         method: "DELETE",
         query: { includeArtifacts },
         signal: abortSignal,
@@ -184,7 +184,7 @@ export function createUserAgentsResource(
       form.append("file", file);
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/avatar`,
+        apiPath`/v1/agents/${agentId}/avatar`,
         {
           body: form,
           signal: abortSignal,
@@ -199,7 +199,7 @@ export function createUserAgentsResource(
     async removeAvatar({ agentId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/avatar`,
+        apiPath`/v1/agents/${agentId}/avatar`,
         { method: "DELETE", signal: abortSignal },
         agentResponseSchema
       );

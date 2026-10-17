@@ -6,7 +6,7 @@ import {
   type FunctionDispatchTarget,
   toChatFunctionDefinitions,
 } from "./functions.ts";
-import { requestStream } from "./http.ts";
+import { apiPath, requestStream } from "./http.ts";
 import type {
   ChatInput,
   ChatResult,
@@ -41,8 +41,8 @@ export async function chat(
    */
   const path =
     input.sessionId === undefined
-      ? `/v1/agents/${input.agentId}/sessions`
-      : `/v1/agents/${input.agentId}/sessions/${input.sessionId}`;
+      ? apiPath`/v1/agents/${input.agentId}/sessions`
+      : apiPath`/v1/agents/${input.agentId}/sessions/${input.sessionId}`;
   const response = await requestStream(config, path, {
     json: body,
     method: "POST",
@@ -68,7 +68,7 @@ export async function continueChat(
 ): Promise<ChatResult> {
   const response = await requestStream(
     config,
-    `/v1/agents/${input.agentId}/sessions/${input.sessionId}/tool-approvals/continue`,
+    apiPath`/v1/agents/${input.agentId}/sessions/${input.sessionId}/tool-approvals/continue`,
     {
       json: {
         decisions: input.decisions,
@@ -489,7 +489,7 @@ export async function completion(
   input: CompletionInput
 ): Promise<CompletionResult> {
   const body = buildStatelessGenerationBody(input, { type: "text" });
-  const path = `/v1/agents/${input.agentId}/generation`;
+  const path = apiPath`/v1/agents/${input.agentId}/generation`;
   const response = await requestStream(config, path, {
     json: body,
     method: "POST",
@@ -539,7 +539,7 @@ export async function objectGeneration(
     type: "object",
     schema: input.schema,
   });
-  const path = `/v1/agents/${input.agentId}/generation`;
+  const path = apiPath`/v1/agents/${input.agentId}/generation`;
   const response = await requestStream(config, path, {
     json: body,
     method: "POST",

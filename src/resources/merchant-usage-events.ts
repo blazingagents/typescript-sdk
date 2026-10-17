@@ -3,7 +3,7 @@ import {
   merchantUsageEventsResponseSchema,
   merchantUsageSummaryResponseSchema,
 } from "../contracts/entities/merchant.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, MerchantUsageEventsResource } from "../types.ts";
 
 /**
@@ -34,7 +34,7 @@ export function createMerchantUsageEventsResource(
     async get({ eventId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/merchant-usage-events/${encodeURIComponent(eventId)}`,
+        apiPath`/v1/merchant-usage-events/${eventId}`,
         { signal: abortSignal },
         merchantUsageEventResponseSchema
       );
@@ -56,7 +56,7 @@ export function createMerchantUsageEventsResource(
     async retry({ eventId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/merchant-usage-events/${encodeURIComponent(eventId)}/retry`,
+        apiPath`/v1/merchant-usage-events/${eventId}/retry`,
         { method: "POST", signal: abortSignal },
         merchantUsageEventResponseSchema
       );
@@ -67,7 +67,7 @@ export function createMerchantUsageEventsResource(
     async release({ eventId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/merchant-usage-events/${encodeURIComponent(eventId)}/release`,
+        apiPath`/v1/merchant-usage-events/${eventId}/release`,
         { method: "POST", signal: abortSignal },
         merchantUsageEventResponseSchema
       );
@@ -78,7 +78,7 @@ export function createMerchantUsageEventsResource(
     async discard({ eventId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/merchant-usage-events/${encodeURIComponent(eventId)}/discard`,
+        apiPath`/v1/merchant-usage-events/${eventId}/discard`,
         { method: "POST", signal: abortSignal },
         merchantUsageEventResponseSchema
       );

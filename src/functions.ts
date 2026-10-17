@@ -10,7 +10,7 @@ import {
   resolveChatFunctionResponseSchema,
 } from "./contracts/entities/chat.ts";
 import { BlazingAgentsError } from "./errors.ts";
-import { requestJson } from "./http.ts";
+import { apiPath, requestJson } from "./http.ts";
 import type { HttpConfig } from "./types.ts";
 
 export interface ChatFunctionContext {
@@ -450,7 +450,7 @@ export function dispatchChatFunctions(
    * Claims a function call, runs its handler, and posts the result within its retry budget.
    */
   const runCall = async (call: ChatFunctionCallEvent["data"]) => {
-    const path = `/v1/agents/${target.agentId}/sessions/${target.sessionId}/function-calls/${call.id}`;
+    const path = apiPath`/v1/agents/${target.agentId}/sessions/${target.sessionId}/function-calls/${call.id}`;
     const claimRequestId = crypto.randomUUID();
     const deadline = Date.parse(call.deadlineAt);
     const claim = await postWithRetry(

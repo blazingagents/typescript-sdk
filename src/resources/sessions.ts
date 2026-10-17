@@ -15,7 +15,7 @@ import {
   sessionIdSchema,
   turnIdSchema,
 } from "../contracts/ids.ts";
-import { requestJson } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, SessionsResource } from "../types.ts";
 
 /**
@@ -34,7 +34,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async submitInput({ agentId, sessionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
+        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
         { method: "POST", json: body, signal: abortSignal },
         sessionInputResponseSchema
       );
@@ -45,7 +45,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async inputs({ agentId, sessionId, abortSignal, ...query }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
+        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
         { query, signal: abortSignal },
         sessionInputsResponseSchema
       );
@@ -56,7 +56,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async stop({ agentId, sessionId, turnId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/stop`,
+        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/stop`,
         {
           method: "POST",
           json: { turnId: turnIdSchema.parse(turnId) },
@@ -71,7 +71,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async fork({ agentId, sessionId, messageId, idempotencyKey, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/fork`,
+        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/fork`,
         {
           method: "POST",
           json: { messageId },
@@ -87,7 +87,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async get({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}`,
         { signal: abortSignal },
         sessionResponseSchema
       );
@@ -98,7 +98,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async list({ agentId, ...options }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions`,
+        apiPath`/v1/agents/${agentId}/sessions`,
         {
           signal: options.abortSignal,
           query: {
@@ -139,7 +139,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async messages({ agentId, sessionId, ...options }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/messages`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}/messages`,
         {
           signal: options.abortSignal,
           query: {
@@ -157,7 +157,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async toolApprovals({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals`,
         { signal: abortSignal },
         toolApprovalsResponseSchema
       );
@@ -168,7 +168,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async delete({ agentId, sessionId, deleteArtifacts, abortSignal }) {
       await requestJson<void>(
         config,
-        `/v1/agents/${agentId}/sessions/${sessionId}`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}`,
         { method: "DELETE", query: { deleteArtifacts }, signal: abortSignal }
       );
     },

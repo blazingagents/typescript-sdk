@@ -2,7 +2,7 @@ import {
   workspaceSchema,
   workspacesListResponseSchema,
 } from "../contracts/entities/workspaces.ts";
-import { requestJson, requestStream } from "../http.ts";
+import { apiPath, requestJson, requestStream } from "../http.ts";
 import type { HttpConfig, WorkspacesResource } from "../types.ts";
 
 /**
@@ -35,7 +35,7 @@ export function createWorkspacesResource(
     async delete({ workspaceId, abortSignal }) {
       const response = await requestStream(
         config,
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
+        apiPath`/v1/workspaces/${workspaceId}`,
         { method: "DELETE", signal: abortSignal }
       );
       return response.status === 202 ? "pending" : "completed";
@@ -46,7 +46,7 @@ export function createWorkspacesResource(
     async get({ workspaceId, abortSignal }) {
       return await requestJson(
         config,
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
+        apiPath`/v1/workspaces/${workspaceId}`,
         { signal: abortSignal },
         workspaceSchema
       );
@@ -75,7 +75,7 @@ export function createWorkspacesResource(
     async update({ workspaceId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}`,
+        apiPath`/v1/workspaces/${workspaceId}`,
         { json: body, signal: abortSignal, method: "PUT" },
         workspaceSchema
       );

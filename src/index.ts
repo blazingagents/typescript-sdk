@@ -234,6 +234,7 @@ export type {
   TenantResource,
   TerminalStreamResult,
   UsageResource,
+  UserAgentsResource,
   UserClient,
   WorkspacesListOptions,
   WorkspacesResource,

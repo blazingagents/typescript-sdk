@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.33.0
+
+### Removed
+
+- `mcpConnections.connect()`, with its `McpConnectionOauthConnectResponse` type and the `mcpConnectionOauthConnectResponseSchema` export from `@blazingagents/sdk/contracts`. The API serves that route only to a dashboard session and refuses an API key, so the method always failed. Finish OAuth sign-in for an `oauth_authorization_code` connection from the dashboard. To replace a connection's URL or credentials from code, call `reconnect()`:
+
+```ts
+// Before (always refused)
+await client.mcpConnections.connect({ mcpConnectionId });
+
+// After
+await client.mcpConnections.reconnect({
+  mcpConnectionId,
+  authType: "bearer",
+  url: "https://mcp.example.com/mcp",
+  bearerToken,
+});
+```
+
 ## 0.32.0
 
 ### Added

@@ -1,5 +1,4 @@
 import {
-  mcpConnectionOauthConnectResponseSchema,
   mcpConnectionReconnectResultSchema,
   mcpConnectionResponseSchema,
   mcpConnectionsResponseSchema,
@@ -33,18 +32,6 @@ export function createMcpConnectionsResource(
       mcpConnectionResponseSchema
     )) as McpConnectionsResource["create"];
   return {
-    /**
-     * Starts OAuth authorization for mcp connections. The API serves this
-     * route only to a dashboard session and refuses an API key.
-     */
-    async connect({ mcpConnectionId, abortSignal }) {
-      return await requestJson(
-        config,
-        apiPath`/v1/mcp-connections/${mcpConnectionId}/connect`,
-        { method: "POST", signal: abortSignal },
-        mcpConnectionOauthConnectResponseSchema
-      );
-    },
     create,
     /**
      * Lists one page of mcp connections.

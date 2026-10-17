@@ -262,16 +262,7 @@ export function buildTerminalStreamResult(
    */
   const claimBody = (): ReadableStream<Uint8Array> => {
     if (bodyClaimed) {
-      const message = `The ${resourceName} response body has already been claimed.`;
-      const cause = new Error(message);
-      throw new BlazingAgentsError(
-        {
-          code: "stream_error",
-          message,
-          requestId,
-        },
-        { cause }
-      );
+      throw alreadyClaimedError(resourceName, requestId);
     }
     bodyClaimed = true;
     const body = responseBodyStream(response, requestId, resourceName);
@@ -308,6 +299,35 @@ export function buildTerminalStreamResult(
       }
     },
   };
+}
+
+function alreadyClaimedError(
+  resourceName: string,
+  requestId: string | undefined
+): BlazingAgentsError {
+  const message = `The ${resourceName} response body has already been claimed.`;
+  return new BlazingAgentsError(
+    { code: "stream_error", message, requestId },
+    { cause: new Error(message) }
+  );
+}
+
+/**
+ * Parses the complete generated text, reporting malformed JSON as a stream error.
+ */
+function parseFinalJson(text: string, requestId: string | undefined): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (cause) {
+    throw new BlazingAgentsError(
+      {
+        code: "stream_error",
+        message: "The agent produced invalid JSON.",
+        requestId,
+      },
+      { cause }
+    );
+  }
 }
 
 /**
@@ -552,18 +572,7 @@ function buildObjectResult(response: Response): ObjectResult {
        * Rejects malformed final JSON when the text stream ends.
        */
       flush() {
-        try {
-          JSON.parse(accumulatedText);
-        } catch (cause) {
-          throw new BlazingAgentsError(
-            {
-              code: "stream_error",
-              message: "The agent produced invalid JSON.",
-              requestId,
-            },
-            { cause }
-          );
-        }
+        parseFinalJson(accumulatedText, requestId);
       },
     })
   );
@@ -573,18 +582,7 @@ function buildObjectResult(response: Response): ObjectResult {
     for await (const delta of finalStream) {
       text += delta;
     }
-    try {
-      return JSON.parse(text) as unknown;
-    } catch (cause) {
-      throw new BlazingAgentsError(
-        {
-          code: "stream_error",
-          message: "The agent produced invalid JSON.",
-          requestId,
-        },
-        { cause }
-      );
-    }
+    return parseFinalJson(text, requestId);
   })();
   objectPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
@@ -634,15 +632,7 @@ function buildStatelessGenerationStreams(
     /** Claims the response relay once. */
     toResponse: () => {
       if (responseBodyClaimed) {
-        const message = `The ${resourceName} response body has already been claimed.`;
-        throw new BlazingAgentsError(
-          {
-            code: "stream_error",
-            message,
-            requestId,
-          },
-          { cause: new Error(message) }
-        );
+        throw alreadyClaimedError(resourceName, requestId);
       }
       responseBodyClaimed = true;
       const headers = replacementResponseHeaders(requestId, location, null);

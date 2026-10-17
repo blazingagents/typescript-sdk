@@ -85,7 +85,7 @@ import type {
   SessionsListResponse,
   ToolApprovalDecision,
   ToolApprovalsResponse,
-  TurnInterruptedEvent,
+  TurnStreamErrorEvent,
 } from "./contracts/entities/sessions.ts";
 import type {
   CreateSkillBody,
@@ -96,7 +96,6 @@ import type {
 } from "./contracts/entities/skills.ts";
 import type {
   SpendingLimitResponse,
-  SpendingLimitStopEvent,
   UpdateSpendingLimitBody,
 } from "./contracts/entities/spending-limits.ts";
 import type {
@@ -264,8 +263,7 @@ export type BlazingAgentsUIMessageData = Record<
   "ba-steer-consumed",
   ChatSteerConsumedEvent["data"]
 > &
-  Record<"model-spending-limit", SpendingLimitStopEvent["data"]> &
-  Record<"turn-interrupted", TurnInterruptedEvent["data"]>;
+  Record<"ba-error", TurnStreamErrorEvent["data"]>;
 
 export type BlazingAgentsUIMessage = UIMessage<
   BlazingAgentsChatMessageMetadata,

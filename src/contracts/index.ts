@@ -197,7 +197,7 @@ export type {
   ToolApprovalContinuationState,
   ToolApprovalDecision,
   ToolApprovalsResponse,
-  TurnInterruptedEvent,
+  TurnStreamErrorEvent,
 } from "./entities/sessions.ts";
 export {
   continueToolApprovalsBodySchema,
@@ -213,7 +213,7 @@ export {
   toolApprovalDecisionSchema,
   toolApprovalStateSchema,
   toolApprovalsResponseSchema,
-  turnInterruptedEventSchema,
+  turnStreamErrorEventSchema,
 } from "./entities/sessions.ts";
 export {
   copySkillBodySchema,
@@ -226,7 +226,6 @@ export type {
   SpendingLimit,
   SpendingLimitResponse,
   SpendingLimitStopDetails,
-  SpendingLimitStopEvent,
   UpdateSpendingLimitBody,
 } from "./entities/spending-limits.ts";
 export {
@@ -236,7 +235,6 @@ export {
   spendingLimitResponseSchema,
   spendingLimitSchema,
   spendingLimitStopDetailsSchema,
-  spendingLimitStopEventSchema,
   updateSpendingLimitBodySchema,
 } from "./entities/spending-limits.ts";
 export {

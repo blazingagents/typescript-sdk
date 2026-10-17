@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { BlazingAgentsChatTransport } from "./chat-transport.ts";
 import { BlazingAgents } from "./client.ts";
-import { turnInterruptedEventSchema } from "./contracts/entities/sessions.ts";
+import { turnStreamErrorEventSchema } from "./contracts/entities/sessions.ts";
 import { BlazingAgentsDirectChatTransport } from "./direct-chat-transport.ts";
 import { defineFunction } from "./functions.ts";
 import { sseStream } from "./test/fixtures.ts";
@@ -683,16 +683,19 @@ it.each(["direct", "relay"] as const)(
   "preserves completed text and a spending stop through native AI Chat (%s)",
   async (kind) => {
     const event = {
-      type: "data-model-spending-limit",
+      type: "data-ba-error",
       transient: true,
       data: {
         code: "model_spending_limit_exceeded",
-        scope: "agent",
-        reason: "reserved",
-        spentUsd: 1,
-        reservedUsd: 4,
-        availableUsd: 0,
-        nextResetAt: null,
+        details: {
+          scope: "agent",
+          reason: "reserved",
+          spentUsd: 1,
+          reservedUsd: 4,
+          availableUsd: 0,
+          nextResetAt: null,
+        },
+        message: "Agent funds are reserved by unfinished work.",
       },
     };
     const { chat, data, errors, onFinish } = await runNativeChat(kind, [
@@ -734,13 +737,13 @@ it.each(["direct", "relay"] as const)(
 it.each(["direct", "relay"] as const)(
   "reports an interrupted turn as a typed event and an error through native AI Chat (%s)",
   async (kind) => {
-    const event = {
-      type: "data-turn-interrupted",
-      transient: true,
-      data: { code: "turn_interrupted" },
-    };
     const errorText =
       "The turn was interrupted before it finished. Read the session's messages to see what was saved. The session may stay busy for up to a minute.";
+    const event = {
+      type: "data-ba-error",
+      transient: true,
+      data: { code: "turn_interrupted", message: errorText },
+    };
     const { chat, data, errors, onFinish } = await runNativeChat(kind, [
       { type: "start", messageId: "answer" },
       { type: "text-start", id: "text" },
@@ -750,7 +753,7 @@ it.each(["direct", "relay"] as const)(
     ]);
     expect(chat.status).toBe("error");
     expect(errors.map((error) => error.message)).toEqual([errorText]);
-    expect(turnInterruptedEventSchema.parse(data[0])).toEqual(event);
+    expect(turnStreamErrorEventSchema.parse(data[0])).toEqual(event);
     expect(data).toHaveLength(1);
     expect(onFinish).toHaveBeenCalledWith(
       expect.objectContaining({ isError: true, finishReason: undefined })

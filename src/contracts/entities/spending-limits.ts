@@ -95,16 +95,3 @@ export function nextSpendingLimitReset(
   }
   return boundary().toISOString();
 }
-
-export const spendingLimitStopEventSchema = z
-  .object({
-    type: z.literal("data-model-spending-limit"),
-    data: spendingLimitStopDetailsSchema.extend({
-      code: z.literal("model_spending_limit_exceeded"),
-    }),
-    transient: z.literal(true),
-  })
-  .strict();
-export type SpendingLimitStopEvent = z.infer<
-  typeof spendingLimitStopEventSchema
->;

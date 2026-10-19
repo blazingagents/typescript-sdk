@@ -29,7 +29,6 @@
     "README.md"
   ],
   "scripts": {
-    "agent-tools:json": "node scripts/write-agent-tools-json.ts",
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "check": "npm run typecheck && npm run test && npm run lint && npm run unused",
     "fix": "ultracite fix",

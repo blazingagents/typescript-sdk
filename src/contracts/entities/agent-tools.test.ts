@@ -43,14 +43,14 @@ describe("AGENT_TOOLS", () => {
     );
   });
 
-  it("matches the committed agent-tools.json other SDKs compare against", () => {
-    const committed = JSON.parse(
+  it("equals the catalog the vendored API contract publishes as x-agent-tools", () => {
+    const contract = JSON.parse(
       readFileSync(
-        new URL("../../../agent-tools.json", import.meta.url),
+        new URL("../../../spec/openapi.json", import.meta.url),
         "utf8"
       )
-    );
-    expect(committed, "run npm run agent-tools:json").toEqual({
+    ) as { "x-agent-tools": unknown };
+    expect(contract["x-agent-tools"]).toEqual({
       tags: AGENT_TOOL_TAGS,
       groups: AGENT_TOOL_GROUPS,
       tools: AGENT_TOOLS,

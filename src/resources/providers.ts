@@ -93,6 +93,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         "/v1/providers",
         {
           json: body,
+          credentialBearing: true,
           signal: abortSignal,
           method: "POST",
         },
@@ -103,7 +104,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
       return await requestJson(
         config,
         "/v1/providers",
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         providersResponseSchema
       );
     },
@@ -111,7 +112,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
       return await requestJson(
         config,
         apiPath`/v1/providers/${providerId}`,
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         providerResponseSchema
       );
     },
@@ -119,7 +120,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
       return await requestJson(
         config,
         apiPath`/v1/providers/${providerId}/models`,
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         providerModelsResponseSchema
       );
     },
@@ -127,7 +128,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
       return await requestJson(
         config,
         apiPath`/v1/providers/${providerId}/thinking-levels`,
-        { signal: abortSignal, query: { model } },
+        { credentialBearing: true, signal: abortSignal, query: { model } },
         thinkingLevelsResponseSchema
       );
     },
@@ -137,6 +138,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         apiPath`/v1/providers/${providerId}`,
         {
           json: body,
+          credentialBearing: true,
           signal: abortSignal,
           method: "PATCH",
         },
@@ -146,6 +148,7 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
     async delete({ providerId, abortSignal, ...options }) {
       await requestJson<void>(config, apiPath`/v1/providers/${providerId}`, {
         method: "DELETE",
+        credentialBearing: true,
         signal: abortSignal,
         query: {
           confirmSnapshotInvalidation: options.confirmSnapshotInvalidation,

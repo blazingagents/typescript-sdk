@@ -17,6 +17,23 @@ interface BodyReadResult {
   readFailed: boolean;
 }
 
+/** Fields no credential-bearing operation's response may contain. */
+const CREDENTIAL_KEYS = new Set([
+  "apiKey",
+  "api_key",
+  "botToken",
+  "bot_token",
+  "signingSecret",
+  "signing_secret",
+  "webhookSecret",
+  "webhook_secret",
+  "bearerToken",
+  "bearer_token",
+  "clientSecret",
+  "client_secret",
+  "credential",
+]);
+
 const DOT_OR_EMPTY_SEGMENTS = new Set(["", ".", ".."]);
 
 /**
@@ -110,8 +127,32 @@ export async function requestJson<T>(
       read.cause
     );
   }
+  let json: unknown;
   try {
-    const json = JSON.parse(read.bodyText) as unknown;
+    json = JSON.parse(read.bodyText) as unknown;
+  } catch (cause) {
+    throw invalidResponseError(
+      headers,
+      response.status,
+      read.diagnosticBody,
+      read.diagnosticBodyTruncated,
+      cause
+    );
+  }
+  const echoed = options.credentialBearing
+    ? findCredentialKey(json)
+    : undefined;
+  if (echoed !== undefined) {
+    throw new BlazingAgentsError({
+      code: "credential_echo",
+      details: { field: echoed },
+      headers,
+      message: `The server echoed credential field ${JSON.stringify(echoed)}; the response body was discarded.`,
+      requestId: headers.get("x-request-id") ?? undefined,
+      status: response.status,
+    });
+  }
+  try {
     return schema === undefined ? (json as T) : schema.parse(json);
   } catch (cause) {
     throw invalidResponseError(
@@ -121,6 +162,33 @@ export async function requestJson<T>(
       read.diagnosticBodyTruncated,
       cause
     );
+  }
+}
+
+/**
+ * Returns the first credential field found anywhere in a decoded JSON value.
+ */
+function findCredentialKey(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const key = findCredentialKey(item);
+      if (key !== undefined) {
+        return key;
+      }
+    }
+    return;
+  }
+  if (value === null || typeof value !== "object") {
+    return;
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (CREDENTIAL_KEYS.has(key)) {
+      return key;
+    }
+    const nested = findCredentialKey(item);
+    if (nested !== undefined) {
+      return nested;
+    }
   }
 }
 

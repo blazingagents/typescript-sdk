@@ -99,6 +99,7 @@ export function createMcpConnectionsResource(
       "/v1/mcp-connections",
       {
         json: body,
+        credentialBearing: true,
         signal: abortSignal,
         method: "POST",
       },
@@ -110,7 +111,7 @@ export function createMcpConnectionsResource(
       return await requestJson(
         config,
         "/v1/mcp-connections",
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         mcpConnectionsResponseSchema
       );
     },
@@ -118,7 +119,7 @@ export function createMcpConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/mcp-connections/${mcpConnectionId}`,
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         mcpConnectionResponseSchema
       );
     },
@@ -128,6 +129,7 @@ export function createMcpConnectionsResource(
         apiPath`/v1/mcp-connections/${mcpConnectionId}`,
         {
           json: body,
+          credentialBearing: true,
           signal: abortSignal,
           method: "PATCH",
         },
@@ -140,6 +142,7 @@ export function createMcpConnectionsResource(
         apiPath`/v1/mcp-connections/${mcpConnectionId}`,
         {
           method: "DELETE",
+          credentialBearing: true,
           signal: abortSignal,
         }
       );
@@ -148,7 +151,7 @@ export function createMcpConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/mcp-connections/${mcpConnectionId}/test`,
-        { method: "POST", signal: abortSignal },
+        { method: "POST", credentialBearing: true, signal: abortSignal },
         mcpConnectionTestResponseSchema
       );
     },
@@ -158,6 +161,7 @@ export function createMcpConnectionsResource(
         apiPath`/v1/mcp-connections/${mcpConnectionId}/reconnect`,
         {
           json: body,
+          credentialBearing: true,
           signal: abortSignal,
           method: "POST",
         },

@@ -665,6 +665,44 @@ describe("invalid response diagnostics", () => {
   });
 });
 
+describe("credential echo", () => {
+  it("discards a credential-bearing response that echoes a nested credential", async () => {
+    const body = JSON.stringify({
+      data: [{ id: "prv_1", config: { headers: [{ bearerToken: "sk-1" }] } }],
+    });
+    const fetch = vi.fn(
+      async () =>
+        new Response(body, {
+          status: 200,
+          headers: { "x-request-id": "req_echo" },
+        })
+    );
+    const error: unknown = await client(fetch)
+      .providers.list()
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(BlazingAgentsError);
+    expect(error).toMatchObject({
+      code: "credential_echo",
+      details: { field: "bearerToken" },
+      requestId: "req_echo",
+      responseBody: undefined,
+      status: 200,
+    });
+    expect(String((error as Error).message)).not.toContain("sk-1");
+  });
+
+  it("returns a credential field from an operation the contract does not flag", async () => {
+    const fetch = vi.fn(async () =>
+      Response.json({ data: [], nextCursor: null, apiKey: 1 })
+    );
+
+    await expect(client(fetch).agents.list()).resolves.toMatchObject({
+      data: [],
+    });
+  });
+});
+
 describe("transport failures", () => {
   it("throws network_error with the original cause when fetch throws", async () => {
     const cause = new Error("connection refused");

@@ -147,7 +147,7 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         "/v1/chat-connections",
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         chatConnectionsResponseSchema
       );
     },
@@ -155,7 +155,12 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         "/v1/chat-connections",
-        { signal: abortSignal, method: "POST", json: body },
+        {
+          credentialBearing: true,
+          signal: abortSignal,
+          method: "POST",
+          json: body,
+        },
         chatConnectionSchema
       );
     },
@@ -163,7 +168,7 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}`,
-        { signal: abortSignal, method: "GET" },
+        { credentialBearing: true, signal: abortSignal, method: "GET" },
         chatConnectionSchema
       );
     },
@@ -171,7 +176,12 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}`,
-        { signal: abortSignal, method: "PATCH", json: body },
+        {
+          credentialBearing: true,
+          signal: abortSignal,
+          method: "PATCH",
+          json: body,
+        },
         chatConnectionSchema
       );
     },
@@ -179,7 +189,12 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}/credentials`,
-        { signal: abortSignal, method: "POST", json: body },
+        {
+          credentialBearing: true,
+          signal: abortSignal,
+          method: "POST",
+          json: body,
+        },
         chatConnectionSchema
       );
     },
@@ -187,7 +202,7 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}/health`,
-        { signal: abortSignal, method: "POST" },
+        { credentialBearing: true, signal: abortSignal, method: "POST" },
         chatConnectionSchema
       );
     },
@@ -195,7 +210,7 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}/deliveries`,
-        { signal: abortSignal, query },
+        { credentialBearing: true, signal: abortSignal, query },
         chatDeliveryListSchema
       );
     },
@@ -208,7 +223,12 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}/deliveries/${deliveryId}/repair`,
-        { signal: abortSignal, method: "POST", json: body },
+        {
+          credentialBearing: true,
+          signal: abortSignal,
+          method: "POST",
+          json: body,
+        },
         chatDeliveryResultSchema
       );
     },
@@ -216,7 +236,7 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}/enable`,
-        { signal: abortSignal, method: "POST" },
+        { credentialBearing: true, signal: abortSignal, method: "POST" },
         chatConnectionSchema
       );
     },
@@ -224,7 +244,7 @@ export function createChatConnectionsResource(
       return await requestJson(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}/disable`,
-        { signal: abortSignal, method: "POST" },
+        { credentialBearing: true, signal: abortSignal, method: "POST" },
         chatConnectionSchema
       );
     },
@@ -232,7 +252,7 @@ export function createChatConnectionsResource(
       await requestJson<void>(
         config,
         apiPath`/v1/chat-connections/${chatConnectionId}`,
-        { signal: abortSignal, method: "DELETE" }
+        { credentialBearing: true, signal: abortSignal, method: "DELETE" }
       );
     },
   };

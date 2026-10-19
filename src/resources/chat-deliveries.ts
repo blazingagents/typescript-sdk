@@ -49,6 +49,7 @@ export function createChatDeliveriesResource(
             // Multi-value filters serialize as one comma-separated parameter.
             status: status?.length ? status.join(",") : undefined,
           },
+          credentialBearing: true,
           signal: abortSignal,
         },
         chatDeliveriesResponseSchema

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Provider, MCP connection, chat connection, chat delivery and merchant connection methods (every operation the API contract marks `x-credential-bearing`) now throw `BlazingAgentsError` with code `credential_echo` when a successful response contains a credential field such as `apiKey`, `botToken` or `clientSecret`. The error carries `details.field` and the request ID; the response body is discarded and never attached to the error. Nothing changes for a correct response.
+
 ## 0.35.0
 
 ### Changed

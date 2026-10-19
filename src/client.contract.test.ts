@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { BlazingAgents } from "./client.ts";
+import { BlazingAgentsError } from "./errors.ts";
 import type { UserClient } from "./index.ts";
 import { createMockFetch, type FetchOption } from "./test/fixtures.ts";
 
 interface ContractOperation {
+  credentialBearing: boolean;
   literalSegments: number;
   method: string;
   operationId: string;
@@ -32,7 +34,14 @@ const contract = JSON.parse(
 ) as {
   paths: Record<
     string,
-    Record<string, { operationId?: string; "x-scope"?: string }>
+    Record<
+      string,
+      {
+        operationId?: string;
+        "x-credential-bearing"?: boolean;
+        "x-scope"?: string;
+      }
+    >
   >;
 };
 
@@ -51,6 +60,7 @@ const operations: ContractOperation[] = Object.entries(contract.paths).flatMap(
                 .split("/")
                 .filter((segment) => !segment.startsWith("{")).length,
               scope: operation["x-scope"],
+              credentialBearing: operation["x-credential-bearing"] === true,
             },
           ]
     )
@@ -289,7 +299,49 @@ async function contractProblems<C>(subject: ClientUnderTest<C>) {
   return { names, problems };
 }
 
+/**
+ * Answers every request with a 2xx body that echoes a credential and returns
+ * the operations whose method rejected it with `credential_echo`.
+ */
+async function credentialGuardedOperations<C>(subject: ClientUnderTest<C>) {
+  const guarded = new Set<string>();
+  for (const method of methodsOf(subject.create() as C & object)) {
+    for (const input of samples[method.name] ?? [ids]) {
+      const { fetch, calls } = createMockFetch({
+        body: { data: [{ apiKey: "ba_live_echoed" }] },
+      });
+      try {
+        await method.invoke(subject.create(fetch), input);
+      } catch (error) {
+        const last = calls.at(-1);
+        if (
+          last !== undefined &&
+          BlazingAgentsError.isInstance(error) &&
+          error.code === "credential_echo"
+        ) {
+          const operation = operationFor(
+            last.init?.method ?? "GET",
+            new URL(last.url).pathname
+          );
+          guarded.add(operation?.operationId ?? `${method.name}: unknown`);
+        }
+      }
+    }
+  }
+  return guarded;
+}
+
 describe("contract coverage", () => {
+  it("rejects credential echoes on exactly the contract's x-credential-bearing operations", async () => {
+    const guarded = await credentialGuardedOperations(tenantClient);
+    const flagged = operations
+      .filter((operation) => operation.credentialBearing)
+      .map((operation) => operation.operationId);
+
+    expect(flagged.length).toBeGreaterThan(0);
+    expect(guarded).toStrictEqual(new Set(flagged));
+  });
+
   it("sends exactly the contract's end-user operations from the user client", async () => {
     const { names, problems } = await contractProblems(userClient);
 

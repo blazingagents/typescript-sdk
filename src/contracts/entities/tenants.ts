@@ -1,32 +1,10 @@
 import { z } from "zod";
-import { tenantIdSchema } from "../ids.ts";
 import {
   MAX_QUOTA_RESET_DAY,
   MAX_TENANT_NAME_LENGTH,
   MIN_QUOTA_RESET_DAY,
 } from "../limitations.ts";
 import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
-
-/**
- * `GET /v1/me` (JWT-only) — the tenant record. `authUserId` is a uuid
- * referencing `auth.users(id)` per the migration.
- */
-export const tenantSchema = z
-  .object({
-    id: tenantIdSchema,
-    authUserId: z.uuid(),
-    email: z.string().min(1),
-    name: z.string().min(1),
-    createdAt: z.iso.datetime({ offset: true }),
-    updatedAt: z.iso.datetime({ offset: true }),
-  })
-  .strip();
-
-export const subscriptionStatusSchema = z.enum(["active", "inactive"]);
-
-export const tenantResponseSchema = tenantSchema
-  .extend({ subscriptionStatus: subscriptionStatusSchema })
-  .strip();
 
 /**
  * Tenant deletion lifecycle — `requestedAt` marks the tenant deleting and
@@ -78,14 +56,32 @@ export const tenantSettingsResponseSchema = tenantSettingsSchema
 
 export const updateTenantSettingsBodySchema = z
   .object({
-    monetizationEnabled: z.boolean().optional(),
-    name: z.string().trim().min(1).max(MAX_TENANT_NAME_LENGTH).optional(),
-    quota: quotaSchema.nullable().optional(),
+    monetizationEnabled: z
+      .boolean()
+      .optional()
+      .describe(
+        "Bill usage to your end users through your merchant account. Turning it off drops usage events your merchant has not yet accepted."
+      ),
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_TENANT_NAME_LENGTH)
+      .optional()
+      .describe("Display name of your tenant."),
+    quota: quotaSchema
+      .nullable()
+      .optional()
+      .describe(
+        "The whole monthly quota, replacing the current one, or `null` to remove it. Send `monthlyTokenLimit`, `monthlyRequestLimit`, and `resetDay`, with at least one limit set."
+      ),
   })
   .strict()
   .refine(hasObjectKeys, {
     message: atLeastOneFieldMessage,
   });
+export type Quota = z.infer<typeof quotaSchema>;
+export type TenantDeletion = z.infer<typeof tenantDeletionSchema>;
 export type TenantSettingsResponse = z.infer<
   typeof tenantSettingsResponseSchema
 >;

@@ -140,28 +140,60 @@ const taskPromptSchema = z.string().trim().min(1).max(MAX_TASK_PROMPT_LENGTH);
  * makes retries return the original Task and initial run id. Without a key,
  * each call creates a new Task. Run creation has its own idempotency key.
  */
+const taskFieldDescriptions = {
+  agentId: "ID of the agent that runs the task. It cannot change later.",
+  name: "Display name, 1 to 80 characters.",
+  prompt: "The prompt the agent receives on every run, 1 to 6,000 characters.",
+  schedule:
+    "When the task runs by itself: `once` at a time, every `everyMs` milliseconds (at least 60,000) for `interval`, or a five-field cron expression in an IANA timezone for `cron`. `null` means the task runs only when you start it.",
+  enabled:
+    "Whether the schedule fires. A disabled task can still be started on demand.",
+  submit: "Start a run as soon as the task is created.",
+  userId:
+    "Your end user's ID, used for attribution. An empty string means a tenant-level task. It cannot change after creation.",
+  metadata:
+    "Your own key-value data, returned unchanged and copied to each run.",
+} as const;
+
 export const createTaskBodySchema = z
   .object({
-    agentId: agentIdSchema,
-    name: taskNameSchema,
-    prompt: taskPromptSchema,
-    schedule: taskScheduleInputSchema.nullable().default(null),
-    enabled: z.boolean().default(true),
-    submit: z.boolean().default(false),
-    idempotencyKey: z.string().trim().min(1).optional(),
-    userId: userIdSchema.default(""),
-    metadata: metadataSchema.default({}),
+    idempotencyKey: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe(
+        "Retry the same creation with this key to return the current task and its original initial run. Changed requests or deleted tasks return a conflict."
+      ),
+    agentId: agentIdSchema.describe(taskFieldDescriptions.agentId),
+    name: taskNameSchema.describe(taskFieldDescriptions.name),
+    prompt: taskPromptSchema.describe(taskFieldDescriptions.prompt),
+    schedule: taskScheduleInputSchema
+      .nullable()
+      .default(null)
+      .describe(taskFieldDescriptions.schedule),
+    enabled: z.boolean().default(true).describe(taskFieldDescriptions.enabled),
+    submit: z.boolean().default(false).describe(taskFieldDescriptions.submit),
+    userId: userIdSchema.default("").describe(taskFieldDescriptions.userId),
+    metadata: metadataSchema
+      .default({})
+      .describe(taskFieldDescriptions.metadata),
   })
   .strict();
 
 // `PATCH /v1/tasks/{taskId}` — `agentId` and `userId` are immutable.
 export const updateTaskBodySchema = z
   .object({
-    name: taskNameSchema.optional(),
-    prompt: taskPromptSchema.optional(),
-    schedule: taskScheduleInputSchema.nullable().optional(),
-    enabled: z.boolean().optional(),
-    metadata: metadataSchema.optional(),
+    name: taskNameSchema.optional().describe(taskFieldDescriptions.name),
+    prompt: taskPromptSchema.optional().describe(taskFieldDescriptions.prompt),
+    schedule: taskScheduleInputSchema
+      .nullable()
+      .optional()
+      .describe(taskFieldDescriptions.schedule),
+    enabled: z.boolean().optional().describe(taskFieldDescriptions.enabled),
+    metadata: metadataSchema
+      .optional()
+      .describe("Your own key-value data. Replaces the current metadata."),
   })
   .strict()
   .refine(hasObjectKeys, {
@@ -171,7 +203,14 @@ export const updateTaskBodySchema = z
 // `POST /v1/tasks/{taskId}/runs` — optional client idempotency key.
 export const createTaskRunBodySchema = z
   .object({
-    idempotencyKey: z.string().trim().min(1).optional(),
+    idempotencyKey: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe(
+        "Your own key for this run. Retrying with the same key returns the same run instead of starting another."
+      ),
   })
   .strict();
 
@@ -293,6 +332,9 @@ export const taskRunMessagesResponseSchema = sessionMessagesResponseSchema
     status: taskRunStatusSchema,
   })
   .strip();
+export type TaskListItem = z.infer<typeof taskListItemSchema>;
+export type TaskRunStatus = z.infer<typeof taskRunStatusSchema>;
+export type TaskScheduleInput = z.infer<typeof taskScheduleInputSchema>;
 export type TasksListResponse = z.infer<typeof tasksListResponseSchema>;
 export type TaskResponse = z.infer<typeof taskResponseSchema>;
 export type TaskRunResponse = z.infer<typeof taskRunResponseSchema>;

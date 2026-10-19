@@ -74,8 +74,12 @@ export const skillsListResponseSchema = paginatedResponseSchema(skillSchema);
 
 export const createSkillBodySchema = z
   .object({
-    path: z.literal("SKILL.md"),
-    content: z.string(),
+    path: z.literal("SKILL.md").describe("Always `SKILL.md`."),
+    content: z
+      .string()
+      .describe(
+        "The `SKILL.md` document. It must start with YAML frontmatter that sets `name` and `description`."
+      ),
   })
   .strict();
 
@@ -89,7 +93,10 @@ export const copySkillBodySchema = z
       .max(MAX_SKILL_COPY_DESTINATIONS)
       .refine(hasUniqueValues, {
         message: "Destination Agent ids must be unique.",
-      }),
+      })
+      .describe(
+        "IDs of the agents to copy the skill to, each listed once. Send 1 to 30."
+      ),
   })
   .strict();
 

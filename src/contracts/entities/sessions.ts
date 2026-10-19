@@ -4,7 +4,7 @@ import { agentIdSchema, sessionIdSchema } from "../ids.ts";
 import { toolExecutionReferenceSchema } from "./agent-approval.ts";
 import { agentConfigSchema, agentResponseSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
-import { chatFunctionDefinitionsSchema } from "./chat.ts";
+import { chatRequestBodySchema } from "./chat.ts";
 
 /**
  * `GET /v1/agents/{agentId}/sessions` list item. `agentId`/`tenantId` never
@@ -123,7 +123,7 @@ export const toolApprovalStateSchema = z
     decidedAt: z.iso.datetime({ offset: true }).nullable().optional(),
     approvalId: z.string().min(1),
     decision: z.enum(["pending", "approved", "denied"]),
-    input: z.json(),
+    input: z.json().meta({ type: "object" }),
     reason: z.string().nullable(),
     toolCallId: z.string().min(1),
     toolName: z.string().min(1),
@@ -154,8 +154,9 @@ export const continueToolApprovalsBodySchema = z
           new Set(decisions.map((decision) => decision.approvalId)).size ===
           decisions.length,
         { message: "Approval IDs must be distinct." }
-      ),
-    functions: chatFunctionDefinitionsSchema.optional(),
+      )
+      .describe("One decision for every approval in the current round."),
+    functions: chatRequestBodySchema.shape.functions,
   })
   .strict();
 
@@ -189,6 +190,9 @@ export const turnStreamErrorEventSchema = z
   .strict();
 export type TurnStreamErrorEvent = z.infer<typeof turnStreamErrorEventSchema>;
 export type SessionForkedFrom = z.infer<typeof sessionForkedFromSchema>;
+export type SessionListItem = z.infer<typeof sessionListItemSchema>;
+export type LatestSessionListItem = z.infer<typeof latestSessionListItemSchema>;
+export type SessionMessage = z.infer<typeof sessionMessageSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
 export type LatestSessionsListResponse = z.infer<

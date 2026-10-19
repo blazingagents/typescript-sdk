@@ -6,91 +6,127 @@ import {
   tenantIdSchema,
 } from "../ids.ts";
 
-const secret = z
+const slackBotToken = z
   .string()
   .min(8)
   .max(8192)
   .regex(/^[!-~]+$/);
+const slackSigningSecret = z.string().regex(/^[0-9a-f]{32}$/);
+const telegramBotToken = z.string().regex(/^\d+:[A-Za-z0-9_-]+$/);
+const slackChannelIds = z.array(z.string().regex(/^[CG][A-Z0-9]+$/)).max(20);
+const telegramChatIds = z.array(z.string().regex(/^-?\d+$/)).max(20);
+
+/** The credentials a client sends; the server never returns them. */
 export const chatCredentialsSchema = z.discriminatedUnion("platform", [
   z
     .object({
       platform: z.literal("slack"),
-      botToken: secret,
-      signingSecret: z.string().regex(/^[0-9a-f]{32}$/),
+      botToken: slackBotToken,
+      signingSecret: slackSigningSecret,
     })
     .strict(),
   z
     .object({
       platform: z.literal("telegram"),
-      botToken: z.string().regex(/^\d+:[A-Za-z0-9_-]+$/),
+      botToken: telegramBotToken,
     })
     .strict(),
 ]);
 const slackConfiguration = z
   .object({
-    channelIds: z
-      .array(z.string().regex(/^[CG][A-Z0-9]+$/))
-      .max(20)
-      .default([]),
+    channelIds: slackChannelIds.default([]),
   })
   .strict();
 const telegramConfiguration = z
   .object({
     businessMode: z.boolean().default(false),
-    chatIds: z
-      .array(z.string().regex(/^-?\d+$/))
-      .max(20)
-      .default([]),
+    chatIds: telegramChatIds.default([]),
   })
   .strict();
 export const chatConfigurationSchema = z.discriminatedUnion("platform", [
   slackConfiguration.extend({ platform: z.literal("slack") }),
   telegramConfiguration.extend({ platform: z.literal("telegram") }),
 ]);
+const connectionName = z.string().trim().min(1).max(80);
 const common = {
-  agentId: agentIdSchema,
-  name: z.string().trim().min(1).max(80),
-  enabled: z.boolean().default(true),
+  agentId: agentIdSchema.describe(
+    "ID of the agent that answers messages on this connection. You cannot change it later."
+  ),
+  name: connectionName.describe("Display name, 1 to 80 characters."),
+  enabled: z
+    .boolean()
+    .default(true)
+    .describe("Whether the connection accepts messages. Defaults to `true`."),
 };
+const configurationDescription =
+  "Optional platform settings. Destination IDs choose where health checks look; they do not restrict who can talk to the agent.";
+const platformDescription = "Chat platform: `slack` or `telegram`.";
 export const createChatConnectionBodySchema = z.discriminatedUnion("platform", [
   z
     .object({
       ...common,
-      platform: z.literal("slack"),
-      configuration: slackConfiguration.prefault({}),
-      credentials: chatCredentialsSchema.options[0].omit({ platform: true }),
+      platform: z.literal("slack").describe(platformDescription),
+      configuration: slackConfiguration
+        .prefault({})
+        .describe(configurationDescription),
+      credentials: z
+        .object({
+          botToken: slackBotToken,
+          signingSecret: slackSigningSecret,
+        })
+        .strict()
+        .describe("The Slack app's bot token and signing secret."),
     })
     .strict(),
   z
     .object({
       ...common,
-      platform: z.literal("telegram"),
-      configuration: telegramConfiguration.prefault({}),
-      credentials: chatCredentialsSchema.options[1].omit({ platform: true }),
+      platform: z.literal("telegram").describe(platformDescription),
+      configuration: telegramConfiguration
+        .prefault({})
+        .describe(configurationDescription),
+      credentials: z
+        .object({ botToken: telegramBotToken })
+        .strict()
+        .describe("The Telegram bot token from BotFather."),
     })
     .strict(),
 ]);
 export const rotateChatConnectionBodySchema = z.discriminatedUnion("platform", [
-  chatCredentialsSchema.options[0],
-  chatCredentialsSchema.options[1],
+  z
+    .object({
+      platform: z
+        .literal("slack")
+        .describe("Must match the connection's platform."),
+      botToken: slackBotToken.describe("The new Slack bot token."),
+      signingSecret: slackSigningSecret.describe(
+        "The Slack app's signing secret."
+      ),
+    })
+    .strict(),
+  z
+    .object({
+      platform: z
+        .literal("telegram")
+        .describe("Must match the connection's platform."),
+      botToken: telegramBotToken.describe("The new Telegram bot token."),
+    })
+    .strict(),
 ]);
 export const updateChatConnectionBodySchema = z
   .object({
-    name: common.name.optional(),
+    name: connectionName.optional().describe("New display name."),
     configuration: z
       .object({
         businessMode: z.boolean().optional(),
-        chatIds: z
-          .array(z.string().regex(/^-?\d+$/))
-          .max(20)
-          .optional(),
-        channelIds: z
-          .array(z.string().regex(/^[CG][A-Z0-9]+$/))
-          .max(20)
-          .optional(),
+        chatIds: telegramChatIds.optional(),
+        channelIds: slackChannelIds.optional(),
       })
       .strict()
-      .optional(),
+      .optional()
+      .describe(
+        "Fields to change. Slack connections accept `channelIds`; Telegram connections accept `chatIds` and `businessMode`. Fields you leave out keep their values."
+      ),
   })
   .strict()
   .refine(
@@ -128,20 +164,20 @@ export const chatConnectionSchema = z
     id: chatConnectionIdSchema,
     tenantId: tenantIdSchema,
     agentId: agentIdSchema,
-    name: common.name,
+    name: connectionName,
     platform: z.enum(["slack", "telegram"]),
     enabled: z.boolean(),
     configuration: z.discriminatedUnion("platform", [
       chatConfigurationSchema.options[0].strip(),
       chatConfigurationSchema.options[1].strip(),
     ]),
-    webhookUrl: z.url(),
     identity: chatIdentitySchema,
     health: chatHealthSchema,
     credentialFragment: z.string().max(4),
     credentialVersion: z.number().int().nonnegative(),
     createdAt: z.string(),
     updatedAt: z.string(),
+    webhookUrl: z.url(),
   })
   .strip();
 export type CreateChatConnectionBody = z.input<
@@ -157,7 +193,7 @@ export type UpdateChatConnectionBody = z.output<
 >;
 
 export const chatConnectionsResponseSchema = z
-  .object({ chatConnections: z.array(chatConnectionSchema) })
+  .object({ chatConnections: chatConnectionSchema.array() })
   .strip();
 export type ChatConnectionsResponse = z.output<
   typeof chatConnectionsResponseSchema
@@ -183,12 +219,12 @@ export const chatDeliverySchema = z
   .object({
     id: chatDeliveryIdSchema,
     kind: z.enum(["reply", "card"]),
-    status: chatDeliveryStatusSchema,
+    status: z.enum(["pending", "confirmed", "failed", "ambiguous"]),
     attempt: z.number().int().nonnegative(),
     credentialVersion: z.number().int().nonnegative(),
     representation: z.string(),
     diagnostic: z.string().nullable(),
-    receipts: z.unknown().optional(),
+    receipts: z.unknown(),
     sessionId: z.string(),
     messageId: z.string().nullable(),
     approvalId: z.string().nullable(),
@@ -199,11 +235,13 @@ export const chatDeliverySchema = z
   .strip();
 export type ChatDelivery = z.infer<typeof chatDeliverySchema>;
 
-export const tenantChatDeliverySchema = chatDeliverySchema.extend({
-  connectionId: chatConnectionIdSchema,
-  agentId: agentIdSchema,
-  platform: z.enum(["slack", "telegram"]),
-});
+export const tenantChatDeliverySchema = chatDeliverySchema
+  .extend({
+    connectionId: chatConnectionIdSchema,
+    agentId: agentIdSchema,
+    platform: z.enum(["slack", "telegram"]),
+  })
+  .strict();
 export type TenantChatDelivery = z.infer<typeof tenantChatDeliverySchema>;
 
 export const chatDeliveriesResponseSchema = z

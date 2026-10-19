@@ -49,26 +49,36 @@ const mcpConnectionNameSchema = z
   .trim()
   .min(1)
   .max(MAX_MCP_CONNECTION_NAME_LENGTH);
+/** Request bodies describe the field; responses carry the bare value. */
+const mcpConnectionNameInputSchema = mcpConnectionNameSchema.describe(
+  "Display name of the connection, unique within your tenant."
+);
 
 const bearerTokenSchema = z
   .string()
   .min(1)
   .max(MAX_MCP_BEARER_TOKEN_LENGTH)
-  .regex(/^[!-~]+$/, "Bearer token must contain visible ASCII characters only");
+  .regex(/^[!-~]+$/, "Bearer token must contain visible ASCII characters only")
+  .describe(
+    "Token sent as `Authorization: Bearer <token>` to the MCP server. Required when `authType` is `bearer`. Never returned."
+  );
 
 const oauthClientIdSchema = z
   .string()
   .min(1)
   .max(MAX_MCP_OAUTH_CLIENT_ID_LENGTH)
-  .regex(/^[!-~]+$/, "Client ID must contain visible ASCII characters only");
+  .regex(/^[!-~]+$/, "Client ID must contain visible ASCII characters only")
+  .describe(
+    "OAuth client ID. Required with `clientSecret` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientSecret`."
+  );
 
 const oauthClientSecretSchema = z
   .string()
   .min(1)
   .max(MAX_MCP_OAUTH_CLIENT_SECRET_LENGTH)
-  .regex(
-    /^[!-~]+$/,
-    "Client secret must contain visible ASCII characters only"
+  .regex(/^[!-~]+$/, "Client secret must contain visible ASCII characters only")
+  .describe(
+    "OAuth client secret. Required with `clientId` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientId`. Never returned."
   );
 
 const oauthScopeSchema = z
@@ -76,10 +86,8 @@ const oauthScopeSchema = z
   .trim()
   .min(1)
   .max(MAX_MCP_OAUTH_SCOPE_LENGTH)
-  .regex(
-    /^[\x20-\x7e]+$/,
-    "Scope must contain printable ASCII characters only"
-  );
+  .regex(/^[\x20-\x7e]+$/, "Scope must contain printable ASCII characters only")
+  .describe("OAuth scope to request. Optional for either OAuth type.");
 
 const credentialFragmentSchema = z.string().min(1).max(4).nullable();
 
@@ -108,6 +116,12 @@ const mcpConnectionUrlSchema = z
     }
   )
   .transform((value) => new URL(value).toString());
+const mcpConnectionUrlInputSchema = mcpConnectionUrlSchema.describe(
+  "Streamable HTTP URL of the MCP server. Use `http` or `https`, with no credentials, query, or fragment."
+);
+
+const authTypeDescription =
+  "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it.";
 
 export const mcpConnectionResponseSchema = z
   .object({
@@ -157,8 +171,17 @@ export const mcpAttachmentsResponseSchema = z
 
 export const updateMcpAttachmentBodySchema = z
   .object({
-    forwardUserId: z.boolean().optional(),
-    forwardedMetadataKeys: forwardedMetadataKeysSchema.optional(),
+    forwardUserId: z
+      .boolean()
+      .optional()
+      .describe(
+        "Send the session's `userId` to the MCP server with every tool call."
+      ),
+    forwardedMetadataKeys: forwardedMetadataKeysSchema
+      .optional()
+      .describe(
+        "Session metadata keys whose values are sent to the MCP server with every tool call. Replaces the current list."
+      ),
   })
   .strict()
   .refine(hasObjectKeys, {
@@ -167,48 +190,48 @@ export const updateMcpAttachmentBodySchema = z
 
 const createNoneMcpConnectionBodySchema = z
   .object({
-    name: mcpConnectionNameSchema,
-    url: mcpConnectionUrlSchema,
-    authType: z.literal("none"),
+    name: mcpConnectionNameInputSchema,
+    url: mcpConnectionUrlInputSchema,
+    authType: z.literal("none").describe(authTypeDescription),
   })
   .strict();
 
 const createBearerMcpConnectionBodySchema = z
   .object({
-    name: mcpConnectionNameSchema,
-    url: mcpConnectionUrlSchema,
-    authType: z.literal("bearer"),
+    name: mcpConnectionNameInputSchema,
+    url: mcpConnectionUrlInputSchema,
+    authType: z.literal("bearer").describe(authTypeDescription),
     bearerToken: bearerTokenSchema,
   })
   .strict();
 
 const oauthClientCredentialsFields = {
-  authType: z.literal("oauth_client_credentials"),
+  authType: z.literal("oauth_client_credentials").describe(authTypeDescription),
   clientId: oauthClientIdSchema,
   clientSecret: oauthClientSecretSchema,
   scope: oauthScopeSchema.optional(),
-  url: mcpConnectionUrlSchema,
+  url: mcpConnectionUrlInputSchema,
 };
 
 const oauthAuthorizationCodeFields = {
-  authType: z.literal("oauth_authorization_code"),
+  authType: z.literal("oauth_authorization_code").describe(authTypeDescription),
   clientId: oauthClientIdSchema.optional(),
   clientSecret: oauthClientSecretSchema.optional(),
   scope: oauthScopeSchema.optional(),
-  url: mcpConnectionUrlSchema,
+  url: mcpConnectionUrlInputSchema,
 };
 
 const createOauthAuthorizationCodeMcpConnectionBodySchema = z
   .object({
     ...oauthAuthorizationCodeFields,
-    name: mcpConnectionNameSchema,
+    name: mcpConnectionNameInputSchema,
   })
   .strict();
 
 const createOauthClientCredentialsMcpConnectionBodySchema = z
   .object({
     ...oauthClientCredentialsFields,
-    name: mcpConnectionNameSchema,
+    name: mcpConnectionNameInputSchema,
   })
   .strict();
 
@@ -234,7 +257,7 @@ export const createMcpConnectionBodySchema = z
 
 export const updateMcpConnectionBodySchema = z
   .object({
-    name: mcpConnectionNameSchema.optional(),
+    name: mcpConnectionNameInputSchema.optional(),
   })
   .strict()
   .refine(hasObjectKeys, {
@@ -245,15 +268,15 @@ export const reconnectMcpConnectionBodySchema = z
   .discriminatedUnion("authType", [
     z
       .object({
-        authType: z.literal("none"),
-        url: mcpConnectionUrlSchema,
+        authType: z.literal("none").describe(authTypeDescription),
+        url: mcpConnectionUrlInputSchema,
       })
       .strict(),
     z
       .object({
-        authType: z.literal("bearer"),
+        authType: z.literal("bearer").describe(authTypeDescription),
         bearerToken: bearerTokenSchema,
-        url: mcpConnectionUrlSchema,
+        url: mcpConnectionUrlInputSchema,
       })
       .strict(),
     z.object(oauthAuthorizationCodeFields).strict(),
@@ -363,6 +386,12 @@ export const mcpConnectionReconnectResultSchema = z.discriminatedUnion(
 
 export type McpConnectionAuthType = z.infer<typeof mcpConnectionAuthTypeSchema>;
 export type McpConnectionStatus = z.infer<typeof mcpConnectionStatusSchema>;
+export type McpConnectionTestErrorCode = z.infer<
+  typeof mcpConnectionTestErrorCodeSchema
+>;
+export type McpConnectionLiveDetails = z.infer<
+  typeof mcpConnectionLiveDetailsSchema
+>;
 export type McpConnectionResponse = z.infer<typeof mcpConnectionResponseSchema>;
 export type McpConnectionsResponse = z.infer<
   typeof mcpConnectionsResponseSchema

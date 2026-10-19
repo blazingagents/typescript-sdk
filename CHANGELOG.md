@@ -27,6 +27,19 @@ try {
 }
 ```
 
+### Added
+
+- Every request schema in `@blazingagents/sdk/contracts` carries the field descriptions of the API reference, so `z.toJSONSchema(createAgentBodySchema)` and editor hovers on a parsed body describe each field. The server generates its OpenAPI document from these same schemas, so the SDK and the API reference cannot drift apart.
+- `BlazingAgentsChatMessageMetadata.blazingAgents.compactedContext`: when a turn compacted the conversation, the assistant message's metadata carries the AI SDK `ModelMessage[]` the next turn resumes from.
+
+### Fixed
+
+- `jsonSchemaShapeSchema` accepts a schema whose root `$ref` names a `$defs` entry containing `/` or `~`, escaped as `~1` and `~0` the way JSON Pointer requires. Before, such a schema was rejected as having no schema root.
+
+### Removed
+
+- `tenantSchema`, `tenantResponseSchema` and `subscriptionStatusSchema` from `@blazingagents/sdk/contracts`. They described `GET /v1/me`, which accepts only a dashboard session and refuses every API key, so no SDK method ever returned that shape. There is no replacement: read your tenant's settings with `client.tenant.getSettings()` (`tenantSettingsResponseSchema`).
+
 ## 0.34.0
 
 ### Changed

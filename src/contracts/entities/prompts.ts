@@ -2,11 +2,11 @@ import { z } from "zod";
 import { cursorSchema, paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, promptIdSchema, tenantIdSchema } from "../ids.ts";
 import {
-  DEFAULT_PROMPTS_LIST_LIMIT,
+  DEFAULT_RESOURCES_LIST_LIMIT,
   MAX_PROMPT_NAME_LENGTH,
   MAX_PROMPT_TEMPLATE_BYTES,
   MAX_PROMPT_VARIABLES,
-  MAX_PROMPTS_LIST_LIMIT,
+  MAX_RESOURCES_LIST_LIMIT,
 } from "../limitations.ts";
 import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
@@ -92,36 +92,72 @@ export const promptResponseSchema = z
 
 export const promptsResponseSchema =
   paginatedResponseSchema(promptResponseSchema);
+const promptFieldDescriptions = {
+  name: "Display name, 1 to 80 characters.",
+  template:
+    "Message template, up to 10,240 characters. Mark each variable as `{{name}}`; names match `[A-Za-z_][A-Za-z0-9_]*`, and a template can use up to 10 of them.",
+  agentId:
+    "ID of an agent in your tenant to link the prompt to, or `null` for no link. Deleting the agent also deletes its linked prompts.",
+  metadata: "Your own key-value data, returned unchanged.",
+} as const;
+
 export const promptsListQuerySchema = z
   .object({
-    cursor: cursorSchema.optional(),
+    userId: userIdSchema
+      .optional()
+      .describe(
+        "Return only prompts for this end user. Send an empty string for tenant-level prompts, or leave it out for all prompts."
+      ),
+    agentId: agentIdSchema
+      .optional()
+      .describe("Return only prompts linked to this agent."),
+    cursor: cursorSchema
+      .optional()
+      .describe("`nextCursor` from the previous page."),
     limit: z.coerce
       .number()
       .int()
       .min(1)
-      .max(MAX_PROMPTS_LIST_LIMIT)
-      .default(DEFAULT_PROMPTS_LIST_LIMIT),
-    userId: userIdSchema.optional(),
-    agentId: agentIdSchema.optional(),
+      .max(MAX_RESOURCES_LIST_LIMIT)
+      .default(DEFAULT_RESOURCES_LIST_LIMIT)
+      .describe("Maximum number of prompts to return."),
   })
   .strict();
 
 export const createPromptBodySchema = z
   .object({
-    name: promptNameSchema,
-    template: promptTemplateSchema,
-    agentId: agentIdSchema.nullable().optional(),
-    userId: userIdSchema.default(""),
-    metadata: metadataSchema.default({}),
+    name: promptNameSchema.describe(promptFieldDescriptions.name),
+    template: promptTemplateSchema.describe(promptFieldDescriptions.template),
+    agentId: agentIdSchema
+      .nullable()
+      .optional()
+      .describe(promptFieldDescriptions.agentId),
+    userId: userIdSchema
+      .default("")
+      .describe(
+        "Your end user's ID, used for attribution. An empty string means a tenant-level prompt. It cannot change after creation."
+      ),
+    metadata: metadataSchema
+      .default({})
+      .describe(promptFieldDescriptions.metadata),
   })
   .strict();
 
 export const updatePromptBodySchema = z
   .object({
-    agentId: agentIdSchema.nullable().optional(),
-    name: promptNameSchema.optional(),
-    template: promptTemplateSchema.optional(),
-    metadata: metadataSchema.optional(),
+    agentId: agentIdSchema
+      .nullable()
+      .optional()
+      .describe(promptFieldDescriptions.agentId),
+    name: promptNameSchema.optional().describe(promptFieldDescriptions.name),
+    template: promptTemplateSchema
+      .optional()
+      .describe(promptFieldDescriptions.template),
+    metadata: metadataSchema
+      .optional()
+      .describe(
+        `${promptFieldDescriptions.metadata} Replaces the current value.`
+      ),
   })
   .strict()
   .refine(hasObjectKeys, {

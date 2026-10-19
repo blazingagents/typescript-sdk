@@ -45,16 +45,23 @@ export const memoriesListResponseSchema = paginatedResponseSchema(memorySchema);
 
 export const createMemoryBodySchema = z
   .object({
-    text: memoryTextSchema,
-    userId: userIdSchema.default(""),
+    text: memoryTextSchema.describe("The note to remember, up to 10 KiB."),
+    userId: userIdSchema
+      .default("")
+      .describe(
+        "The end user this memory belongs to. Only turns that pass the same `userId` see it. Leave it out or send an empty string for a general memory that every turn of the agent sees. It cannot change after creation."
+      ),
   })
   .strict();
 
 export const updateMemoryBodySchema = z
   .object({
-    text: memoryTextSchema,
+    text: memoryTextSchema.describe(
+      "Replacement text for the memory, up to 10 KiB."
+    ),
   })
   .strict();
+export type Memory = z.infer<typeof memorySchema>;
 export type MemoryResponse = z.infer<typeof memoryResponseSchema>;
 export type MemoriesListResponse = z.infer<typeof memoriesListResponseSchema>;
 export type CreateMemoryBody = z.input<typeof createMemoryBodySchema>;

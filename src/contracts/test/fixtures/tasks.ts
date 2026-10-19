@@ -76,6 +76,7 @@ export function createTaskRunFixture(
     turnId: "turn_xxxxxxxxxxxxxxxx",
     status: "running",
     error: null,
+    errorCode: null,
     userId: "",
     metadata: {},
     startedAt: iso,

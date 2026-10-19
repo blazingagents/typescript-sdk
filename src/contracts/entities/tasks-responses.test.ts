@@ -77,6 +77,23 @@ describe("taskRunResponseSchema", () => {
     );
   });
 
+  it("keeps the error code a blocked run ended with", () => {
+    expect(
+      taskRunResponseSchema.parse(
+        createTaskRunFixture({
+          status: "blocked",
+          error: "Usage credit required",
+          errorCode: "usage_credit_required",
+        })
+      ).errorCode
+    ).toBe("usage_credit_required");
+  });
+
+  it("rejects a run without errorCode", () => {
+    const { errorCode: _, ...runWithoutCode } = createTaskRunFixture();
+    expect(taskRunResponseSchema.safeParse(runWithoutCode).success).toBe(false);
+  });
+
   it("accepts a null sessionId for a not-yet-started run", () => {
     expect(
       taskRunResponseSchema.safeParse(

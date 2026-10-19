@@ -31,6 +31,7 @@ const taskRunRow = {
   turnId: null,
   status: "queued",
   error: null,
+  errorCode: null,
   startedAt: null,
   finishedAt: null,
   cancelRequestedAt: null,
@@ -241,6 +242,7 @@ describe("client.tasks", () => {
       body: {
         ...taskRunRow,
         error: "provider_required",
+        errorCode: "provider_required",
         finishedAt: "2026-01-01T00:00:01.000Z",
         sessionId: null,
         status: "failed",
@@ -254,6 +256,7 @@ describe("client.tasks", () => {
       })
     ).resolves.toMatchObject({
       error: "provider_required",
+      errorCode: "provider_required",
       sessionId: null,
       status: "failed",
     });

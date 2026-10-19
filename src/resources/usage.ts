@@ -1,5 +1,4 @@
 import {
-  sessionUsageQuerySchema,
   sessionUsageResponseSchema,
   usageOverviewResponseSchemaForQuery,
   usageResponseSchema,
@@ -19,8 +18,7 @@ export function createUsageResource(config: HttpConfig): UsageResource {
     /**
      * Retrieves usage grouped by Session.
      */
-    async sessions({ abortSignal, ...input }) {
-      const body = sessionUsageQuerySchema.parse(input);
+    async sessions({ abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/usage/sessions",

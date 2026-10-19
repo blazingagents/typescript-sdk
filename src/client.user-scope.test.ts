@@ -132,7 +132,9 @@ describe("forUser", () => {
       "line\nbreak",
       "x".repeat(257),
     ]) {
-      expect(() => tenant.forUser(invalid)).toThrow();
+      expect(() => tenant.forUser(invalid)).toThrow(
+        expect.objectContaining({ code: "invalid_request", param: "userId" })
+      );
     }
   });
 

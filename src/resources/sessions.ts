@@ -10,11 +10,6 @@ import {
   sessionsListResponseSchema,
   toolApprovalsResponseSchema,
 } from "../contracts/entities/sessions.ts";
-import {
-  agentIdSchema,
-  sessionIdSchema,
-  turnIdSchema,
-} from "../contracts/ids.ts";
 import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, SessionsResource } from "../types.ts";
 
@@ -34,7 +29,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async submitInput({ agentId, sessionId, abortSignal, ...body }) {
       return await requestJson(
         config,
-        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}/inputs`,
         { method: "POST", json: body, signal: abortSignal },
         sessionInputResponseSchema
       );
@@ -45,7 +40,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async inputs({ agentId, sessionId, abortSignal, ...query }) {
       return await requestJson(
         config,
-        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/inputs`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}/inputs`,
         { query, signal: abortSignal },
         sessionInputsResponseSchema
       );
@@ -56,10 +51,10 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async stop({ agentId, sessionId, turnId, abortSignal }) {
       return await requestJson(
         config,
-        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/stop`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}/stop`,
         {
           method: "POST",
-          json: { turnId: turnIdSchema.parse(turnId) },
+          json: { turnId },
           signal: abortSignal,
         },
         stopSessionResponseSchema
@@ -71,7 +66,7 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
     async fork({ agentId, sessionId, messageId, idempotencyKey, abortSignal }) {
       return await requestJson(
         config,
-        apiPath`/v1/agents/${agentIdSchema.parse(agentId)}/sessions/${sessionIdSchema.parse(sessionId)}/fork`,
+        apiPath`/v1/agents/${agentId}/sessions/${sessionId}/fork`,
         {
           method: "POST",
           json: { messageId },

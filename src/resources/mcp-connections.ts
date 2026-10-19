@@ -3,8 +3,6 @@ import {
   mcpConnectionResponseSchema,
   mcpConnectionsResponseSchema,
   mcpConnectionTestResponseSchema,
-  reconnectMcpConnectionBodySchema,
-  updateMcpConnectionBodySchema,
 } from "../contracts/entities/mcp-connections.ts";
 import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, McpConnectionsResource } from "../types.ts";
@@ -63,7 +61,7 @@ export function createMcpConnectionsResource(
         config,
         apiPath`/v1/mcp-connections/${mcpConnectionId}`,
         {
-          json: updateMcpConnectionBodySchema.parse(body),
+          json: body,
           signal: abortSignal,
           method: "PATCH",
         },
@@ -102,7 +100,7 @@ export function createMcpConnectionsResource(
         config,
         apiPath`/v1/mcp-connections/${mcpConnectionId}/reconnect`,
         {
-          json: reconnectMcpConnectionBodySchema.parse(body),
+          json: body,
           signal: abortSignal,
           method: "POST",
         },

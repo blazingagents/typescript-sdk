@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BlazingAgentsError } from "./errors.ts";
 import {
   chat,
   completion,
@@ -167,13 +168,21 @@ export class BlazingAgents {
    * Scope requests to one end user. IDs use printable ASCII, at most 256 characters, without leading or trailing spaces.
    * @param userId - Printable ASCII end-user ID, at most 256 characters with no surrounding spaces.
    * @returns A client scoped to the validated end-user ID.
-   * @throws ZodError - If the user ID is invalid.
+   * @throws BlazingAgentsError - With code `invalid_request` if the user ID is invalid.
    */
   forUser(userId: string): UserClient {
-    return createUserClient({
-      ...this.#config,
-      scopeUserId: scopedUserIdSchema.parse(userId),
-    });
+    const parsed = scopedUserIdSchema.safeParse(userId);
+    if (!parsed.success) {
+      throw new BlazingAgentsError(
+        {
+          code: "invalid_request",
+          message: `Invalid user ID: ${z.prettifyError(parsed.error)}`,
+          param: "userId",
+        },
+        { cause: parsed.error }
+      );
+    }
+    return createUserClient({ ...this.#config, scopeUserId: parsed.data });
   }
 
   /**

@@ -1,10 +1,53 @@
 import {
+  type ArtifactDownloadUrlResponse,
+  type ArtifactListItem,
+  type ArtifactsListResponse,
   artifactDownloadUrlResponseSchema,
   artifactListItemSchema,
   artifactsListResponseSchema,
 } from "../contracts/entities/artifacts.ts";
 import { apiPath, requestJson } from "../http.ts";
-import type { ArtifactsResource, HttpConfig } from "../types.ts";
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+export interface ArtifactsListOptions extends ResourceRequestOptions {
+  agentId?: string;
+  cursor?: string;
+  sessionId?: string;
+}
+
+export interface ArtifactsResource {
+  /**
+   * Creates a temporary Artifact download URL.
+   * @param input - `artifactId`; optional abortSignal.
+   * @returns The artifact download url response.
+   */
+  createDownloadUrl(
+    input: { artifactId: string } & ResourceRequestOptions
+  ): Promise<ArtifactDownloadUrlResponse>;
+  /**
+   * Deletes the Artifact.
+   * @param input - `artifactId`; optional abortSignal.
+   * @returns Resolves when the operation completes.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  delete(input: { artifactId: string } & ResourceRequestOptions): Promise<void>;
+  /**
+   * Retrieves the Artifact.
+   * @param input - `artifactId`; optional abortSignal.
+   * @returns The artifact list item.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  get(
+    input: { artifactId: string } & ResourceRequestOptions
+  ): Promise<ArtifactListItem>;
+  /**
+   * Lists one page of Artifact records.
+   * @param input - filters and pagination options.
+   * @returns The artifacts list response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  list(input?: ArtifactsListOptions): Promise<ArtifactsListResponse>;
+}
 
 /**
  * `client.artifacts` — Tenant-level metadata and direct download URLs.
@@ -13,9 +56,6 @@ import type { ArtifactsResource, HttpConfig } from "../types.ts";
  */
 export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
   return {
-    /**
-     * Creates a temporary Artifact download URL.
-     */
     async createDownloadUrl({ artifactId, abortSignal }) {
       return await requestJson(
         config,
@@ -24,9 +64,6 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactDownloadUrlResponseSchema
       );
     },
-    /**
-     * Retrieves artifacts.
-     */
     async get({ artifactId, abortSignal }) {
       return await requestJson(
         config,
@@ -35,9 +72,6 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactListItemSchema
       );
     },
-    /**
-     * Lists one page of artifacts.
-     */
     async list({ abortSignal, ...options } = {}) {
       return await requestJson(
         config,
@@ -53,9 +87,6 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
         artifactsListResponseSchema
       );
     },
-    /**
-     * Deletes artifacts.
-     */
     async delete({ artifactId, abortSignal }) {
       await requestJson<void>(config, apiPath`/v1/artifacts/${artifactId}`, {
         method: "DELETE",

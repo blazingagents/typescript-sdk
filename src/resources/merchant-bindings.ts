@@ -1,9 +1,51 @@
 import {
+  type MerchantBindingResponse,
+  type MerchantBindingsResponse,
   merchantBindingResponseSchema,
   merchantBindingsResponseSchema,
+  type UpsertMerchantBindingBody,
 } from "../contracts/entities/merchant.ts";
 import { apiPath, requestJson } from "../http.ts";
-import type { HttpConfig, MerchantBindingsResource } from "../types.ts";
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+export interface MerchantBindingsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  userId?: string;
+}
+
+/**
+ * `client.merchantBindings` — end-user → provider customer bindings behind
+ * `/v1/merchant-connection/bindings`. `put` validates the customer against
+ * the provider.
+ */
+export interface MerchantBindingsResource {
+  /**
+   * Deletes the end-user merchant binding.
+   * @param input - `userId`; optional abortSignal.
+   * @returns Resolves when the operation completes.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  delete(input: { userId: string } & ResourceRequestOptions): Promise<void>;
+  /**
+   * Lists one page of end-user merchant binding records.
+   * @param input - filters and pagination options.
+   * @returns The merchant bindings response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  list(input?: MerchantBindingsListOptions): Promise<MerchantBindingsResponse>;
+  /**
+   * Validates and saves the end-user merchant binding.
+   * @param input - `userId`; fields to change; optional abortSignal.
+   * @returns The merchant binding response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  put(
+    input: UpsertMerchantBindingBody & {
+      userId: string;
+    } & ResourceRequestOptions
+  ): Promise<MerchantBindingResponse>;
+}
 
 /**
  * `client.merchantBindings` — list/put/delete over
@@ -17,9 +59,6 @@ export function createMerchantBindingsResource(
   config: HttpConfig
 ): MerchantBindingsResource {
   return {
-    /**
-     * Lists one page of merchant bindings.
-     */
     async list({ abortSignal, ...query } = {}) {
       return await requestJson(
         config,
@@ -28,9 +67,6 @@ export function createMerchantBindingsResource(
         merchantBindingsResponseSchema
       );
     },
-    /**
-     * Validates and saves merchant bindings.
-     */
     async put({ userId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -39,9 +75,6 @@ export function createMerchantBindingsResource(
         merchantBindingResponseSchema
       );
     },
-    /**
-     * Deletes merchant bindings.
-     */
     async delete({ userId, abortSignal }) {
       await requestJson<void>(
         config,

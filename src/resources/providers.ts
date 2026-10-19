@@ -1,11 +1,84 @@
 import {
+  type CreateProviderBody,
+  type DeleteProviderOptions,
+  type ProviderModelsResponse,
+  type ProviderResponse,
+  type ProvidersResponse,
   providerModelsResponseSchema,
   providerResponseSchema,
   providersResponseSchema,
+  type ThinkingLevelsResponse,
   thinkingLevelsResponseSchema,
+  type UpdateProviderBody,
 } from "../contracts/entities/providers.ts";
 import { apiPath, requestJson } from "../http.ts";
-import type { HttpConfig, ProvidersResource } from "../types.ts";
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+export interface ProvidersResource {
+  /**
+   * Creates the Provider.
+   * @param input - creation fields; optional abortSignal.
+   * @returns The provider response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  create(
+    input: CreateProviderBody & ResourceRequestOptions
+  ): Promise<ProviderResponse>;
+  /**
+   * Deletes the Provider.
+   * @param input - `providerId`; optional abortSignal.
+   * @returns Resolves when the operation completes.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  delete(
+    input: DeleteProviderOptions & {
+      providerId: string;
+    } & ResourceRequestOptions
+  ): Promise<void>;
+  /**
+   * Retrieves the Provider.
+   * @param input - `providerId`; optional abortSignal.
+   * @returns The provider response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  get(
+    input: { providerId: string } & ResourceRequestOptions
+  ): Promise<ProviderResponse>;
+  /**
+   * Retrieves supported thinking levels for a Provider model.
+   * @param input - `providerId`, provider-specific `model` name, and optional abortSignal.
+   * @returns The thinking levels response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  getThinkingLevels(
+    input: { providerId: string; model: string } & ResourceRequestOptions
+  ): Promise<ThinkingLevelsResponse>;
+  /**
+   * Lists available Provider records.
+   * @param input - optional abortSignal.
+   * @returns The providers response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  list(input?: ResourceRequestOptions): Promise<ProvidersResponse>;
+  /**
+   * Lists models exposed by the Provider.
+   * @param input - `providerId`; optional abortSignal.
+   * @returns The provider models response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  listModels(
+    input: { providerId: string } & ResourceRequestOptions
+  ): Promise<ProviderModelsResponse>;
+  /**
+   * Updates the Provider.
+   * @param input - `providerId`; fields to change; optional abortSignal.
+   * @returns The provider response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  update(
+    input: UpdateProviderBody & { providerId: string } & ResourceRequestOptions
+  ): Promise<ProviderResponse>;
+}
 
 /**
  * `client.providers` — CRUD and cost-free model discovery.
@@ -14,9 +87,6 @@ import type { HttpConfig, ProvidersResource } from "../types.ts";
  */
 export function createProvidersResource(config: HttpConfig): ProvidersResource {
   return {
-    /**
-     * Creates providers.
-     */
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -29,9 +99,6 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         providerResponseSchema
       );
     },
-    /**
-     * Lists one page of providers.
-     */
     async list({ abortSignal } = {}) {
       return await requestJson(
         config,
@@ -40,9 +107,6 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         providersResponseSchema
       );
     },
-    /**
-     * Retrieves providers.
-     */
     async get({ providerId, abortSignal }) {
       return await requestJson(
         config,
@@ -51,9 +115,6 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         providerResponseSchema
       );
     },
-    /**
-     * Lists models exposed by the Provider.
-     */
     async listModels({ providerId, abortSignal }) {
       return await requestJson(
         config,
@@ -62,9 +123,6 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         providerModelsResponseSchema
       );
     },
-    /**
-     * Retrieves supported thinking levels for a Provider model.
-     */
     async getThinkingLevels({ providerId, model, abortSignal }) {
       return await requestJson(
         config,
@@ -73,9 +131,6 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         thinkingLevelsResponseSchema
       );
     },
-    /**
-     * Updates providers.
-     */
     async update({ providerId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -88,9 +143,6 @@ export function createProvidersResource(config: HttpConfig): ProvidersResource {
         providerResponseSchema
       );
     },
-    /**
-     * Deletes providers.
-     */
     async delete({ providerId, abortSignal, ...options }) {
       await requestJson<void>(config, apiPath`/v1/providers/${providerId}`, {
         method: "DELETE",

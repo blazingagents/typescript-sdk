@@ -1,17 +1,158 @@
+import type { UIMessage } from "ai";
 import {
+  type SessionInputResponse,
+  type SessionInputsQuery,
+  type SessionInputsResponse,
+  type StopSessionBody,
+  type StopSessionResponse,
+  type SubmitSessionInputBody,
   sessionInputResponseSchema,
   sessionInputsResponseSchema,
   stopSessionResponseSchema,
 } from "../contracts/entities/session-inputs.ts";
 import {
+  type LatestSessionsListResponse,
   latestSessionsListResponseSchema,
+  type SessionMessagesResponse,
+  type SessionResponse,
+  type SessionsListResponse,
   sessionMessagesResponseSchema,
   sessionResponseSchema,
   sessionsListResponseSchema,
+  type ToolApprovalsResponse,
   toolApprovalsResponseSchema,
 } from "../contracts/entities/sessions.ts";
 import { apiPath, requestJson } from "../http.ts";
-import type { HttpConfig, SessionsResource } from "../types.ts";
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+export interface SessionsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  userId?: string;
+}
+
+export interface LatestSessionsListOptions extends ResourceRequestOptions {
+  byAgent?: boolean;
+  cursor?: string;
+  limit?: number;
+  userId?: string;
+}
+
+export interface SessionMessagesOptions extends ResourceRequestOptions {
+  after?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface SessionsResource {
+  /**
+   * Deletes the Session.
+   * @param input - `agentId`, `sessionId`; optional abortSignal; deleteArtifacts controls Artifact deletion.
+   * @returns Resolves when the operation completes.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  delete(
+    input: {
+      agentId: string;
+      sessionId: string;
+      deleteArtifacts: boolean;
+    } & ResourceRequestOptions
+  ): Promise<void>;
+  /**
+   * Retry an uncertain acknowledgement with the same explicit idempotencyKey.
+   * @param input - `agentId`, `sessionId`, `messageId`; optional abortSignal.
+   * @returns The session response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  fork(
+    input: {
+      agentId: string;
+      sessionId: string;
+      messageId: string;
+      idempotencyKey: string;
+    } & ResourceRequestOptions
+  ): Promise<SessionResponse>;
+  /**
+   * Retrieves the Session.
+   * @param input - `agentId`, `sessionId`; optional abortSignal.
+   * @returns The session response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  get(
+    input: { agentId: string; sessionId: string } & ResourceRequestOptions
+  ): Promise<SessionResponse>;
+  /**
+   * Poll from the first page for state changes; cursor only paginates receipts.
+   * @param input - `agentId`, `sessionId`; query filters; optional abortSignal.
+   * @returns The session inputs response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  inputs(
+    input: { agentId: string; sessionId: string } & SessionInputsQuery &
+      ResourceRequestOptions
+  ): Promise<SessionInputsResponse>;
+  /**
+   * Lists one page of Session records.
+   * @param input - `agentId`; filters and pagination options.
+   * @returns The sessions list response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  list(
+    input: { agentId: string } & SessionsListOptions
+  ): Promise<SessionsListResponse>;
+  /**
+   * `GET /v1/sessions/latest` — the Tenant's most recently updated Sessions,
+   * newest first. Set `byAgent` to return at most one Session per Agent.
+   * `userId` narrows the candidate Sessions to one end user's.
+   * @param input - filters and pagination options.
+   * @returns The latest sessions list response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  listLatest(
+    input?: LatestSessionsListOptions
+  ): Promise<LatestSessionsListResponse>;
+  /**
+   * Lists one page of Session messages.
+   * @param input - `agentId`, `sessionId`.
+   * @returns The session messages response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  messages(
+    input: { agentId: string; sessionId: string } & SessionMessagesOptions
+  ): Promise<SessionMessagesResponse>;
+  /**
+   * Records cancellation for the named Turn without waiting for settlement.
+   * @param input - `agentId`, `sessionId`; fields to change; optional abortSignal.
+   * @returns The stop session response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  stop(
+    input: { agentId: string; sessionId: string } & StopSessionBody &
+      ResourceRequestOptions
+  ): Promise<StopSessionResponse>;
+  /**
+   * Retry an uncertain acknowledgement with the same requestId and payload.
+   * @param input - `agentId`, `sessionId`; fields to change; optional abortSignal.
+   * @returns The session input response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  submitInput(
+    input: Omit<SubmitSessionInputBody, "message"> & {
+      agentId: string;
+      sessionId: string;
+      message: UIMessage;
+    } & ResourceRequestOptions
+  ): Promise<SessionInputResponse>;
+  /**
+   * Retrieves the pending Tool approval round.
+   * @param input - `agentId`, `sessionId`; optional abortSignal.
+   * @returns The tool approvals response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  toolApprovals(
+    input: { agentId: string; sessionId: string } & ResourceRequestOptions
+  ): Promise<ToolApprovalsResponse>;
+}
 
 /**
  * `client.sessions` reads, paginates, and deletes Sessions under
@@ -23,9 +164,6 @@ import type { HttpConfig, SessionsResource } from "../types.ts";
  */
 export function createSessionsResource(config: HttpConfig): SessionsResource {
   return {
-    /**
-     * Submits a Session input. Reuse the request ID and payload after an uncertain acknowledgement.
-     */
     async submitInput({ agentId, sessionId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -34,9 +172,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionInputResponseSchema
       );
     },
-    /**
-     * Lists input receipts. Poll the first page to observe state changes.
-     */
     async inputs({ agentId, sessionId, abortSignal, ...query }) {
       return await requestJson(
         config,
@@ -45,9 +180,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionInputsResponseSchema
       );
     },
-    /**
-     * Records cancellation for the named Turn without waiting for settlement.
-     */
     async stop({ agentId, sessionId, turnId, abortSignal }) {
       return await requestJson(
         config,
@@ -60,9 +192,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         stopSessionResponseSchema
       );
     },
-    /**
-     * Forks a Session at a message. Reuse the idempotency key after an uncertain acknowledgement.
-     */
     async fork({ agentId, sessionId, messageId, idempotencyKey, abortSignal }) {
       return await requestJson(
         config,
@@ -76,9 +205,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionResponseSchema
       );
     },
-    /**
-     * Retrieves sessions.
-     */
     async get({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
@@ -87,9 +213,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionResponseSchema
       );
     },
-    /**
-     * Lists one page of sessions.
-     */
     async list({ agentId, ...options }) {
       return await requestJson(
         config,
@@ -105,9 +228,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionsListResponseSchema
       );
     },
-    /**
-     * Lists recently updated Sessions, optionally limited to one per Agent.
-     */
     async listLatest(options = {}) {
       return await requestJson(
         config,
@@ -124,9 +244,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         latestSessionsListResponseSchema
       );
     },
-    /**
-     * Lists one page of Session messages.
-     */
     async messages({ agentId, sessionId, ...options }) {
       return await requestJson(
         config,
@@ -142,9 +259,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         sessionMessagesResponseSchema
       );
     },
-    /**
-     * Retrieves the pending Tool approval round.
-     */
     async toolApprovals({ agentId, sessionId, abortSignal }) {
       return await requestJson(
         config,
@@ -153,9 +267,6 @@ export function createSessionsResource(config: HttpConfig): SessionsResource {
         toolApprovalsResponseSchema
       );
     },
-    /**
-     * Deletes sessions.
-     */
     async delete({ agentId, sessionId, deleteArtifacts, abortSignal }) {
       await requestJson<void>(
         config,

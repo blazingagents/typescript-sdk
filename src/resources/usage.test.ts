@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
 import { createMockFetch } from "../test/fixtures.ts";
-import type { UsageResource } from "../types.ts";
+import type { UsageResource } from "./usage.ts";
 
 const BASE = "http://localhost:8787";
 const usageResponse = {

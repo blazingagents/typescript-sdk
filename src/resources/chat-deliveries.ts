@@ -1,6 +1,33 @@
-import { chatDeliveriesResponseSchema } from "../contracts/entities/chat-connections.ts";
+import {
+  type ChatDeliveriesResponse,
+  type ChatDeliveryListStatus,
+  chatDeliveriesResponseSchema,
+} from "../contracts/entities/chat-connections.ts";
 import { requestJson } from "../http.ts";
-import type { ChatDeliveriesResource, HttpConfig } from "../types.ts";
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+export interface ChatDeliveriesListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  /** ISO 8601 date-time; inclusive lower bound on `createdAt`. */
+  since?: string;
+  /** `failed` and/or `ambiguous`; omitted means both. */
+  status?: readonly ChatDeliveryListStatus[];
+}
+
+/**
+ * `client.chatDeliveries` — the Tenant's deliveries across all Chat
+ * Connections behind `GET /v1/chat-deliveries`, newest first.
+ */
+export interface ChatDeliveriesResource {
+  /**
+   * Lists one page of Chat delivery records.
+   * @param input - filters and pagination options.
+   * @returns The chat deliveries response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  list(input?: ChatDeliveriesListOptions): Promise<ChatDeliveriesResponse>;
+}
 
 /**
  * `client.chatDeliveries` — `GET /v1/chat-deliveries`, the Tenant-wide
@@ -12,9 +39,6 @@ export function createChatDeliveriesResource(
   config: HttpConfig
 ): ChatDeliveriesResource {
   return {
-    /**
-     * Lists one page of chat deliveries.
-     */
     async list({ abortSignal, status, ...query } = {}) {
       return await requestJson(
         config,

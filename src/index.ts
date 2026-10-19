@@ -185,11 +185,49 @@ export {
   type SessionOwnershipStore,
 } from "./relay.ts";
 export type {
-  AgentClient,
-  AgentSkillsResource,
   AgentsListOptions,
   AgentsResource,
-  ArtifactsResource,
+  UserAgentsResource,
+} from "./resources/agents.ts";
+export type { ArtifactsResource } from "./resources/artifacts.ts";
+export type { ChatConnectionsResource } from "./resources/chat-connections.ts";
+export type {
+  ChatDeliveriesListOptions,
+  ChatDeliveriesResource,
+} from "./resources/chat-deliveries.ts";
+export type { McpConnectionsResource } from "./resources/mcp-connections.ts";
+export type {
+  MemoriesListOptions,
+  MemoriesResource,
+} from "./resources/memories.ts";
+export type {
+  MerchantBindingsListOptions,
+  MerchantBindingsResource,
+} from "./resources/merchant-bindings.ts";
+export type { MerchantConnectionResource } from "./resources/merchant-connection.ts";
+export type {
+  MerchantUsageEventsListOptions,
+  MerchantUsageEventsResource,
+} from "./resources/merchant-usage-events.ts";
+export type { PromptsResource } from "./resources/prompts.ts";
+export type { ProvidersResource } from "./resources/providers.ts";
+export type {
+  LatestSessionsListOptions,
+  SessionsResource,
+} from "./resources/sessions.ts";
+export type {
+  AgentSkillsResource,
+  SkillsListOptions,
+} from "./resources/skills.ts";
+export type { TasksResource } from "./resources/tasks.ts";
+export type { TenantResource } from "./resources/tenant.ts";
+export type { UsageResource } from "./resources/usage.ts";
+export type {
+  WorkspacesListOptions,
+  WorkspacesResource,
+} from "./resources/workspaces.ts";
+export type {
+  AgentClient,
   AttributionInput,
   BlazingAgentsErrorCode,
   BlazingAgentsOptions,
@@ -197,9 +235,6 @@ export type {
   BlazingAgentsUIMessage,
   BlazingAgentsUIMessageChunk,
   BlazingAgentsUIMessageData,
-  ChatConnectionsResource,
-  ChatDeliveriesListOptions,
-  ChatDeliveriesResource,
   ChatInput,
   ChatMessageInput,
   ChatMessagesInput,
@@ -212,31 +247,12 @@ export type {
   CompletionResult,
   ContinueChatInput,
   KnownBlazingAgentsErrorCode,
-  LatestSessionsListOptions,
-  McpConnectionsResource,
-  MemoriesListOptions,
-  MemoriesResource,
-  MerchantBindingsListOptions,
-  MerchantBindingsResource,
-  MerchantConnectionResource,
-  MerchantUsageEventsListOptions,
-  MerchantUsageEventsResource,
   ObjectInput,
   ObjectPromptIdInput,
   ObjectPromptInput,
   ObjectResult,
-  PromptsResource,
-  ProvidersResource,
   ResourceRequestOptions,
   ResponseObservation,
-  SessionsResource,
-  SkillsListOptions,
-  TasksResource,
-  TenantResource,
   TerminalStreamResult,
-  UsageResource,
-  UserAgentsResource,
   UserClient,
-  WorkspacesListOptions,
-  WorkspacesResource,
 } from "./types.ts";

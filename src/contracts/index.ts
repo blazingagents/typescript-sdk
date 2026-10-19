@@ -30,23 +30,29 @@ export {
   agentToolNames,
   chatFunctionNameSchema,
 } from "./entities/agent-tools.ts";
+export type { AgentStatus } from "./entities/agents.ts";
 export {
   agentConfigSchema,
+  agentInstructionsSchema,
+  agentModelIdSchema,
   agentResponseSchema,
   agentStatusSchema,
   agentsListQuerySchema,
   agentsResponseSchema,
+  agentToolsSchema,
   createAgentBodySchema,
   updateAgentBodySchema,
 } from "./entities/agents.ts";
 export {
   artifactDownloadUrlResponseSchema,
+  artifactFilenameSchema,
   artifactListItemSchema,
   artifactsListResponseSchema,
 } from "./entities/artifacts.ts";
 export {
   attributionCreateInputSchema,
   metadataSchema,
+  userIdSchema,
 } from "./entities/attribution.ts";
 export type {
   ChatFunctionCallEvent,
@@ -99,12 +105,18 @@ export {
   tenantChatDeliverySchema,
   updateChatConnectionBodySchema,
 } from "./entities/chat-connections.ts";
+export type {
+  McpConnectionLiveDetails,
+  McpConnectionTestErrorCode,
+} from "./entities/mcp-connections.ts";
 export {
   approveMcpOauthAuthorizationBodySchema,
   createMcpConnectionBodySchema,
+  forwardedMetadataKeysSchema,
   mcpAttachmentResponseSchema,
   mcpAttachmentsResponseSchema,
   mcpConnectionAuthTypeSchema,
+  mcpConnectionLiveDetailsSchema,
   mcpConnectionReconnectResultSchema,
   mcpConnectionResponseSchema,
   mcpConnectionStatusSchema,
@@ -116,11 +128,17 @@ export {
   updateMcpAttachmentBodySchema,
   updateMcpConnectionBodySchema,
 } from "./entities/mcp-connections.ts";
+export type {
+  CreateMemoryBody,
+  Memory,
+  UpdateMemoryBody,
+} from "./entities/memories.ts";
 export {
   createMemoryBodySchema,
   memoriesListResponseSchema,
   memoryResponseSchema,
   memorySchema,
+  memoryTextSchema,
   updateMemoryBodySchema,
 } from "./entities/memories.ts";
 export {
@@ -136,6 +154,7 @@ export {
   merchantProviderSchema,
   merchantUsageEventNextAction,
   merchantUsageEventNextActionSchema,
+  merchantUsageEventResponseSchema,
   merchantUsageEventSchema,
   merchantUsageEventStatusSchema,
   merchantUsageEventsResponseSchema,
@@ -193,7 +212,10 @@ export {
 } from "./entities/session-inputs.ts";
 export type {
   ContinueToolApprovalsBody,
+  LatestSessionListItem,
   SessionForkedFrom,
+  SessionListItem,
+  SessionMessage,
   ToolApprovalContinuationState,
   ToolApprovalDecision,
   ToolApprovalsResponse,
@@ -209,6 +231,7 @@ export {
   sessionMessagesResponseSchema,
   sessionResponseSchema,
   sessionsListResponseSchema,
+  toolApprovalContinuationSchema,
   toolApprovalContinuationStateSchema,
   toolApprovalDecisionSchema,
   toolApprovalStateSchema,
@@ -218,8 +241,14 @@ export {
 export {
   copySkillBodySchema,
   createSkillBodySchema,
+  skillArchiveTypeSchema,
   skillCopyResultsSchema,
+  skillDescriptionSchema,
   skillDetailSchema,
+  skillFilePathSchema,
+  skillMetadataSchema,
+  skillNameSchema,
+  skillSchema,
   skillsListResponseSchema,
 } from "./entities/skills.ts";
 export type {
@@ -237,6 +266,13 @@ export {
   spendingLimitStopDetailsSchema,
   updateSpendingLimitBodySchema,
 } from "./entities/spending-limits.ts";
+export type {
+  CreateTaskBody,
+  TaskListItem,
+  TaskRunStatus,
+  TaskScheduleInput,
+  UpdateTaskBody,
+} from "./entities/tasks.ts";
 export {
   createTaskBodySchema,
   createTaskResponseSchema,
@@ -244,6 +280,7 @@ export {
   createTaskRunResponseSchema,
   taskCronConfigSchema,
   taskIntervalConfigSchema,
+  taskLatestRunSchema,
   taskListItemSchema,
   taskOnceConfigSchema,
   taskResponseSchema,
@@ -256,12 +293,14 @@ export {
   tasksListResponseSchema,
   updateTaskBodySchema,
 } from "./entities/tasks.ts";
+export type {
+  Quota,
+  TenantDeletion,
+  UpdateTenantSettingsBody,
+} from "./entities/tenants.ts";
 export {
   quotaSchema,
-  subscriptionStatusSchema,
   tenantDeletionSchema,
-  tenantResponseSchema,
-  tenantSchema,
   tenantSettingsResponseSchema,
   updateTenantSettingsBodySchema,
 } from "./entities/tenants.ts";
@@ -285,6 +324,7 @@ export type { WorkspaceTier } from "./entities/workspaces.ts";
 export {
   createWorkspaceBodySchema,
   updateWorkspaceBodySchema,
+  workspaceNetworkPolicySchema,
   workspaceSchema,
   workspacesListResponseSchema,
   workspaceTierSchema,
@@ -292,8 +332,10 @@ export {
 export {
   agentIdSchema,
   apiKeyTokenSchema,
+  chatDeliveryIdSchema,
   functionCallIdSchema,
   isAdminAgentId,
+  merchantUsageEventIdSchema,
   promptIdSchema,
   sessionIdSchema,
 } from "./ids.ts";

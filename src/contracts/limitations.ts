@@ -13,8 +13,8 @@ export const MAX_SKILL_NAME_LENGTH = 64;
 export const MAX_SKILL_DESCRIPTION_LENGTH = 1024;
 export const MAX_SKILL_COPY_DESTINATIONS = 30;
 
-export const DEFAULT_PROMPTS_LIST_LIMIT = 50;
-export const MAX_PROMPTS_LIST_LIMIT = 100;
+export const DEFAULT_RESOURCES_LIST_LIMIT = 50;
+export const MAX_RESOURCES_LIST_LIMIT = 100;
 export const MAX_PROMPT_TEMPLATE_BYTES = 10 * 1024;
 export const MAX_PROMPT_VARIABLES = 10;
 export const MAX_PROMPT_NAME_LENGTH = 80;
@@ -45,8 +45,6 @@ export const MAX_MCP_ATTACHMENT_METADATA_KEY_LENGTH = 64;
 
 /** Agents — name ≤ 80, instructions ≤ 3000. */
 export const MAX_AGENT_NAME_LENGTH = 80;
-export const DEFAULT_AGENTS_LIST_LIMIT = 50;
-export const MAX_AGENTS_LIST_LIMIT = 100;
 export const MAX_AGENT_INSTRUCTIONS_LENGTH = 3000;
 
 /** Artifacts — 10 MiB per file. */

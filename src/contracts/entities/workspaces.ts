@@ -44,23 +44,49 @@ export const workspaceSchema = z
   })
   .strip();
 
+const networkPolicyDescription =
+  "Which hosts the workspace can reach: `unrestricted`, `allowlist` with `allowedHosts`, or `offline`.";
+
 export const createWorkspaceBodySchema = z
   .object({
-    name: workspaceNameSchema.optional(),
-    tier: workspaceTierSchema.default("core"),
-    userId: userIdSchema.default(""),
-    metadata: metadataSchema.default({}),
-    networkPolicy: workspaceNetworkPolicySchema.default({
-      mode: "unrestricted",
-    }),
+    tier: workspaceTierSchema
+      .default("core")
+      .describe(
+        "Workspace tier, fixed at creation. Core loses its files when the workspace stops; Plus keeps them when it stops while idle."
+      ),
+    name: workspaceNameSchema
+      .optional()
+      .describe(
+        `Display name, up to ${MAX_WORKSPACE_NAME_LENGTH} characters. Leave it out for an unnamed workspace.`
+      ),
+    userId: userIdSchema
+      .default("")
+      .describe(
+        'Your own ID for the end user who owns the workspace. `""` means a tenant-level workspace. It cannot be changed later.'
+      ),
+    metadata: metadataSchema
+      .default({})
+      .describe("Your own key-value data, returned as sent."),
+    networkPolicy: workspaceNetworkPolicySchema
+      .default({ mode: "unrestricted" })
+      .describe(networkPolicyDescription),
   })
   .strict();
 
 export const updateWorkspaceBodySchema = z
   .object({
-    name: workspaceNameSchema.nullable().optional(),
-    metadata: metadataSchema.optional(),
-    networkPolicy: workspaceNetworkPolicySchema.optional(),
+    name: workspaceNameSchema
+      .nullable()
+      .optional()
+      .describe(
+        `New display name, up to ${MAX_WORKSPACE_NAME_LENGTH} characters, or \`null\` to clear it.`
+      ),
+    metadata: metadataSchema
+      .optional()
+      .describe("Replaces the workspace's metadata."),
+    networkPolicy: workspaceNetworkPolicySchema
+      .optional()
+      .describe(`Replaces the network policy. ${networkPolicyDescription}`),
   })
   .strict()
   .refine(hasObjectKeys, { message: "At least one field is required." });

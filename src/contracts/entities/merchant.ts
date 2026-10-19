@@ -76,10 +76,23 @@ export type MerchantConnectionResponse = z.infer<
 
 export const createMerchantConnectionBodySchema = z
   .object({
-    provider: merchantProviderSchema,
-    environment: merchantEnvironmentSchema,
-    credential: z.string().min(1),
-    guard: merchantGuardSchema.optional(),
+    provider: merchantProviderSchema.describe(
+      "Your billing provider: `polar` or `dodo`."
+    ),
+    environment: merchantEnvironmentSchema.describe(
+      "The provider environment to send usage to: `sandbox` or `live`."
+    ),
+    credential: z
+      .string()
+      .min(1)
+      .describe(
+        "A credential for your provider account: a Polar Organization Access Token, or a Dodo API key in the mode that matches `environment`. It is never returned."
+      ),
+    guard: merchantGuardSchema
+      .optional()
+      .describe(
+        "Check each end user's plan or balance with your provider before every turn starts. Off when left out."
+      ),
   })
   .strict();
 export type CreateMerchantConnectionBody = z.infer<
@@ -88,9 +101,21 @@ export type CreateMerchantConnectionBody = z.infer<
 
 export const updateMerchantConnectionBodySchema = z
   .object({
-    credential: z.string().min(1).optional(),
-    status: merchantConnectionStatusSchema.optional(),
-    guard: merchantGuardSchema.optional(),
+    credential: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "A replacement credential. It must belong to the same merchant account as the current one."
+      ),
+    status: merchantConnectionStatusSchema
+      .optional()
+      .describe(
+        "`active` sends usage events to your provider. While `disconnected`, deliveries fail and can be retried after you set it back to `active`, and turns are refused if the guard is on."
+      ),
+    guard: merchantGuardSchema
+      .optional()
+      .describe("The complete guard configuration, replacing the current one."),
   })
   .strict();
 export type UpdateMerchantConnectionBody = z.infer<
@@ -120,7 +145,12 @@ export type MerchantBindingsResponse = z.infer<
 >;
 
 export const upsertMerchantBindingBodySchema = z
-  .object({ customerId: z.string().min(1) })
+  .object({
+    customerId: z
+      .string()
+      .min(1)
+      .describe("The ID of the customer in your billing provider."),
+  })
   .strict();
 export type UpsertMerchantBindingBody = z.infer<
   typeof upsertMerchantBindingBodySchema
@@ -254,7 +284,10 @@ export const merchantUsageSummaryQuerySchema = z
       .int()
       .min(1)
       .max(MAX_MERCHANT_USAGE_SUMMARY_DAYS)
-      .default(DEFAULT_MERCHANT_USAGE_SUMMARY_DAYS),
+      .default(DEFAULT_MERCHANT_USAGE_SUMMARY_DAYS)
+      .describe(
+        `UTC days in the \`daily\` series, ending today, from 1 to ${MAX_MERCHANT_USAGE_SUMMARY_DAYS}.`
+      ),
   })
   .strict();
 

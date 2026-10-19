@@ -65,7 +65,8 @@ export const providerModelsResponseSchema = z
         .strip()
     ),
   })
-  .strip();
+  .strip()
+  .meta({ id: "ProviderModelList" });
 
 /**
  * `POST /v1/providers` — name, type, optional base URL, and the API key
@@ -75,10 +76,25 @@ export const providerModelsResponseSchema = z
  */
 export const createProviderBodySchema = z
   .object({
-    name: providerNameSchema,
-    providerType: providerTypeSchema,
-    baseUrl: providerBaseUrlSchema.nullable().default(null),
-    apiKey: z.string().trim().min(1),
+    name: providerNameSchema.describe(
+      "Display name, unique within your tenant."
+    ),
+    providerType: providerTypeSchema.describe(
+      "The model vendor. Cannot be changed later."
+    ),
+    baseUrl: providerBaseUrlSchema
+      .nullable()
+      .default(null)
+      .describe(
+        "Endpoint override. Required for `custom`, not accepted for `vercel_ai_gateway`, and optional otherwise. Cannot be changed later."
+      ),
+    apiKey: z
+      .string()
+      .trim()
+      .min(1)
+      .describe(
+        "The vendor API key. It is stored encrypted, never returned, and cannot be changed later."
+      ),
   })
   .strict()
   .refine(
@@ -102,7 +118,9 @@ export const createProviderBodySchema = z
 /** `PATCH /v1/providers/{id}` — only the display name is mutable. */
 export const updateProviderBodySchema = z
   .object({
-    name: providerNameSchema,
+    name: providerNameSchema.describe(
+      "New display name, unique within your tenant."
+    ),
   })
   .strict();
 export type ProvidersResponse = z.infer<typeof providersResponseSchema>;

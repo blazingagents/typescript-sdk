@@ -44,20 +44,38 @@ function validateUsageRange(
   }
 }
 
+const usageRangeFields = {
+  from: z.iso
+    .date()
+    .optional()
+    .describe(
+      "First UTC day to include, as `YYYY-MM-DD`. Send it with `to`, or leave both out for the last 30 days ending today."
+    ),
+  to: z.iso
+    .date()
+    .optional()
+    .describe(
+      `Last UTC day to include, as \`YYYY-MM-DD\`. It must not be before \`from\` and can be at most ${MAX_USAGE_RANGE_DAYS} days after it.`
+    ),
+};
+
 /**
  * Query for the bounded dashboard-oriented usage overview. The date range has
  * the same semantics as `UsageQuery`; `limit` bounds each ranking.
  */
+
 export const usageOverviewQuerySchema = z
   .object({
-    from: z.iso.date().optional(),
-    to: z.iso.date().optional(),
+    ...usageRangeFields,
     limit: z
       .number()
       .int()
       .min(1)
       .max(MAX_USAGE_OVERVIEW_TOP_N)
-      .default(DEFAULT_USAGE_OVERVIEW_TOP_N),
+      .default(DEFAULT_USAGE_OVERVIEW_TOP_N)
+      .describe(
+        `Rows to return in each ranked breakdown (\`byAgent\`, \`byUser\`, \`byModel\`), from 1 to ${MAX_USAGE_OVERVIEW_TOP_N}.`
+      ),
   })
   .strict()
   .superRefine(validateUsageRange);
@@ -102,9 +120,11 @@ export const sessionUsageQuerySchema = z
       .max(100)
       .refine(hasUniqueValues, {
         message: "Session ids must be unique.",
-      }),
-    from: z.iso.date().optional(),
-    to: z.iso.date().optional(),
+      })
+      .describe(
+        "One to 100 distinct session IDs. Every session must be visible to the caller."
+      ),
+    ...usageRangeFields,
   })
   .strict()
   .superRefine(validateUsageRange);

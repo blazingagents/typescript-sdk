@@ -1,3 +1,4 @@
+import { modelMessageSchema } from "ai";
 import { z } from "zod";
 
 import {
@@ -36,9 +37,8 @@ export const usageSummarySchema = z
     errorMessage: z.string().nullable(),
     inputTokens: z.number().int().min(0),
     /**
-     * True only when every measured inference for this Turn reported
-     * input/output totals. Provider omissions stay unknown — a zero is never
-     * substituted for a missing measurement (ADR-0048).
+     * True only when every inference reported input/output totals; a zero is
+     * never substituted for a missing measurement (ADR-0048).
      */
     measurementComplete: z.boolean(),
     modelDurationMs: z.number().int().min(0),
@@ -67,7 +67,12 @@ export const usageSummarySchema = z
 
 export const blazingAgentsChatMessageMetadataSchema = z
   .object({
-    blazingAgents: z.object({ usage: usageSummarySchema }).strip(),
+    blazingAgents: z
+      .object({
+        usage: usageSummarySchema,
+        compactedContext: z.array(modelMessageSchema).optional(),
+      })
+      .strip(),
   })
   .strip();
 
@@ -111,7 +116,10 @@ function hasMeaningfulSchemaRoot(
   }
   const reference = schema.$ref;
   if (typeof reference === "string" && reference.startsWith("#/$defs/")) {
-    const name = reference.slice("#/$defs/".length);
+    const name = reference
+      .slice("#/$defs/".length)
+      .replaceAll("~1", "/")
+      .replaceAll("~0", "~");
     if (!name || seenReferences.has(name) || !(name in definitions)) {
       return false;
     }
@@ -144,31 +152,37 @@ function hasMeaningfulSchemaRoot(
  * unions (for example, Pydantic's `int | None` TypeAdapter schema), and local
  * `$ref` roots are needed for recursive Pydantic models.
  */
-export const jsonSchemaShapeSchema = z.custom<ConvertibleJsonSchema>(
-  (value) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      return false;
-    }
-    const schema = value as Record<string, unknown>;
-    const rawDefinitions = schema.$defs;
-    const definitions =
-      typeof rawDefinitions === "object" &&
-      rawDefinitions !== null &&
-      !Array.isArray(rawDefinitions)
-        ? (rawDefinitions as JsonSchemaRecord)
-        : {};
-    if (!hasMeaningfulSchemaRoot(value, definitions, new Set())) {
-      return false;
-    }
-    try {
-      z.fromJSONSchema(value as ConvertibleJsonSchema);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  { message: "schema contains an unsupported or invalid JSON Schema feature" }
-);
+export const jsonSchemaShapeSchema = z
+  .custom<ConvertibleJsonSchema>(
+    (value) => {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return false;
+      }
+      const schema = value as Record<string, unknown>;
+      const rawDefinitions = schema.$defs;
+      const definitions =
+        typeof rawDefinitions === "object" &&
+        rawDefinitions !== null &&
+        !Array.isArray(rawDefinitions)
+          ? (rawDefinitions as JsonSchemaRecord)
+          : {};
+      if (!hasMeaningfulSchemaRoot(value, definitions, new Set())) {
+        return false;
+      }
+      try {
+        z.fromJSONSchema(value as ConvertibleJsonSchema);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "schema contains an unsupported or invalid JSON Schema feature" }
+  )
+  /**
+   * `z.custom` is opaque to the OpenAPI generator; declare the honest wire
+   * shape (any JSON object) for the generated document.
+   */
+  .meta({ type: "object" });
 
 export const MAX_CHAT_FUNCTIONS = 32;
 export const MAX_CHAT_FUNCTION_DEFINITIONS_BYTES = 64 * 1024;
@@ -269,23 +283,84 @@ export const resolveChatFunctionResponseSchema = z
 export const chatRequestBodySchema = z
   .object({
     /**
-     * AI SDK owns the runtime UIMessage schema. Core keeps this wire field
-     * unknown; the HTTP boundary validates it with `safeValidateUIMessages`
-     * before treating it as a UIMessage.
+     * AI SDK owns the UIMessage schema; the HTTP boundary validates this with
+     * `safeValidateUIMessages`.
      */
-    messages: z.array(z.unknown()).min(1).optional(),
-    promptId: promptIdSchema.optional(),
-    variables: promptVariablesSchema.optional(),
-    trigger: chatTriggerSchema.default("submit-message"),
-    messageId: z.string().min(1).optional(),
+    messages: z
+      .array(z.unknown())
+      .min(1)
+      .optional()
+      .describe(
+        'Ordered messages for one Turn, each an AI SDK `UIMessage` with `role: "user"`, an `id`, and non-empty `parts`. Parts can be text, or `file` parts with an `image/*` media type and a base64 `data:` URL. Send either `messages` or `promptId`.'
+      ),
+    promptId: promptIdSchema
+      .optional()
+      .describe("ID of a saved prompt to send instead of `messages`."),
+    variables: promptVariablesSchema
+      .optional()
+      .describe(
+        "Values for the saved prompt's variables. Allowed only with `promptId`, and must name exactly the prompt's variables."
+      ),
+    trigger: chatTriggerSchema
+      .default("submit-message")
+      .describe(
+        "`submit-message` (the default) sends a new message. `regenerate-message` generates the answer again and is allowed only when continuing a session."
+      ),
+    messageId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "With `regenerate-message`, the message to cut the conversation back to before the answer is generated again."
+      ),
     /**
-     * End-user attribution (ADR-0001), stamped on the Session at lazy
-     * materialization and on every usage row this Turn records.
+     * Stamps the session row at lazy materialization and every
+     * `token_usage_*` row this turn records (ADR-0001).
      */
-    userId: userIdSchema.default(""),
-    metadata: metadataSchema.default({}),
-    /** Caller-local functions for this invocation; handlers stay in the caller's backend. */
-    functions: chatFunctionDefinitionsSchema.optional(),
+    userId: userIdSchema
+      .default("")
+      .describe(
+        "Your end user's ID. Starting a session records it on the session, and every turn in that session keeps the session's end user."
+      ),
+    metadata: metadataSchema
+      .default({})
+      .describe(
+        "Your own key-value data. Recorded on a new session and on the turn's usage."
+      ),
+    /**
+     * `chatFunctionDefinitionsSchema` validates the value; `z.custom` is opaque
+     * to the OpenAPI generator, so `meta` declares the wire shape.
+     */
+    functions: z
+      .custom<ChatFunctionDefinitions>(
+        (value) => typeof value === "object" && value !== null
+      )
+      .check((context) => {
+        const result = chatFunctionDefinitionsSchema.safeParse(context.value);
+        if (!result.success) {
+          context.issues.push({
+            code: "custom",
+            input: context.value,
+            message: z.prettifyError(result.error),
+          });
+        }
+      })
+      .optional()
+      .meta({
+        additionalProperties: {
+          additionalProperties: false,
+          properties: {
+            description: { type: "string" },
+            inputSchema: { type: "object" },
+          },
+          required: ["description", "inputSchema"],
+          type: "object",
+        },
+        type: "object",
+      })
+      .describe(
+        "Caller-local functions the model may call during this turn, keyed by name; each entry has a `description` and a JSON Schema `inputSchema`. Your backend claims and answers each call through the function-call endpoints."
+      ),
   })
   .strict()
   .refine(
@@ -309,17 +384,36 @@ export const chatRequestBodySchema = z
  */
 export const generationRequestBodySchema = z
   .object({
-    prompt: z.string().trim().min(1).optional(),
-    promptId: promptIdSchema.optional(),
-    variables: promptVariablesSchema.optional(),
-    output: z.discriminatedUnion("type", [
-      z.object({ type: z.literal("text") }).strict(),
-      z
-        .object({ type: z.literal("object"), schema: jsonSchemaShapeSchema })
-        .strict(),
-    ]),
-    userId: userIdSchema.default(""),
-    metadata: metadataSchema.default({}),
+    prompt: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe("The prompt to answer. Send either `prompt` or `promptId`."),
+    promptId: promptIdSchema
+      .optional()
+      .describe("ID of a saved prompt to use instead of `prompt`."),
+    variables: promptVariablesSchema
+      .optional()
+      .describe(
+        "Values for the saved prompt's variables. Allowed only with `promptId`, and must name exactly the prompt's variables."
+      ),
+    output: z
+      .discriminatedUnion("type", [
+        z.object({ type: z.literal("text") }).strict(),
+        z
+          .object({ type: z.literal("object"), schema: jsonSchemaShapeSchema })
+          .strict(),
+      ])
+      .describe(
+        'What to stream back: `{"type":"text"}` for text, or `{"type":"object","schema":{…}}` for JSON that matches a JSON Schema.'
+      ),
+    userId: userIdSchema
+      .default("")
+      .describe("Your end user's ID, used for usage attribution."),
+    metadata: metadataSchema
+      .default({})
+      .describe("Your own key-value data, recorded with the usage."),
   })
   .strict()
   .refine(

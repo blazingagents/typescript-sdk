@@ -6,6 +6,7 @@ import {
 } from "ai";
 import { ChatStreamTransport } from "./chat-stream-transport.ts";
 import { sessionIdSchema, turnIdSchema } from "./contracts/ids.ts";
+import { parseClientInput } from "./errors.ts";
 
 export type BlazingAgentsChatTransportOptions<
   UI_MESSAGE extends UIMessage = UIMessage,
@@ -47,7 +48,9 @@ export class BlazingAgentsChatTransport<
     const { onSessionId, onTurnId, sessionId, ...transportOptions } = options;
     const transportFetch = transportOptions.fetch ?? globalThis.fetch;
     this.#sessionId =
-      sessionId === undefined ? undefined : sessionIdSchema.parse(sessionId);
+      sessionId === undefined
+        ? undefined
+        : parseClientInput(sessionIdSchema, sessionId, "sessionId");
     this.#transport = new ChatStreamTransport({
       ...transportOptions,
       /** Reads the first Session ID and each Turn ID before returning the response. */

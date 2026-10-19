@@ -6,6 +6,7 @@
 
 - Every method that puts an ID in the URL path now throws `BlazingAgentsError` with code `invalid_request` before any request when that ID is `""`, `.` or `..`. Before, `.` and `..` reached `fetch` unencoded, and URL normalization sent the request to a parent path: `agents.disable({ agentId: ".." })` called `/v1/disable`.
 - `forUser(userId)` throws `BlazingAgentsError` with code `invalid_request` and `param: "userId"` for an invalid user ID, instead of a `ZodError`.
+- `new BlazingAgentsChatTransport({ sessionId })` and `new BlazingAgentsDirectChatTransport({ sessionId })` throw `BlazingAgentsError` with code `invalid_request` and `param: "sessionId"` for a malformed Session ID, instead of a `ZodError`.
 - `sessions.submitInput`, `sessions.inputs`, `sessions.stop`, `mcpConnections.update`, `mcpConnections.reconnect` and `usage.sessions` no longer validate IDs or the request body locally, and so no longer throw `ZodError`. The server validates them and answers `invalid_request`, which the SDK throws as `BlazingAgentsError`. Catch `BlazingAgentsError` in place of `ZodError`:
 
 ```ts

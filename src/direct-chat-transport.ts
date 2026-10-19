@@ -7,6 +7,7 @@ import { extractApprovalDecisions } from "./approvals.ts";
 import { ChatStreamTransport } from "./chat-stream-transport.ts";
 import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
+import { parseClientInput } from "./errors.ts";
 import type { ChatFunctions } from "./functions.ts";
 import type { ChatResult } from "./types.ts";
 
@@ -55,7 +56,7 @@ export class BlazingAgentsDirectChatTransport<
     this.#sessionId =
       options.sessionId === undefined
         ? undefined
-        : sessionIdSchema.parse(options.sessionId);
+        : parseClientInput(sessionIdSchema, options.sessionId, "sessionId");
   }
 
   /**

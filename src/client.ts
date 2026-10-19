@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BlazingAgentsError } from "./errors.ts";
+import { parseClientInput } from "./errors.ts";
 import {
   chat,
   completion,
@@ -195,18 +195,10 @@ export class BlazingAgents {
    * @throws BlazingAgentsError - With code `invalid_request` if the user ID is invalid.
    */
   forUser(userId: string): UserClient {
-    const parsed = scopedUserIdSchema.safeParse(userId);
-    if (!parsed.success) {
-      throw new BlazingAgentsError(
-        {
-          code: "invalid_request",
-          message: `Invalid user ID: ${z.prettifyError(parsed.error)}`,
-          param: "userId",
-        },
-        { cause: parsed.error }
-      );
-    }
-    return createUserClient({ ...this.#config, scopeUserId: parsed.data });
+    return createUserClient({
+      ...this.#config,
+      scopeUserId: parseClientInput(scopedUserIdSchema, userId, "userId"),
+    });
   }
 
   /**

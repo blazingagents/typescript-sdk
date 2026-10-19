@@ -62,7 +62,7 @@ export function createMerchantConnectionResource(
       return await requestJson(
         config,
         "/v1/merchant-connection",
-        { signal: abortSignal },
+        { credentialBearing: true, signal: abortSignal },
         merchantConnectionResponseSchema
       );
     },
@@ -70,7 +70,12 @@ export function createMerchantConnectionResource(
       return await requestJson(
         config,
         "/v1/merchant-connection",
-        { json: body, method: "POST", signal: abortSignal },
+        {
+          json: body,
+          method: "POST",
+          credentialBearing: true,
+          signal: abortSignal,
+        },
         merchantConnectionResponseSchema
       );
     },
@@ -78,13 +83,19 @@ export function createMerchantConnectionResource(
       return await requestJson(
         config,
         "/v1/merchant-connection",
-        { json: body, method: "PATCH", signal: abortSignal },
+        {
+          json: body,
+          method: "PATCH",
+          credentialBearing: true,
+          signal: abortSignal,
+        },
         merchantConnectionResponseSchema
       );
     },
     async retire({ abortSignal } = {}) {
       await requestJson<void>(config, "/v1/merchant-connection", {
         method: "DELETE",
+        credentialBearing: true,
         signal: abortSignal,
       });
     },

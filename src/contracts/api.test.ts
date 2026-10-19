@@ -95,6 +95,7 @@ describe("known error codes", () => {
     ] as const;
     expectTypeOf<KnownBlazingAgentsErrorCode>().toEqualTypeOf<
       | (typeof codes)[number]
+      | "credential_echo"
       | "invalid_response"
       | "network_error"
       | "request_aborted"

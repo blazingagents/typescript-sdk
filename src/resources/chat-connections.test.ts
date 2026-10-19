@@ -95,17 +95,12 @@ describe("chatConnections", () => {
     ["enable", "/enable", "POST"],
     ["disable", "/disable", "POST"],
   ] as const)(
-    "%s returns the safe connection and forwards cancellation",
+    "%s returns the connection and forwards cancellation",
     async (action, suffix, method) => {
       const { client, calls } = setup({
         ...connection,
-        credentials: { botToken: "never-return" },
         futureField: 1,
-        configuration: {
-          ...connection.configuration,
-          futureField: true,
-          botToken: "never-return",
-        },
+        configuration: { ...connection.configuration, futureField: true },
       });
       const abortSignal = new AbortController().signal;
       await expect(
@@ -121,6 +116,19 @@ describe("chatConnections", () => {
       expect(calls[0].init?.body).toBeNull();
     }
   );
+  it("rejects a connection response that echoes a credential", async () => {
+    const { client } = setup({
+      ...connection,
+      configuration: { ...connection.configuration, botToken: "never-return" },
+    });
+    await expect(
+      client.chatConnections.get({ chatConnectionId: connection.id })
+    ).rejects.toMatchObject({
+      code: "credential_echo",
+      details: { field: "botToken" },
+      responseBody: undefined,
+    });
+  });
   it("updates only the submitted fields", async () => {
     const { client, calls } = setup();
     await client.chatConnections.update({

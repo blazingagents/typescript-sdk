@@ -19,6 +19,7 @@ import type { WorkspacesResource } from "./resources/workspaces.ts";
 
 export type KnownBlazingAgentsErrorCode =
   | ApiErrorCode
+  | "credential_echo"
   | "invalid_response"
   | "network_error"
   | "request_aborted"
@@ -43,6 +44,11 @@ export interface RequestOptions {
   body?: BodyInit | FormData | null;
   // Caller-owned correlation sent as `X-Client-Request-Id`.
   clientRequestId?: string | undefined;
+  /**
+   * Set on operations the contract marks `x-credential-bearing`: a 2xx JSON
+   * body that contains a credential field is discarded and rejected.
+   */
+  credentialBearing?: true;
   /**
    * Extra headers (e.g. `Content-Type: multipart/form-data` is set
    * automatically by `fetch` when given a `FormData` body).

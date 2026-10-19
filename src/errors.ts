@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { BlazingAgentsErrorCode } from "./types.ts";
 
 /**
@@ -82,4 +83,32 @@ export class BlazingAgentsError extends Error {
     }
     return BLAZING_AGENTS_ERROR_SYMBOL in (error as Record<string, unknown>);
   }
+}
+
+/**
+ * Parses caller input the SDK must check before any request, such as a value
+ * that becomes a header or transport state.
+ * @param schema - Schema the value must satisfy.
+ * @param value - Caller-supplied value.
+ * @param param - Name of the caller parameter, reported on the error.
+ * @returns The parsed value.
+ * @throws BlazingAgentsError - With code `invalid_request` if the value is invalid.
+ */
+export function parseClientInput<Schema extends z.ZodType>(
+  schema: Schema,
+  value: unknown,
+  param: string
+): z.output<Schema> {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new BlazingAgentsError(
+      {
+        code: "invalid_request",
+        message: `Invalid ${param}: ${z.prettifyError(parsed.error)}`,
+        param,
+      },
+      { cause: parsed.error }
+    );
+  }
+  return parsed.data;
 }

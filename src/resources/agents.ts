@@ -1,18 +1,146 @@
 import {
+  type Agent,
+  type AgentsResponse,
   agentResponseSchema,
   agentsResponseSchema,
+  type CreateAgentBody,
+  type UpdateAgentBody,
 } from "../contracts/entities/agents.ts";
 import {
+  type McpAttachmentResponse,
+  type McpAttachmentsResponse,
   mcpAttachmentResponseSchema,
   mcpAttachmentsResponseSchema,
+  type UpdateMcpAttachmentBody,
 } from "../contracts/entities/mcp-connections.ts";
-import { spendingLimitResponseSchema } from "../contracts/entities/spending-limits.ts";
+import {
+  type SpendingLimitResponse,
+  spendingLimitResponseSchema,
+  type UpdateSpendingLimitBody,
+} from "../contracts/entities/spending-limits.ts";
 import { apiPath, requestJson } from "../http.ts";
-import type {
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+/** Agent operations on a user-scoped client, which has no spending limits. */
+export type UserAgentsResource = Omit<
   AgentsResource,
-  HttpConfig,
-  UserAgentsResource,
-} from "../types.ts";
+  "getSpendingLimit" | "updateSpendingLimit"
+>;
+
+export interface AgentsResource {
+  /**
+   * Creates the Agent. Omitting `workspaceId` creates a Core Workspace by default. `workspaceTier` selects its immutable tier and conflicts with `workspaceId`.
+   * @param input - creation fields; optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  create(input: CreateAgentBody & ResourceRequestOptions): Promise<Agent>;
+  /**
+   * Deletes the Agent while preserving its attached Workspace.
+   * @param input - `agentId`; optional abortSignal; includeArtifacts controls Artifact deletion.
+   * @returns Resolves when the operation completes.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  delete(
+    input: {
+      agentId: string;
+      includeArtifacts: boolean;
+    } & ResourceRequestOptions
+  ): Promise<void>;
+  /**
+   * Disables the Agent.
+   * @param input - `agentId`; optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  disable(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
+  /**
+   * Enables the Agent.
+   * @param input - `agentId`; optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  enable(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
+  /**
+   * Retrieves the Agent.
+   * @param input - `agentId`; optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  get(input: { agentId: string } & ResourceRequestOptions): Promise<Agent>;
+  /** Retrieves the Agent model spending limit. Requires tenant authority. */
+  getSpendingLimit(
+    input: { agentId: string } & ResourceRequestOptions
+  ): Promise<SpendingLimitResponse>;
+  /**
+   * Lists available Agent records.
+   * @param input - filters and pagination options.
+   * @returns Matching Agents. This response has no pagination cursor.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  list(input?: AgentsListOptions): Promise<AgentsResponse>;
+  /**
+   * Lists the Agent MCP attachments.
+   * @param input - `agentId`; optional abortSignal.
+   * @returns The mcp attachments response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  listMcpAttachments(
+    input: { agentId: string } & ResourceRequestOptions
+  ): Promise<McpAttachmentsResponse>;
+  /**
+   * Removes the Agent avatar.
+   * @param input - `agentId`; optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  removeAvatar(
+    input: { agentId: string } & ResourceRequestOptions
+  ): Promise<Agent>;
+  /**
+   * Updates the Agent. A concrete `workspaceId` switches the Agent; detachment is unsupported.
+   * @param input - `agentId`; fields to change; optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  update(
+    input: UpdateAgentBody & { agentId: string } & ResourceRequestOptions
+  ): Promise<Agent>;
+  /**
+   * Updates one Agent MCP attachment.
+   * @param input - `agentId`, `mcpConnectionId`; fields to change; optional abortSignal.
+   * @returns The mcp attachment response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  updateMcpAttachment(
+    input: UpdateMcpAttachmentBody & {
+      agentId: string;
+      mcpConnectionId: string;
+    } & ResourceRequestOptions
+  ): Promise<McpAttachmentResponse>;
+  /** Sets the Agent model spending limit. Pass null to disable it. Requires tenant authority. */
+  updateSpendingLimit(
+    input: UpdateSpendingLimitBody & {
+      agentId: string;
+    } & ResourceRequestOptions
+  ): Promise<SpendingLimitResponse>;
+  /**
+   * Uploads an Agent avatar as multipart form data.
+   * @param input - Target `agentId`, image `file`, and optional abortSignal.
+   * @returns The agent.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  uploadAvatar(
+    input: { agentId: string; file: File } & ResourceRequestOptions
+  ): Promise<Agent>;
+}
+
+export interface AgentsListOptions extends ResourceRequestOptions {
+  cursor?: string;
+  limit?: number;
+  userId?: string;
+  workspaceId?: string;
+}
 
 /**
  * Builds the Agents operations, including the spending limits that need tenant authority.
@@ -22,7 +150,6 @@ import type {
 export function createAgentsResource(config: HttpConfig): AgentsResource {
   return {
     ...createUserAgentsResource(config),
-    /** Retrieves the model spending limit using tenant authority. */
     async getSpendingLimit({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -31,7 +158,6 @@ export function createAgentsResource(config: HttpConfig): AgentsResource {
         spendingLimitResponseSchema
       );
     },
-    /** Sets the model spending limit. Null disables it. Requires tenant authority. */
     async updateSpendingLimit({ agentId, abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -71,9 +197,6 @@ export function createUserAgentsResource(
     );
 
   return {
-    /**
-     * Creates agents.
-     */
     async create({ abortSignal, ...body }) {
       return await requestJson(
         config,
@@ -86,9 +209,6 @@ export function createUserAgentsResource(
         agentResponseSchema
       );
     },
-    /**
-     * Lists one page of agents.
-     */
     async list(options = {}) {
       return await requestJson(
         config,
@@ -105,9 +225,6 @@ export function createUserAgentsResource(
         agentsResponseSchema
       );
     },
-    /**
-     * Retrieves agents.
-     */
     async get({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -116,9 +233,6 @@ export function createUserAgentsResource(
         agentResponseSchema
       );
     },
-    /**
-     * Disables agents.
-     */
     async disable({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -127,9 +241,6 @@ export function createUserAgentsResource(
         agentResponseSchema
       );
     },
-    /**
-     * Enables agents.
-     */
     async enable({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -138,9 +249,6 @@ export function createUserAgentsResource(
         agentResponseSchema
       );
     },
-    /**
-     * Lists the Agent MCP attachments.
-     */
     async listMcpAttachments({ agentId, abortSignal }) {
       return await requestJson(
         config,
@@ -150,9 +258,6 @@ export function createUserAgentsResource(
       );
     },
     update,
-    /**
-     * Updates one Agent MCP attachment.
-     */
     async updateMcpAttachment({
       agentId,
       mcpConnectionId,
@@ -166,9 +271,6 @@ export function createUserAgentsResource(
         mcpAttachmentResponseSchema
       );
     },
-    /**
-     * Deletes agents.
-     */
     async delete({ agentId, includeArtifacts, abortSignal }) {
       await requestJson<void>(config, apiPath`/v1/agents/${agentId}`, {
         method: "DELETE",
@@ -176,9 +278,6 @@ export function createUserAgentsResource(
         signal: abortSignal,
       });
     },
-    /**
-     * Uploads an Agent avatar as multipart form data.
-     */
     async uploadAvatar({ agentId, file, abortSignal }) {
       const form = new FormData();
       form.append("file", file);
@@ -193,9 +292,6 @@ export function createUserAgentsResource(
         agentResponseSchema
       );
     },
-    /**
-     * Removes the Agent avatar.
-     */
     async removeAvatar({ agentId, abortSignal }) {
       return await requestJson(
         config,

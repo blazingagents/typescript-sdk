@@ -299,7 +299,9 @@ describe("BlazingAgentsDirectChatTransport", () => {
           getClient: () => client(fetch),
           sessionId: "invalid",
         })
-    ).toThrow();
+    ).toThrow(
+      expect.objectContaining({ code: "invalid_request", param: "sessionId" })
+    );
   });
 
   it("preserves typed request cancellation", async () => {

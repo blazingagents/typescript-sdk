@@ -1,11 +1,55 @@
 import {
-  sessionUsageQuerySchema,
+  type SessionUsageQuery,
+  type SessionUsageResponse,
   sessionUsageResponseSchema,
+  type UsageOverviewQuery,
+  type UsageOverviewResponse,
+  type UsageQuery,
+  type UsageResponse,
   usageOverviewResponseSchemaForQuery,
   usageResponseSchema,
 } from "../contracts/entities/usage.ts";
 import { apiPath, requestJson } from "../http.ts";
-import type { HttpConfig, UsageResource } from "../types.ts";
+import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
+
+export interface UsageResource {
+  /**
+   * Retrieves usage totals.
+   * @param input - query filters; optional abortSignal.
+   * @returns The usage response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  get(
+    input?: Partial<UsageQuery> & ResourceRequestOptions
+  ): Promise<UsageResponse>;
+  /**
+   * Retrieves usage for one Agent.
+   * @param input - `agentId`; query filters; optional abortSignal.
+   * @returns The usage response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  getForAgent(
+    input: Partial<UsageQuery> & { agentId: string } & ResourceRequestOptions
+  ): Promise<UsageResponse>;
+  /**
+   * Returns totals, daily usage, and bounded Agent, user, and model rankings.
+   * @param input - query filters; optional abortSignal.
+   * @returns The usage overview response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  overview(
+    input?: Partial<UsageOverviewQuery> & ResourceRequestOptions
+  ): Promise<UsageOverviewResponse>;
+  /**
+   * Retrieves usage grouped by Session.
+   * @param input - query filters; optional abortSignal.
+   * @returns The session usage response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   */
+  sessions(
+    input: SessionUsageQuery & ResourceRequestOptions
+  ): Promise<SessionUsageResponse>;
+}
 
 /**
  * `client.usage` — get over `/v1/usage` (tenant-wide) and
@@ -16,11 +60,7 @@ import type { HttpConfig, UsageResource } from "../types.ts";
  */
 export function createUsageResource(config: HttpConfig): UsageResource {
   return {
-    /**
-     * Retrieves usage grouped by Session.
-     */
-    async sessions({ abortSignal, ...input }) {
-      const body = sessionUsageQuerySchema.parse(input);
+    async sessions({ abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/usage/sessions",
@@ -32,9 +72,6 @@ export function createUsageResource(config: HttpConfig): UsageResource {
         sessionUsageResponseSchema
       );
     },
-    /**
-     * Retrieves usage.
-     */
     async get({ abortSignal, ...query } = {}) {
       return await requestJson(
         config,
@@ -46,9 +83,6 @@ export function createUsageResource(config: HttpConfig): UsageResource {
         usageResponseSchema
       );
     },
-    /**
-     * Retrieves usage for one Agent.
-     */
     async getForAgent({ agentId, abortSignal, ...query }) {
       return await requestJson(
         config,
@@ -57,9 +91,6 @@ export function createUsageResource(config: HttpConfig): UsageResource {
         usageResponseSchema
       );
     },
-    /**
-     * Retrieves usage totals, daily usage, and bounded rankings.
-     */
     async overview({ abortSignal, ...query } = {}) {
       return await requestJson(
         config,

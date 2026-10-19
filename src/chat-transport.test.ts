@@ -23,6 +23,14 @@ const secondMessage: UIMessage = {
 describe("BlazingAgentsChatTransport", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("rejects a malformed Session ID with a typed SDK error", () => {
+    expect(
+      () => new BlazingAgentsChatTransport({ sessionId: "invalid" })
+    ).toThrow(
+      expect.objectContaining({ code: "invalid_request", param: "sessionId" })
+    );
+  });
+
   it("adapts AI SDK messages and resumes with the server-minted Session ID", async () => {
     const requests: Record<string, unknown>[] = [];
     const onSessionId = vi.fn();

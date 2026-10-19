@@ -17,14 +17,26 @@ interface BodyReadResult {
   readFailed: boolean;
 }
 
+const DOT_OR_EMPTY_SEGMENTS = new Set(["", ".", ".."]);
+
 /**
  * Builds an endpoint path, encoding each interpolated value so it stays inside
- * one path segment or query value.
+ * one path segment. `encodeURIComponent` leaves `.` and `..` unchanged, and
+ * URL normalization would resolve them against the parent path, so those and
+ * the empty segment are rejected.
  */
 export function apiPath(
   template: TemplateStringsArray,
   ...values: string[]
 ): string {
+  for (const value of values) {
+    if (DOT_OR_EMPTY_SEGMENTS.has(value)) {
+      throw new BlazingAgentsError({
+        code: "invalid_request",
+        message: `Invalid path segment ${JSON.stringify(value)}.`,
+      });
+    }
+  }
   return String.raw({ raw: template }, ...values.map(encodeURIComponent));
 }
 

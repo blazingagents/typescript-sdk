@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseClientInput } from "./errors.ts";
 import {
   chat,
   completion,
@@ -6,54 +7,78 @@ import {
   objectGeneration,
 } from "./generation.ts";
 import {
+  type AgentsResource,
   createAgentsResource,
   createUserAgentsResource,
 } from "./resources/agents.ts";
-import { createArtifactsResource } from "./resources/artifacts.ts";
-import { createChatConnectionsResource } from "./resources/chat-connections.ts";
-import { createChatDeliveriesResource } from "./resources/chat-deliveries.ts";
-import { createMcpConnectionsResource } from "./resources/mcp-connections.ts";
-import { createMemoriesResource } from "./resources/memories.ts";
-import { createMerchantBindingsResource } from "./resources/merchant-bindings.ts";
-import { createMerchantConnectionResource } from "./resources/merchant-connection.ts";
-import { createMerchantUsageEventsResource } from "./resources/merchant-usage-events.ts";
-import { createPromptsResource } from "./resources/prompts.ts";
-import { createProvidersResource } from "./resources/providers.ts";
-import { createSessionsResource } from "./resources/sessions.ts";
+import {
+  type ArtifactsResource,
+  createArtifactsResource,
+} from "./resources/artifacts.ts";
+import {
+  type ChatConnectionsResource,
+  createChatConnectionsResource,
+} from "./resources/chat-connections.ts";
+import {
+  type ChatDeliveriesResource,
+  createChatDeliveriesResource,
+} from "./resources/chat-deliveries.ts";
+import {
+  createMcpConnectionsResource,
+  type McpConnectionsResource,
+} from "./resources/mcp-connections.ts";
+import {
+  createMemoriesResource,
+  type MemoriesResource,
+} from "./resources/memories.ts";
+import {
+  createMerchantBindingsResource,
+  type MerchantBindingsResource,
+} from "./resources/merchant-bindings.ts";
+import {
+  createMerchantConnectionResource,
+  type MerchantConnectionResource,
+} from "./resources/merchant-connection.ts";
+import {
+  createMerchantUsageEventsResource,
+  type MerchantUsageEventsResource,
+} from "./resources/merchant-usage-events.ts";
+import {
+  createPromptsResource,
+  type PromptsResource,
+} from "./resources/prompts.ts";
+import {
+  createProvidersResource,
+  type ProvidersResource,
+} from "./resources/providers.ts";
+import {
+  createSessionsResource,
+  type SessionsResource,
+} from "./resources/sessions.ts";
 import { createAgentSkillsResource } from "./resources/skills.ts";
-import { createTasksResource } from "./resources/tasks.ts";
-import { createTenantResource } from "./resources/tenant.ts";
-import { createUsageResource } from "./resources/usage.ts";
-import { createWorkspacesResource } from "./resources/workspaces.ts";
+import { createTasksResource, type TasksResource } from "./resources/tasks.ts";
+import {
+  createTenantResource,
+  type TenantResource,
+} from "./resources/tenant.ts";
+import { createUsageResource, type UsageResource } from "./resources/usage.ts";
+import {
+  createWorkspacesResource,
+  type WorkspacesResource,
+} from "./resources/workspaces.ts";
 import type {
   AgentClient,
-  AgentsResource,
-  ArtifactsResource,
   BlazingAgentsOptions,
   BlazingAgentsRequestOptions,
-  ChatConnectionsResource,
-  ChatDeliveriesResource,
   ChatInput,
   ChatResult,
   CompletionInput,
   CompletionResult,
   ContinueChatInput,
   HttpConfig,
-  McpConnectionsResource,
-  MemoriesResource,
-  MerchantBindingsResource,
-  MerchantConnectionResource,
-  MerchantUsageEventsResource,
   ObjectInput,
   ObjectResult,
-  PromptsResource,
-  ProvidersResource,
-  SessionsResource,
-  TasksResource,
-  TenantResource,
-  UsageResource,
   UserClient,
-  WorkspacesResource,
 } from "./types.ts";
 
 const DEFAULT_BASE_URL = "https://api.blazingagents.com";
@@ -167,12 +192,12 @@ export class BlazingAgents {
    * Scope requests to one end user. IDs use printable ASCII, at most 256 characters, without leading or trailing spaces.
    * @param userId - Printable ASCII end-user ID, at most 256 characters with no surrounding spaces.
    * @returns A client scoped to the validated end-user ID.
-   * @throws ZodError - If the user ID is invalid.
+   * @throws BlazingAgentsError - With code `invalid_request` if the user ID is invalid.
    */
   forUser(userId: string): UserClient {
     return createUserClient({
       ...this.#config,
-      scopeUserId: scopedUserIdSchema.parse(userId),
+      scopeUserId: parseClientInput(scopedUserIdSchema, userId, "userId"),
     });
   }
 

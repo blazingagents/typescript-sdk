@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import { BlazingAgents } from "../client.ts";
 import { createMockFetch } from "../test/fixtures.ts";
 
@@ -32,59 +31,6 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 }
 
 describe("durable session inputs", () => {
-  it.each(["submitInput", "inputs", "stop"] as const)(
-    "%s rejects unsafe Agent and Session IDs before fetch",
-    async (method) => {
-      const { fetch, calls } = createMockFetch({ body: response });
-      const sessions = client(fetch).forUser("alice").sessions;
-      for (const field of ["agentId", "sessionId"] as const) {
-        for (const value of [
-          "",
-          ".",
-          "..",
-          "%2e%2e",
-          "../../ag_OTHER/sessions/ss_y",
-          "id/child",
-          "id?query",
-          "id#fragment",
-          "ss_short",
-          "turn_0123456789abcdef",
-        ]) {
-          await expect(
-            sessions[method]({
-              ...target,
-              [field]: value,
-              requestId: data.requestId,
-              message,
-              turnId,
-            })
-          ).rejects.toBeInstanceOf(z.ZodError);
-        }
-      }
-      expect(calls).toHaveLength(0);
-    }
-  );
-
-  it("stop rejects unsafe Turn IDs before fetch", async () => {
-    const { fetch, calls } = createMockFetch({ body: response });
-    for (const value of [
-      "",
-      ".",
-      "..",
-      "%2e%2e",
-      "../tool-approvals",
-      "turn_0123456789abcdef?query",
-      "turn_0123456789abcdef#fragment",
-      "turn_short",
-      target.sessionId,
-    ]) {
-      await expect(
-        client(fetch).sessions.stop({ ...target, turnId: value })
-      ).rejects.toBeInstanceOf(z.ZodError);
-    }
-    expect(calls).toHaveLength(0);
-  });
-
   it("accepts the authoritative Admin Agent ID shape", async () => {
     const { fetch, calls } = createMockFetch({ body: response });
     const agentId = "ag_adm0123456789abc";

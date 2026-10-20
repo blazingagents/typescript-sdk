@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `ErrorCode` includes `subscription_already_paid`: `POST /v1/checkouts` returns it with 409 when the tenant already pays, or when Polar reports an earlier checkout as paid. `TaskRun.errorCode` accepts it too.
+
 ## 0.37.0
 
 ### Added

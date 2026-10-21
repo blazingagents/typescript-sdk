@@ -27,6 +27,7 @@ export const apiErrorCodeSchema = z.enum([
   "service_unavailable",
   "checkout_evidence_mismatch",
   "subscription_already_paid",
+  "subscription_not_cancelled",
   "agent_disabled",
   "admin_agent_managed",
   "agent_mcp_connection_not_found",

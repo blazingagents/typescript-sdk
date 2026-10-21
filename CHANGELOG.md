@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `ErrorCode` includes `subscription_not_cancelled`: `DELETE /v1/tenant` returns it with 409 while the tenant's subscription still renews. `TaskRun.errorCode` accepts it too.
+
 ## 0.38.0
 
 ### Added

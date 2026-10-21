@@ -1,6 +1,6 @@
 import { Cron } from "croner";
 import { z } from "zod";
-import { apiErrorCodeSchema, paginatedResponseSchema } from "../api.ts";
+import { paginatedResponseSchema, receivedApiErrorCodeSchema } from "../api.ts";
 import {
   agentIdSchema,
   sessionIdSchema,
@@ -291,7 +291,7 @@ export const taskRunResponseSchema = z
     turnId: turnIdSchema.nullable(),
     status: taskRunStatusSchema,
     error: z.string().nullable(),
-    errorCode: apiErrorCodeSchema
+    errorCode: receivedApiErrorCodeSchema
       .nullable()
       .describe(
         "Machine-readable reason a run ended `blocked` or `failed`: one of the API error codes, such as `usage_credit_required`, `quota_exceeded` or `provider_required`. `null` for every other run, and for a failure without a code; `error` carries the message."

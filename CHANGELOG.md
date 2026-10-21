@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `TaskRunResponse.errorCode` is now `BlazingAgentsErrorCode | null`, an open string, the type thrown errors already use. `tasks.getRun()` and `tasks.listRuns()` no longer throw `invalid_response` on a run that ended with an error code newer than this SDK, and the platform can add a code without an SDK release first. Listed codes still autocomplete. An exhaustive `switch` over `run.errorCode` now needs a `default` branch:
+
+  ```ts
+  switch (run.errorCode) {
+    case "usage_credit_required":
+      // …
+      break;
+    default:
+      // any other code, including one this SDK version does not list
+      break;
+  }
+  ```
+
 ## 0.40.0
 
 ### Added

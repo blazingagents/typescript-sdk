@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `ErrorCode` includes `merchant_connection_in_use`: `DELETE /v1/merchant-connection` and `POST /v1/merchant-connection` return it with 409 while a request admitted on the current merchant connection is still running. `TaskRun.errorCode` accepts it too.
+
 ## 0.39.0
 
 ### Added

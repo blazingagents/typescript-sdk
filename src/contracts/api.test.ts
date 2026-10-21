@@ -78,6 +78,7 @@ describe("known error codes", () => {
       "chat_webhook_conflict",
       "chat_webhook_registration_failed",
       "merchant_connection_not_found",
+      "merchant_connection_in_use",
       "merchant_credential_invalid",
       "merchant_provider_unavailable",
       "merchant_customer_not_found",

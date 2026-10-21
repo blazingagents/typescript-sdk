@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { BlazingAgentsErrorCode } from "../types.ts";
 
 /**
  * `/v1` error envelope — see docs/adr/0003-ai-sdk-native-wire-protocol.md.
@@ -95,7 +96,14 @@ export const apiErrorCodeSchema = z.enum([
   "tenant_not_deleting",
 ]);
 
-const receivedApiErrorCodeSchema = z.string().min(1);
+/**
+ * A code as received: any non-empty string, so a server newer than this SDK
+ * can send a code the SDK does not list. The type keeps autocomplete for the
+ * listed codes.
+ */
+export const receivedApiErrorCodeSchema: z.ZodType<BlazingAgentsErrorCode> = z
+  .string()
+  .min(1);
 
 const receivedApiErrorSchema = z
   .object({

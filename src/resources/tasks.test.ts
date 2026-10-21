@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
 import { agentConfigFixture } from "../contracts/test/fixtures/tasks.ts";
+import type { BlazingAgentsErrorCode, TasksResource } from "../index.ts";
 import { createMockFetch } from "../test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
@@ -260,6 +261,34 @@ describe("client.tasks", () => {
       sessionId: null,
       status: "failed",
     });
+  });
+
+  it("types a run's errorCode as the open error code", () => {
+    expectTypeOf<
+      Awaited<ReturnType<TasksResource["getRun"]>>["errorCode"]
+    >().toEqualTypeOf<BlazingAgentsErrorCode | null>();
+  });
+
+  it("getRun and listRuns accept an error code newer than this SDK", async () => {
+    const failedRun = {
+      ...taskRunRow,
+      error: "A newer server outcome",
+      errorCode: "some_future_code",
+      finishedAt: "2026-01-01T00:00:01.000Z",
+      status: "failed",
+    };
+
+    await expect(
+      client(createMockFetch({ body: failedRun }).fetch).tasks.getRun({
+        taskId: "tk_0123456789abcdef",
+        runId: "tr_0123456789abcdef",
+      })
+    ).resolves.toMatchObject({ errorCode: "some_future_code" });
+    await expect(
+      client(
+        createMockFetch({ body: { data: [failedRun], nextCursor: null } }).fetch
+      ).tasks.listRuns({ taskId: "tk_0123456789abcdef" })
+    ).resolves.toMatchObject({ data: [{ errorCode: "some_future_code" }] });
   });
 
   it("runMessages gets /v1/tasks/:id/runs/:runId/messages", async () => {

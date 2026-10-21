@@ -89,6 +89,29 @@ describe("taskRunResponseSchema", () => {
     ).toBe("usage_credit_required");
   });
 
+  it("keeps an error code newer than this SDK", () => {
+    expect(
+      taskRunResponseSchema.parse(
+        createTaskRunFixture({
+          status: "failed",
+          error: "A newer server outcome",
+          errorCode: "some_future_code",
+        })
+      ).errorCode
+    ).toBe("some_future_code");
+  });
+
+  it("accepts a null errorCode and rejects an empty one", () => {
+    expect(
+      taskRunResponseSchema.parse(createTaskRunFixture({ errorCode: null }))
+        .errorCode
+    ).toBeNull();
+    expect(
+      taskRunResponseSchema.safeParse(createTaskRunFixture({ errorCode: "" }))
+        .success
+    ).toBe(false);
+  });
+
   it("rejects a run without errorCode", () => {
     const { errorCode: _, ...runWithoutCode } = createTaskRunFixture();
     expect(taskRunResponseSchema.safeParse(runWithoutCode).success).toBe(false);

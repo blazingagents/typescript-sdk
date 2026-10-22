@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+This release moves Session ownership from your backend to the API. The platform has no production users yet, so the removal ships in one release without a deprecation step.
+
+### Changed
+
+- `createChatRelay` and `createCompletionRelay` now run each request as the signed-in End-user through `client.forUser(context.userId)`. The API reaches only that End-user's Agents, Sessions and Workspaces, binds a new Session to that End-user, and answers 404 (`not_found` or `workspace_not_found`) for anything else. The relay no longer puts `userId` in the request body. Make sure `context.agentId` names an Agent that this End-user owns and whose Workspace the same End-user owns. An Admin Agent, or an Agent of another End-user, now answers 404.
+- A Session that belongs to another End-user, or does not exist, now yields the API's 404 with its error code and request ID, instead of a local 403 `forbidden`.
+- A `context.userId` that `forUser` rejects, such as one with leading or trailing spaces, answers 500 `internal_error` ("Request failed.") without the ID or the validation message, and sends nothing to the API. Fix the resolver that returned it.
+- The `client` option must now provide `forUser`. A `BlazingAgents` client does.
+
+### Removed
+
+- `SessionOwnershipStore` and the `sessions` option of `createChatRelay`. The API now enforces which End-user owns each Session, so delete your ownership table and its reads and writes, and pass the same `BlazingAgents` client:
+
+  ```ts
+  // Before
+  const relay = createChatRelay({
+    client,
+    sessions: { ownerOf, recordOwner },
+    resolveContext,
+  });
+  // After
+  const relay = createChatRelay({ client, resolveContext });
+  ```
+
 ## 0.42.1
 
 ### Changed

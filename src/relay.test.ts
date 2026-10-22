@@ -1,14 +1,20 @@
 import type { UIMessage } from "ai";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { BlazingAgentsError } from "./errors.ts";
+import { BlazingAgents } from "./client.ts";
 import { defineFunction } from "./functions.ts";
 import {
   createChatRelay,
   createCompletionRelay,
   type RelayContext,
-  type SessionOwnershipStore,
 } from "./relay.ts";
+import type { FetchOption } from "./test/fixtures.ts";
+
+const BASE = "http://api.test";
+const agentId = "ag_0123456789abcdef";
+const sessionId = "ss_0123456789abcdef";
+const turnId = "tr_0123456789abcdef";
+const SCOPE_HEADER = "x-ba-user-id";
 
 const message: UIMessage = {
   id: "message-1",
@@ -16,16 +22,98 @@ const message: UIMessage = {
   role: "user",
 };
 const context: RelayContext = {
-  agentId: "ag_0123456789abcdef",
+  agentId,
   metadata: { plan: "demo" },
   userId: "user-a",
 };
+const sseBody = 'data: {"type":"text-delta","id":"t","delta":"Hi"}\n\n';
 
-function request(body: unknown): Request {
+interface ApiCall {
+  body: unknown;
+  headers: Headers;
+  method: string;
+  path: string;
+  signal?: AbortSignal | null;
+}
+
+type Respond = (call: ApiCall) => Response | Promise<Response>;
+
+/**
+ * A real client over a fake `fetch`, so each test asserts the HTTP request the
+ * API would observe.
+ */
+function fakeApi(respond: Respond) {
+  const calls: ApiCall[] = [];
+  // biome-ignore lint/suspicious/useAwait: the fake fetch returns a Promise
+  const fetch: FetchOption = async (url, init = {}) => {
+    const call: ApiCall = {
+      body: typeof init.body === "string" ? JSON.parse(init.body) : undefined,
+      headers: new Headers(init.headers as HeadersInit),
+      method: init.method ?? "GET",
+      path: url.slice(BASE.length),
+      signal: init.signal,
+    };
+    calls.push(call);
+    return respond(call);
+  };
+  return {
+    calls,
+    client: new BlazingAgents({ apiKey: "ba_test", baseUrl: BASE, fetch }),
+  };
+}
+
+function chatReply() {
+  return new Response(sseBody, {
+    status: 201,
+    headers: {
+      "content-type": "text/event-stream",
+      location: `/v1/agents/${agentId}/sessions/${sessionId}`,
+      "x-ba-turn-id": turnId,
+      "x-request-id": "req-chat",
+    },
+  });
+}
+
+function continueReply() {
+  return new Response(sseBody, {
+    headers: {
+      "content-type": "text/event-stream",
+      "x-ba-turn-id": turnId,
+      "x-request-id": "req-continue",
+    },
+  });
+}
+
+function completionReply() {
+  return new Response("Done", {
+    headers: {
+      "content-type": "text/plain",
+      "x-request-id": "req-completion",
+    },
+  });
+}
+
+function apiError(status: number, code: string, requestId: string) {
+  return Response.json(
+    { error: { code, message: `${code} message.` } },
+    { headers: { "x-request-id": requestId }, status }
+  );
+}
+
+function request(body: unknown, init: RequestInit = {}): Request {
   return new Request("http://example.test/chat", {
     body: JSON.stringify(body),
     headers: { "content-type": "application/json" },
     method: "POST",
+    ...init,
+  });
+}
+
+/** Resolves the End-user from a header, as a Tenant resolves its session cookie. */
+function userFromHeader(incoming: Request): Promise<RelayContext> {
+  return Promise.resolve({
+    ...context,
+    userId: incoming.headers.get("x-test-user") as string,
   });
 }
 
@@ -59,129 +147,199 @@ const approvalMessage: UIMessage = {
     },
   ],
 };
+const decisions = [
+  { approvalId: "approval-1", approved: true },
+  { approvalId: "approval-2", approved: false, reason: "No" },
+];
+const continuePath = `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/continue`;
 
-function sessions(owner?: string): SessionOwnershipStore {
-  return {
-    ownerOf: vi.fn(() => Promise.resolve(owner)),
-    recordOwner: vi.fn(() => Promise.resolve()),
-  };
-}
-
-describe("relay factories", () => {
-  it("creates a Session with trusted context and records its owner", async () => {
-    const store = sessions();
-    const chat = vi.fn(() =>
-      Promise.resolve({
-        requestId: "request-1",
-        sessionId: Promise.resolve("ss_0123456789abcdef"),
-        turnId: Promise.resolve("turn_0123456789abcdef"),
-        toStream: () => new ReadableStream<Uint8Array>(),
-        toResponse: () =>
-          new Response("chat", {
-            headers: {
-              location:
-                "/v1/agents/ag_0123456789abcdef/sessions/ss_0123456789abcdef",
-            },
-          }),
-      })
-    );
+describe("createChatRelay", () => {
+  it("creates a Session as the signed-in End-user and relays the API's headers", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
     const relay = createChatRelay({
-      client: { chat, continueChat: vi.fn() },
+      client,
       resolveContext: () => Promise.resolve(context),
-      sessions: store,
     });
 
     const response = await relay(
       request({
-        agentId: "attacker-agent",
+        agentId: "ag_attackeragent0000",
         message,
-        sessionId: undefined,
         trigger: "submit-message",
         userId: "attacker",
       })
     );
 
-    expect(await response.text()).toBe("chat");
-    expect(chat).toHaveBeenCalledWith({
-      agentId: context.agentId,
-      message,
-      messageId: undefined,
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].path).toBe(`/v1/agents/${agentId}/sessions`);
+    expect(calls[0].headers.get(SCOPE_HEADER)).toBe("user-a");
+    expect(calls[0].headers.get("authorization")).toBe("Bearer ba_test");
+    expect(calls[0].body).toEqual({
+      messages: [message],
       metadata: context.metadata,
-      abortSignal: expect.any(AbortSignal),
       trigger: "submit-message",
-      userId: context.userId,
     });
-    expect(store.recordOwner).toHaveBeenCalledWith(
-      "ss_0123456789abcdef",
-      "user-a"
+    expect(response.status).toBe(201);
+    expect(await response.text()).toBe(sseBody);
+    expect(response.headers.get("location")).toBe(
+      `/v1/agents/${agentId}/sessions/${sessionId}`
     );
+    expect(response.headers.get("x-ba-turn-id")).toBe(turnId);
+    expect(response.headers.get("x-request-id")).toBe("req-chat");
   });
 
-  it("authorizes resume and forwards regeneration", async () => {
-    const store = sessions("user-a");
-    const chat = vi.fn(() =>
-      Promise.resolve({
-        sessionId: Promise.resolve("ss_0123456789abcdef"),
-        turnId: Promise.resolve("turn_0123456789abcdef"),
-        toStream: () => new ReadableStream<Uint8Array>(),
-        toResponse: () => new Response("resumed"),
-      })
-    );
+  it("resumes and regenerates inside the End-user's scope", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
     const relay = createChatRelay({
-      client: { chat, continueChat: vi.fn() },
+      client,
       resolveContext: () => Promise.resolve(context),
-      sessions: store,
     });
 
-    expect(
-      await (
-        await relay(
-          request({
-            message,
-            messageId: "assistant-1",
-            sessionId: "ss_0123456789abcdef",
-            trigger: "regenerate-message",
-          })
-        )
-      ).text()
-    ).toBe("resumed");
-    expect(chat).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageId: "assistant-1",
-        sessionId: "ss_0123456789abcdef",
-        trigger: "regenerate-message",
-      })
-    );
-    expect(store.recordOwner).not.toHaveBeenCalled();
+    await (await relay(request({ message, sessionId }))).text();
+    await (
+      await relay(
+        request({
+          message,
+          messageId: "assistant-1",
+          sessionId,
+          trigger: "regenerate-message",
+        })
+      )
+    ).text();
+
+    expect(calls.map((call) => call.path)).toEqual([
+      `/v1/agents/${agentId}/sessions/${sessionId}`,
+      `/v1/agents/${agentId}/sessions/${sessionId}`,
+    ]);
+    expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+      "user-a",
+      "user-a",
+    ]);
+    expect(calls[0].body).toMatchObject({ trigger: "submit-message" });
+    expect(calls[1].body).toMatchObject({
+      messageId: "assistant-1",
+      trigger: "regenerate-message",
+    });
   });
 
-  it("rejects missing authentication, foreign Sessions, and invalid chat", async () => {
-    const client = {
-      chat: vi.fn(),
-      continueChat: vi.fn(),
-    };
+  it("passes the request's functions to the API", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve({ ...context, functions }),
+    });
+
+    await (await relay(request({ message }))).text();
+
+    expect(calls[0].body).toMatchObject({
+      functions: { getOrder: { description: "Get an order" } },
+    });
+  });
+
+  it.each(["not_found", "workspace_not_found"])(
+    "answers a Session outside the End-user's scope with the API's %s",
+    async (code) => {
+      const { calls, client } = fakeApi(() => apiError(404, code, "req-404"));
+      const relay = createChatRelay({
+        client,
+        resolveContext: () => Promise.resolve(context),
+      });
+
+      for (const body of [
+        { message, sessionId },
+        { message: approvalMessage, sessionId },
+      ]) {
+        const response = await relay(request(body));
+        expect(response.status).toBe(404);
+        expect(response.headers.get("x-request-id")).toBe("req-404");
+        expect(await response.json()).toEqual({
+          error: { code, message: `${code} message.` },
+        });
+      }
+      expect(calls).toHaveLength(2);
+      expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+        "user-a",
+        "user-a",
+      ]);
+    }
+  );
+
+  it("submits an approval round as the End-user", async () => {
+    const { calls, client } = fakeApi(() => continueReply());
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve({ ...context, functions }),
+    });
+
+    const response = await relay(
+      request({ message: approvalMessage, sessionId })
+    );
+
+    expect(await response.text()).toBe(sseBody);
+    expect(response.headers.get("x-ba-turn-id")).toBe(turnId);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].path).toBe(continuePath);
+    expect(calls[0].headers.get(SCOPE_HEADER)).toBe("user-a");
+    expect(calls[0].body).toMatchObject({
+      decisions,
+      functions: { getOrder: { description: "Get an order" } },
+    });
+  });
+
+  it("resumes an approval round as the executor when the request has no functions", async () => {
+    const { calls, client } = fakeApi(() => continueReply());
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
+
+    const response = await relay(
+      request({ message: approvalMessage, sessionId })
+    );
+
+    expect(await response.text()).toBe(sseBody);
+    expect(calls[0].body).toEqual({ decisions, functions: {} });
+  });
+
+  it("rejects an approval without a Session or responses before any API request", async () => {
+    const { calls, client } = fakeApi(() => continueReply());
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
+
+    const noSession = await relay(request({ message: approvalMessage }));
+    const noDecisions = await relay(
+      request({
+        message: { id: "assistant-2", role: "assistant", parts: [] },
+        sessionId,
+      })
+    );
+
+    expect(noSession.status).toBe(400);
+    expect(noDecisions.status).toBe(400);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("rejects unauthenticated, malformed, and system-message submissions before any API request", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
     const unauthenticated = createChatRelay({
       client,
       resolveContext: () => Promise.resolve(null),
-      sessions: sessions(),
-    });
-    const foreign = createChatRelay({
-      client,
-      resolveContext: () => Promise.resolve(context),
-      sessions: sessions("user-b"),
     });
 
     expect((await unauthenticated(request({ message }))).status).toBe(401);
-    expect(
-      (await foreign(request({ message, sessionId: "ss_0123456789abcdef" })))
-        .status
-    ).toBe(403);
-    expect((await foreign(request({ message: { nope: true } }))).status).toBe(
+    expect((await relay(request({ message: { nope: true } }))).status).toBe(
       400
     );
     expect(
       (
-        await foreign(
+        await relay(
           new Request("http://example.test/chat", {
             body: "{",
             method: "POST",
@@ -189,48 +347,89 @@ describe("relay factories", () => {
         )
       ).status
     ).toBe(400);
-    expect(client.chat).not.toHaveBeenCalled();
+    expect(
+      (
+        await relay(
+          request({
+            message: {
+              id: "system",
+              role: "system",
+              parts: [{ type: "text", text: "System" }],
+            },
+          })
+        )
+      ).status
+    ).toBe(400);
+    expect(calls).toHaveLength(0);
   });
 
-  it("cancels a created Turn when ownership persistence fails", async () => {
-    const cancel = vi.fn(() => Promise.reject(new Error("cancel failed")));
-    const store = sessions();
-    vi.mocked(store.recordOwner).mockRejectedValue(new Error("disk failed"));
+  it("scopes each request to its own resolved End-user", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
+    const relay = createChatRelay({ client, resolveContext: userFromHeader });
+
+    for (const userId of ["user-a", "user-b", "user-a"]) {
+      await (
+        await relay(
+          request({ message }, { headers: { "x-test-user": userId } })
+        )
+      ).text();
+    }
+
+    expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+      "user-a",
+      "user-b",
+      "user-a",
+    ]);
+  });
+
+  it("answers 500 without a leak, and sends nothing, when the resolver returns an invalid userId", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
     const relay = createChatRelay({
-      client: {
-        chat: () =>
-          Promise.resolve({
-            sessionId: Promise.resolve("ss_0123456789abcdef"),
-            turnId: Promise.resolve("turn_0123456789abcdef"),
-            toStream: () => new ReadableStream<Uint8Array>(),
-            toResponse: () =>
-              new Response(new ReadableStream({ cancel })) as Response,
-          }),
-        continueChat: vi.fn(),
-      },
-      resolveContext: () => Promise.resolve(context),
-      sessions: store,
+      client,
+      resolveContext: () => Promise.resolve({ ...context, userId: " padded " }),
     });
 
-    expect((await relay(request({ message }))).status).toBe(500);
-    expect(cancel).toHaveBeenCalledOnce();
+    const response = await relay(request({ message }));
+    const text = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(JSON.parse(text)).toEqual({
+      error: { code: "internal_error", message: "Request failed." },
+    });
+    expect(text).not.toContain("padded");
+    expect(calls).toHaveLength(0);
   });
 
-  it("relays completion text with trusted attribution", async () => {
-    const completion = vi.fn(() =>
-      Promise.resolve({
-        requestId: "request-2",
-        text: Promise.resolve("done"),
-        textStream: new ReadableStream<string>(),
-        toResponse: () =>
-          new Response("completion", {
-            headers: { "x-request-id": "request-2" },
-            status: 201,
-          }),
-      })
+  it("aborts the API request when the browser stops", async () => {
+    const { calls, client } = fakeApi(
+      (call) =>
+        new Promise<Response>((_resolve, reject) => {
+          call.signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError"))
+          );
+        })
     );
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
+    const stop = new AbortController();
+
+    const pending = relay(request({ message }, { signal: stop.signal }));
+    await expect.poll(() => calls.length).toBe(1);
+    stop.abort();
+    const response = await pending;
+
+    expect(calls[0].signal?.aborted).toBe(true);
+    expect(response.status).toBe(499);
+  });
+});
+
+describe("createCompletionRelay", () => {
+  it("relays completion text as the signed-in End-user", async () => {
+    const { calls, client } = fakeApi(() => completionReply());
     const relay = createCompletionRelay({
-      client: { completion },
+      client,
       resolveContext: () => Promise.resolve(context),
     });
 
@@ -238,230 +437,111 @@ describe("relay factories", () => {
       request({ agentId: "attacker", prompt: " Explain ", userId: "attacker" })
     );
 
-    expect(response.status).toBe(201);
-    expect(await response.text()).toBe("completion");
-    expect(completion).toHaveBeenCalledWith({
-      agentId: context.agentId,
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("Done");
+    expect(response.headers.get("x-request-id")).toBe("req-completion");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].path).toBe(`/v1/agents/${agentId}/generation`);
+    expect(calls[0].headers.get(SCOPE_HEADER)).toBe("user-a");
+    expect(calls[0].body).toEqual({
       metadata: context.metadata,
+      output: { type: "text" },
       prompt: "Explain",
-      abortSignal: expect.any(AbortSignal),
-      userId: context.userId,
     });
   });
 
-  it("returns safe completion errors while preserving upstream status and request id", async () => {
+  it("scopes each request to its own resolved End-user", async () => {
+    const { calls, client } = fakeApi(() => completionReply());
     const relay = createCompletionRelay({
-      client: {
-        completion: () =>
-          Promise.reject(
-            new BlazingAgentsError({
-              code: "quota_exceeded",
-              headers: new Headers({ "x-request-id": "request-3" }),
-              message: "Quota exceeded.",
-              status: 429,
-            })
-          ),
-      },
+      client,
+      resolveContext: userFromHeader,
+    });
+
+    for (const userId of ["user-a", "user-b"]) {
+      await (
+        await relay(
+          request({ prompt: "Hello" }, { headers: { "x-test-user": userId } })
+        )
+      ).text();
+    }
+
+    expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+      "user-a",
+      "user-b",
+    ]);
+  });
+
+  it("answers 500 without a leak, and sends nothing, when the resolver returns an invalid userId", async () => {
+    const { calls, client } = fakeApi(() => completionReply());
+    const relay = createCompletionRelay({
+      client,
+      resolveContext: () => Promise.resolve({ ...context, userId: " padded " }),
+    });
+
+    const response = await relay(request({ prompt: "Hello" }));
+    const text = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(JSON.parse(text)).toEqual({
+      error: { code: "internal_error", message: "Request failed." },
+    });
+    expect(text).not.toContain("padded");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("returns safe errors while preserving the upstream status and request id", async () => {
+    const { client } = fakeApi(() =>
+      apiError(429, "quota_exceeded", "request-3")
+    );
+    const relay = createCompletionRelay({
+      client,
       resolveContext: () => Promise.resolve(context),
     });
 
     const response = await relay(request({ prompt: "Hello" }));
+
     expect(response.status).toBe(429);
     expect(response.headers.get("x-request-id")).toBe("request-3");
     expect(await response.json()).toEqual({
-      error: { code: "quota_exceeded", message: "Quota exceeded." },
+      error: { code: "quota_exceeded", message: "quota_exceeded message." },
     });
   });
 
-  it("maps aborts, invalid bodies, missing auth, and unexpected failures", async () => {
-    const client = {
-      chat: vi.fn(),
-      completion: vi.fn(() =>
-        Promise.reject(
-          new BlazingAgentsError({
-            code: "request_aborted",
-            message: "aborted",
-          })
-        )
-      ),
-    };
-    const relay = createCompletionRelay({
-      client,
-      resolveContext: () => Promise.resolve(context),
+  it("maps aborts, network failures, invalid bodies, missing auth, and resolver failures", async () => {
+    const aborted = fakeApi(() =>
+      Promise.reject(new DOMException("aborted", "AbortError"))
+    );
+    const unreachable = fakeApi(() =>
+      Promise.reject(new TypeError("upstream unavailable"))
+    );
+    const resolve = () => Promise.resolve(context);
+    const abortedRelay = createCompletionRelay({
+      client: aborted.client,
+      resolveContext: resolve,
+    });
+    const unreachableRelay = createCompletionRelay({
+      client: unreachable.client,
+      resolveContext: resolve,
     });
     const unauthenticated = createCompletionRelay({
-      client,
+      client: aborted.client,
       resolveContext: () => Promise.resolve(null),
     });
     const broken = createCompletionRelay({
-      client,
+      client: aborted.client,
       resolveContext: () => Promise.reject(new Error("secret")),
     });
 
-    expect((await relay(request({ prompt: "Hello" }))).status).toBe(499);
-    expect((await relay(request({ prompt: " " }))).status).toBe(400);
+    expect((await abortedRelay(request({ prompt: "Hello" }))).status).toBe(499);
+    expect((await abortedRelay(request({ prompt: " " }))).status).toBe(400);
     expect((await unauthenticated(request({ prompt: "Hello" }))).status).toBe(
       401
+    );
+    expect((await unreachableRelay(request({ prompt: "Hello" }))).status).toBe(
+      502
     );
     const response = await broken(request({ prompt: "Hello" }));
     expect(response.status).toBe(500);
     expect(await response.text()).not.toContain("secret");
-
-    vi.mocked(client.completion).mockRejectedValueOnce(
-      new BlazingAgentsError({
-        code: "network_error",
-        message: "upstream unavailable",
-        requestId: "request-4",
-      })
-    );
-    const unavailable = await relay(request({ prompt: "Hello" }));
-    expect(unavailable.status).toBe(502);
-    expect(unavailable.headers.get("x-request-id")).toBe("request-4");
   });
-
-  it("passes the request's functions to chat", async () => {
-    const chat = vi.fn(() =>
-      Promise.resolve({
-        sessionId: Promise.resolve("ss_0123456789abcdef"),
-        turnId: Promise.resolve("turn_0123456789abcdef"),
-        toStream: () => new ReadableStream<Uint8Array>(),
-        toResponse: () => new Response("chat"),
-      })
-    );
-    const relay = createChatRelay({
-      client: { chat, continueChat: vi.fn() },
-      resolveContext: () => Promise.resolve({ ...context, functions }),
-      sessions: sessions(),
-    });
-    await relay(request({ message }));
-    expect(chat).toHaveBeenCalledWith(expect.objectContaining({ functions }));
-  });
-
-  it("decides approval responses and resumes with the request's functions", async () => {
-    const continueChat = vi.fn(() =>
-      Promise.resolve({
-        sessionId: Promise.resolve("ss_0123456789abcdef"),
-        turnId: Promise.resolve("turn_0123456789abcdef"),
-        toStream: () => new ReadableStream<Uint8Array>(),
-        toResponse: () => new Response("resumed"),
-      })
-    );
-    const relay = createChatRelay({
-      client: { chat: vi.fn(), continueChat },
-      resolveContext: () => Promise.resolve({ ...context, functions }),
-      sessions: sessions("user-a"),
-    });
-
-    const response = await relay(
-      request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
-    );
-
-    expect(await response.text()).toBe("resumed");
-    const target = {
-      agentId: context.agentId,
-      sessionId: "ss_0123456789abcdef",
-      abortSignal: expect.any(AbortSignal),
-    };
-    expect(continueChat).toHaveBeenCalledWith({
-      ...target,
-      decisions: [
-        { approvalId: "approval-1", approved: true },
-        { approvalId: "approval-2", approved: false, reason: "No" },
-      ],
-      functions,
-    });
-  });
-
-  it("resumes as the executor even when the request has no functions", async () => {
-    const continueChat = vi.fn(() =>
-      Promise.resolve({
-        sessionId: Promise.resolve("ss_0123456789abcdef"),
-        turnId: Promise.resolve("turn_0123456789abcdef"),
-        toStream: () => new ReadableStream<Uint8Array>(),
-        toResponse: () => new Response("resumed"),
-      })
-    );
-    const relay = createChatRelay({
-      client: { chat: vi.fn(), continueChat },
-      resolveContext: () => Promise.resolve(context),
-      sessions: sessions("user-a"),
-    });
-
-    const response = await relay(
-      request({ message: approvalMessage, sessionId: "ss_0123456789abcdef" })
-    );
-
-    expect(await response.text()).toBe("resumed");
-    expect(continueChat).toHaveBeenCalledWith({
-      agentId: context.agentId,
-      sessionId: "ss_0123456789abcdef",
-      abortSignal: expect.any(AbortSignal),
-      decisions: [
-        { approvalId: "approval-1", approved: true },
-        { approvalId: "approval-2", approved: false, reason: "No" },
-      ],
-      functions: {},
-    });
-  });
-
-  it("rejects approval relays without a Session, ownership, or responses", async () => {
-    const client = { chat: vi.fn(), continueChat: vi.fn() };
-    const owned = createChatRelay({
-      client,
-      resolveContext: () => Promise.resolve(context),
-      sessions: sessions("user-a"),
-    });
-    const foreign = createChatRelay({
-      client,
-      resolveContext: () => Promise.resolve(context),
-      sessions: sessions("user-b"),
-    });
-
-    expect((await owned(request({ message: approvalMessage }))).status).toBe(
-      400
-    );
-    expect(
-      (
-        await foreign(
-          request({
-            message: approvalMessage,
-            sessionId: "ss_0123456789abcdef",
-          })
-        )
-      ).status
-    ).toBe(403);
-    expect(
-      (
-        await owned(
-          request({
-            message: { id: "assistant-2", role: "assistant", parts: [] },
-            sessionId: "ss_0123456789abcdef",
-          })
-        )
-      ).status
-    ).toBe(400);
-    expect(client.chat).not.toHaveBeenCalled();
-  });
-});
-
-it("rejects a system message without starting a Turn", async () => {
-  const chat = vi.fn();
-  const continueChat = vi.fn();
-  const relay = createChatRelay({
-    client: { chat, continueChat },
-    resolveContext: () => Promise.resolve(context),
-    sessions: sessions(),
-  });
-  const response = await relay(
-    request({
-      message: {
-        id: "system",
-        role: "system",
-        parts: [{ type: "text", text: "System" }],
-      },
-    })
-  );
-  expect(response.status).toBe(400);
-  expect(chat).not.toHaveBeenCalled();
-  expect(continueChat).not.toHaveBeenCalled();
 });

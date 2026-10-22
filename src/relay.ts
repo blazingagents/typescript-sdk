@@ -1,37 +1,31 @@
 import { safeValidateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
 import { extractApprovalDecisions } from "./approvals.ts";
-import type { BlazingAgents } from "./client.ts";
 import { sessionIdSchema } from "./contracts/ids.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import type { ChatFunctions } from "./functions.ts";
+import type { UserClient } from "./types.ts";
 
 export interface RelayContext {
+  /**
+   * Agent that serves this request. It must be owned by `userId`, and its
+   * Workspace must be owned by the same End-user; otherwise the API answers 404.
+   */
   agentId: string;
   /** Handlers for this authenticated request and its approved continuation. */
   functions?: ChatFunctions;
   metadata?: Record<string, unknown>;
+  /**
+   * The signed-in End-user. The relay scopes every API request to this
+   * End-user with `client.forUser(userId)`, so the API only reaches that
+   * End-user's Agents, Sessions, and Workspaces. Follows the `forUser` rules:
+   * printable ASCII, at most 256 characters, no surrounding spaces.
+   */
   userId: string;
 }
 
-export interface SessionOwnershipStore {
-  /**
-   * Looks up the end user who owns the Session.
-   * @param sessionId - Session to look up or record.
-   * @returns The owner ID, or undefined when no owner is recorded.
-   */
-  ownerOf(sessionId: string): Promise<string | undefined>;
-  /**
-   * Records ownership of a newly created Session.
-   * @param sessionId - Session to look up or record.
-   * @param userId - End-user ID for request scope.
-   * @returns Resolves after ownership is stored.
-   */
-  recordOwner(sessionId: string, userId: string): Promise<void>;
-}
-
-interface RelayOptions<Method extends keyof BlazingAgents> {
-  client: Pick<BlazingAgents, Method>;
+interface RelayOptions<Method extends keyof UserClient> {
+  client: { forUser(userId: string): Pick<UserClient, Method> };
   /**
    * Resolves authenticated Agent and end-user context, or null for an unauthenticated request.
    * @param request - Incoming HTTP request.
@@ -52,15 +46,14 @@ const chatBodySchema = z.object({
 const completionBodySchema = z.object({ prompt: z.string().trim().min(1) });
 
 /**
- * Relays useChat submissions. An assistant message carrying approval
- * responses submits the complete round and streams the continuation.
+ * Relays useChat submissions as the signed-in End-user. An assistant message
+ * carrying approval responses submits the complete round and streams the
+ * continuation.
  * @param options - Configuration for this operation.
- * @returns An HTTP handler that checks Session ownership before resuming.
+ * @returns An HTTP handler that runs each request through `client.forUser(context.userId)`, so the API answers 404 for a Session outside that End-user's scope.
  */
 export function createChatRelay(
-  options: RelayOptions<"chat" | "continueChat"> & {
-    sessions: SessionOwnershipStore;
-  }
+  options: RelayOptions<"chat" | "continueChat">
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {
@@ -68,6 +61,7 @@ export function createChatRelay(
       if (!context) {
         return errorResponse(401, "unauthorized", "Authentication required.");
       }
+      const client = scopeTo(options.client, context.userId);
       const body = chatBodySchema.parse(await request.json());
       const validated = await safeValidateUIMessages({
         messages: [body.message],
@@ -75,15 +69,9 @@ export function createChatRelay(
       if (!validated.success) {
         return errorResponse(400, "invalid_request", "Invalid chat message.");
       }
-      if (
-        body.sessionId !== undefined &&
-        (await options.sessions.ownerOf(body.sessionId)) !== context.userId
-      ) {
-        return errorResponse(403, "forbidden", "Session is not available.");
-      }
       const message = validated.data[0] as UIMessage;
       if (message.role === "assistant") {
-        return await relayApprovalResponses(options.client, {
+        return await relayApprovalResponses(client, {
           agentId: context.agentId,
           functions: context.functions,
           message,
@@ -105,9 +93,8 @@ export function createChatRelay(
         messageId: body.messageId,
         metadata: context.metadata,
         abortSignal: request.signal,
-        userId: context.userId,
       };
-      const result = await options.client.chat(
+      const result = await client.chat(
         body.sessionId === undefined
           ? {
               ...chatInput,
@@ -119,18 +106,6 @@ export function createChatRelay(
               trigger: body.trigger,
             }
       );
-      const sessionId = await result.sessionId;
-      if (body.sessionId === undefined) {
-        try {
-          await options.sessions.recordOwner(sessionId, context.userId);
-        } catch (error) {
-          await result
-            .toResponse()
-            .body?.cancel(error)
-            .catch(() => undefined);
-          throw error;
-        }
-      }
       return result.toResponse();
     } catch (error) {
       return safeErrorResponse(error);
@@ -139,10 +114,10 @@ export function createChatRelay(
 }
 
 /**
- * Validates the Session and forwards the last assistant approval round.
+ * Forwards the last assistant approval round to its Session.
  */
 async function relayApprovalResponses(
-  client: Pick<BlazingAgents, "continueChat">,
+  client: Pick<UserClient, "continueChat">,
   {
     functions,
     message,
@@ -185,9 +160,9 @@ async function relayApprovalResponses(
 }
 
 /**
- * Creates an authenticated HTTP handler that validates prompts and relays text generation.
+ * Creates an authenticated HTTP handler that validates prompts and relays text generation as the signed-in End-user.
  * @param options - Configuration for this operation.
- * @returns An HTTP handler that validates prompts and relays text generation.
+ * @returns An HTTP handler that runs each request through `client.forUser(context.userId)`.
  */
 export function createCompletionRelay(
   options: RelayOptions<"completion">
@@ -198,19 +173,35 @@ export function createCompletionRelay(
       if (!context) {
         return errorResponse(401, "unauthorized", "Authentication required.");
       }
+      const client = scopeTo(options.client, context.userId);
       const body = completionBodySchema.parse(await request.json());
-      const result = await options.client.completion({
+      const result = await client.completion({
         agentId: context.agentId,
         metadata: context.metadata,
         prompt: body.prompt,
         abortSignal: request.signal,
-        userId: context.userId,
       });
       return result.toResponse();
     } catch (error) {
       return safeErrorResponse(error);
     }
   };
+}
+
+/**
+ * Scopes the client to the resolved End-user. An ID that `forUser` rejects is a
+ * Tenant resolver bug, not a browser error, so it becomes a plain error that
+ * the generic 500 response answers without the validation message.
+ */
+function scopeTo<Method extends keyof UserClient>(
+  client: RelayOptions<Method>["client"],
+  userId: string
+): Pick<UserClient, Method> {
+  try {
+    return client.forUser(userId);
+  } catch (cause) {
+    throw new Error("The relay context has an invalid userId.", { cause });
+  }
 }
 
 /**

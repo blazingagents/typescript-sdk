@@ -67,9 +67,10 @@ const sessionId = await chat.sessionId;
 return chat.toResponse();
 ```
 
-Keep API keys on the server. For browser chat applications, relay `chat()`
-through your backend and use `BlazingAgentsChatTransport` with AI SDK
-`useChat`.
+Keep API keys on the server. For browser chat applications, serve
+`createChatRelay` from your backend and use `BlazingAgentsChatTransport` with
+AI SDK `useChat`. The relay runs each request as the signed-in End-user with
+`client.forUser(userId)`.
 
 ## Documentation
 

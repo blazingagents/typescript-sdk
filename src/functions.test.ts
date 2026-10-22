@@ -1159,10 +1159,6 @@ describe("approval relay without a registry", () => {
     const relay = createChatRelay({
       client,
       resolveContext: () => Promise.resolve({ agentId, userId: "user-a" }),
-      sessions: {
-        ownerOf: () => Promise.resolve("user-a"),
-        recordOwner: () => Promise.resolve(),
-      },
     });
     const response = await relay(
       new Request("http://example.test/chat", {
@@ -1193,6 +1189,7 @@ describe("approval relay without a registry", () => {
     expect(calls[0].path).toBe(
       `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/continue`
     );
+    expect(calls[0].headers.get("x-ba-user-id")).toBe("user-a");
     expect((of("/result")[0].body as { outcome: unknown }).outcome).toEqual({
       kind: "error",
       message: "Function getOrder is not available.",

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The `userId` description on memory creation now says a general memory is seen by unscoped turns only; a turn made through `forUser` sees only its end user's memories.
+
 ## 0.43.0
 
 This release moves Session ownership from your backend to the API and removes `workflowIssue` from merchant usage events. The platform has no production users yet, so each removal ships in one release without a deprecation step.

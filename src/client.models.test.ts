@@ -124,12 +124,7 @@ const models: Record<string, z.ZodType> = {
  * reports, with the reason. The platform sends these fields until it adopts
  * this release; delete each entry once the spec drops it.
  */
-const allowedDifferences: Record<string, string> = {
-  "MerchantUsageEventList.events[].workflowIssue: in the spec, missing from the SDK":
-    "removed; `nextAction` already says `retry` when automatic delivery stops",
-  "MerchantUsageEventResponse.event.workflowIssue: in the spec, missing from the SDK":
-    "removed; `nextAction` already says `retry` when automatic delivery stops",
-};
+const allowedDifferences: Record<string, string> = {};
 
 type Root = object;
 

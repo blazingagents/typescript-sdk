@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.43.0
 
 This release moves Session ownership from your backend to the API and removes `workflowIssue` from merchant usage events. The platform has no production users yet, so each removal ships in one release without a deprecation step.
 

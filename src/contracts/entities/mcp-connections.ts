@@ -117,7 +117,7 @@ const mcpConnectionUrlSchema = z
   )
   .transform((value) => new URL(value).toString());
 const mcpConnectionUrlInputSchema = mcpConnectionUrlSchema.describe(
-  "Streamable HTTP URL of the MCP server. Use `http` or `https`, with no credentials, query, or fragment."
+  "Streamable HTTP URL of the MCP server. Use `https`, with no credentials, query, or fragment."
 );
 
 const authTypeDescription =

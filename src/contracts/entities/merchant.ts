@@ -165,12 +165,6 @@ export type MerchantUsageEventStatus = z.infer<
   typeof merchantUsageEventStatusSchema
 >;
 
-export const merchantWorkflowIssueSchema = z.enum([
-  "error",
-  "cancelled",
-  "recovery_exhausted",
-]);
-
 export const merchantUsageEventNextActionSchema = z.enum([
   "none",
   "wait",
@@ -204,7 +198,6 @@ export const merchantUsageEventSchema = z
     lastAttemptAt: z.iso.datetime({ offset: true }).nullable(),
     lastErrorCode: z.string().nullable(),
     acceptedAt: z.iso.datetime({ offset: true }).nullable(),
-    workflowIssue: merchantWorkflowIssueSchema.nullable(),
     nextAction: merchantUsageEventNextActionSchema,
   })
   .strip();
@@ -284,19 +277,19 @@ export type MerchantUsageSummaryResponse = z.infer<
 >;
 
 /**
- * The operator-facing action derived from event state — computed at the
- * service seam, never persisted.
+ * The action a Tenant takes on an event. `automaticDeliveryStopped` is true
+ * when automatic delivery has given up on a `pending` event.
  */
 export function merchantUsageEventNextAction(event: {
+  automaticDeliveryStopped: boolean;
   status: MerchantUsageEventStatus;
-  workflowIssue: z.infer<typeof merchantWorkflowIssueSchema> | null;
 }): z.infer<typeof merchantUsageEventNextActionSchema> {
   switch (event.status) {
     case "accepted":
     case "discarded":
       return "none";
     case "pending":
-      return event.workflowIssue === null ? "wait" : "retry";
+      return event.automaticDeliveryStopped ? "retry" : "wait";
     case "failed":
       return "retry";
     case "incomplete":

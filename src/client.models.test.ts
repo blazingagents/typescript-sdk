@@ -119,20 +119,6 @@ const models: Record<string, z.ZodType> = {
   submitSessionInput: sessionInputResponseSchema,
 };
 
-/**
- * Field differences the SDK keeps on purpose, keyed by the path the walk
- * reports, with the reason. The platform sends these constants until it
- * adopts this release; delete each entry once the spec drops it.
- */
-const allowedDifferences: Record<string, string> = {
-  "MerchantConnectionResponse.connection.status: in the spec, missing from the SDK":
-    "always `active`; removed with the `disconnected` state",
-  "MerchantUsageSummary.summary.counts.uncertain: in the spec, missing from the SDK":
-    "always 0; removed with the `uncertain` status",
-  "MerchantUsageSummary.summary.counts.unmapped: in the spec, missing from the SDK":
-    "always 0; removed with the `unmapped` status",
-};
-
 type Root = object;
 
 function resolveRef(schema: JsonSchema, root: Root): JsonSchema {
@@ -270,13 +256,6 @@ describe("response models", () => {
       );
     });
 
-    expect(
-      differences.filter((difference) => !(difference in allowedDifferences))
-    ).toStrictEqual([]);
-    expect(
-      Object.keys(allowedDifferences).filter(
-        (difference) => !differences.includes(difference)
-      )
-    ).toStrictEqual([]);
+    expect(differences).toStrictEqual([]);
   });
 });

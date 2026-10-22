@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The vendored contract now matches the platform, which no longer sends the merchant connection `status`, the usage summary counts `uncertain` and `unmapped`, or the steer receipt states `delivered` and `uncertain`. The SDK stopped reading them in 0.42.0, so no code changes.
+
 ## 0.42.0
 
 This release matches the platform contract. The platform has no production users yet, so each removal ships in one release without a deprecation step.

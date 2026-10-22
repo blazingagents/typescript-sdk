@@ -94,15 +94,12 @@ describe("client.workspaces", () => {
     });
   });
 
-  it.each([
-    [204, "completed"],
-    [202, "pending"],
-  ] as const)("maps empty HTTP %i deletion to %s", async (status, outcome) => {
-    const { fetch, calls } = createMockFetch({ status, text: "" });
+  it("resolves to undefined on an empty 204 deletion", async () => {
+    const { fetch, calls } = createMockFetch({ status: 204, text: "" });
 
     await expect(
       client(fetch).workspaces.delete({ workspaceId: workspace.id })
-    ).resolves.toBe(outcome);
+    ).resolves.toBeUndefined();
     expect(calls[0].url).toBe(`${BASE}/v1/workspaces/${workspace.id}`);
     expect(calls[0].init?.method).toBe("DELETE");
   });

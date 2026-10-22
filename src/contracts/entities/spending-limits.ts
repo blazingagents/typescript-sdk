@@ -28,7 +28,6 @@ export const spendingLimitPeriodSchema = z
     startsAt: z.iso.datetime({ offset: true }),
     endsAt: z.iso.datetime({ offset: true }),
     spentUsd: z.number().nonnegative(),
-    reservedUsd: z.number().nonnegative(),
     availableUsd: z.number().nonnegative(),
   })
   .strict();
@@ -43,9 +42,8 @@ export const spendingLimitResponseSchema = z
 export const spendingLimitStopDetailsSchema = z
   .object({
     scope: z.enum(["agent", "tenant", "both"]),
-    reason: z.enum(["exhausted", "reserved", "unpriced", "unknown_usage"]),
+    reason: z.enum(["exhausted", "unpriced"]),
     spentUsd: z.number().nonnegative(),
-    reservedUsd: z.number().nonnegative(),
     availableUsd: z.number().nonnegative(),
     nextResetAt: z.iso.datetime({ offset: true }).nullable(),
   })

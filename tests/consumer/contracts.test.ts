@@ -218,7 +218,6 @@ it("types the error event a failed Turn stream sends", () => {
     scope: "tenant",
     reason: "exhausted",
     spentUsd: 5,
-    reservedUsd: 0,
     availableUsd: 0,
     nextResetAt: null,
   };

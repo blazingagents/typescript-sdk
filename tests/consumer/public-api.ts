@@ -198,21 +198,6 @@ export async function manageChatConnections() {
   return telegram;
 }
 
-export async function listChatDeliveries() {
-  const page = await client.chatDeliveries.list({
-    status: ["failed", "ambiguous"],
-    since: "2026-09-01T00:00:00.000Z",
-    limit: 10,
-    ...readOptions,
-  });
-  const first = page.data[0];
-  return {
-    connectionId: first?.connectionId,
-    deliveryId: first?.id,
-    nextCursor: page.nextCursor,
-  };
-}
-
 export function requiredSessionForkArguments() {
   // @ts-expect-error fork requires the caller's explicit retry key
   client.sessions.fork({

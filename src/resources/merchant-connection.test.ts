@@ -7,7 +7,6 @@ const connection = {
   id: "mch_0123456789abcdef",
   provider: "polar",
   environment: "sandbox",
-  status: "active",
   merchantAccountId: "org_test_account",
   keyFragment: "k1x9",
   guard: { enabled: true, meterId: "meter_1", productIds: ["prod_1"] },
@@ -46,7 +45,7 @@ describe("client.merchantConnection", () => {
       guard: { enabled: true, meterId: "meter_1", productIds: ["prod_1"] },
       provider: "polar",
     });
-    expect(result.connection?.status).toBe("active");
+    expect(result.connection?.id).toBe(connection.id);
     expect(calls[0].init?.method).toBe("POST");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       credential: "polar_oat_secret",
@@ -58,12 +57,10 @@ describe("client.merchantConnection", () => {
 
   it("update patches the connection body", async () => {
     const { fetch, calls } = createMockFetch({ body: { connection } });
-    await client(fetch).merchantConnection.update({
-      status: "disconnected",
-    });
+    await client(fetch).merchantConnection.update({ credential: "polar_new" });
     expect(calls[0].init?.method).toBe("PATCH");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
-      status: "disconnected",
+      credential: "polar_new",
     });
   });
 

@@ -8,9 +8,6 @@ import {
   artifactsListResponseSchema,
   chatConnectionSchema,
   chatConnectionsResponseSchema,
-  chatDeliveriesResponseSchema,
-  chatDeliveryListSchema,
-  chatDeliveryResultSchema,
   claimChatFunctionResponseSchema,
   createTaskResponseSchema,
   createTaskRunResponseSchema,
@@ -73,8 +70,6 @@ const models: Record<string, z.ZodType> = {
   ArtifactList: artifactsListResponseSchema,
   ChatConnection: chatConnectionSchema,
   ChatConnectionList: chatConnectionsResponseSchema,
-  ChatDeliveryList: chatDeliveryListSchema,
-  ChatDeliveryResult: chatDeliveryResultSchema,
   CreatedTask: createTaskResponseSchema,
   CreatedTaskRun: createTaskRunResponseSchema,
   LatestSessionList: latestSessionsListResponseSchema,
@@ -111,7 +106,6 @@ const models: Record<string, z.ZodType> = {
   TaskRun: taskRunResponseSchema,
   TaskRunList: taskRunsListResponseSchema,
   TaskRunMessageList: taskRunMessagesResponseSchema,
-  TenantChatDeliveryList: chatDeliveriesResponseSchema,
   TenantSettings: tenantSettingsResponseSchema,
   ToolApprovalList: toolApprovalsResponseSchema,
   Usage: usageResponseSchema,
@@ -127,9 +121,17 @@ const models: Record<string, z.ZodType> = {
 
 /**
  * Field differences the SDK keeps on purpose, keyed by the path the walk
- * reports, with the reason.
+ * reports, with the reason. The platform sends these constants until it
+ * adopts this release; delete each entry once the spec drops it.
  */
-const allowedDifferences: Record<string, string> = {};
+const allowedDifferences: Record<string, string> = {
+  "MerchantConnectionResponse.connection.status: in the spec, missing from the SDK":
+    "always `active`; removed with the `disconnected` state",
+  "MerchantUsageSummary.summary.counts.uncertain: in the spec, missing from the SDK":
+    "always 0; removed with the `uncertain` status",
+  "MerchantUsageSummary.summary.counts.unmapped: in the spec, missing from the SDK":
+    "always 0; removed with the `unmapped` status",
+};
 
 type Root = object;
 

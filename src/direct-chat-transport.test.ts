@@ -691,13 +691,12 @@ it.each(["direct", "relay"] as const)(
         code: "model_spending_limit_exceeded",
         details: {
           scope: "agent",
-          reason: "reserved",
+          reason: "exhausted",
           spentUsd: 1,
-          reservedUsd: 4,
           availableUsd: 0,
           nextResetAt: null,
         },
-        message: "Agent funds are reserved by unfinished work.",
+        message: "Agent model spending limit reached.",
       },
     };
     const { chat, data, errors, onFinish } = await runNativeChat(kind, [
@@ -708,7 +707,7 @@ it.each(["direct", "relay"] as const)(
       event,
       {
         type: "error",
-        errorText: "Agent funds are reserved by unfinished work.",
+        errorText: "Agent model spending limit reached.",
       },
       {
         type: "finish",
@@ -718,7 +717,7 @@ it.each(["direct", "relay"] as const)(
     ]);
     expect(chat.status).toBe("error");
     expect(errors.map((error) => error.message)).toEqual([
-      "Agent funds are reserved by unfinished work.",
+      "Agent model spending limit reached.",
     ]);
     expect(data).toEqual([event]);
     expect(onFinish).toHaveBeenCalledWith(

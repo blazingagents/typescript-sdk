@@ -14,7 +14,6 @@ const enabled = {
     startsAt: "2026-10-09T00:00:00Z",
     endsAt: "2026-11-09T00:00:00Z",
     spentUsd: 5,
-    reservedUsd: 2,
     availableUsd: 18.123_456,
   },
   nextResetAt: "2026-11-09T00:00:00Z",
@@ -26,9 +25,8 @@ const disabled = {
 };
 const stopDetails = {
   scope: "both",
-  reason: "reserved",
+  reason: "exhausted",
   spentUsd: 5,
-  reservedUsd: 20,
   availableUsd: 0,
   nextResetAt: "2026-11-09T00:00:00Z",
 };

@@ -316,10 +316,6 @@ export const mcpOauthAuthorizationLaunchResponseSchema = z
   })
   .strip();
 
-export const approveMcpOauthAuthorizationBodySchema = z
-  .object({ setupToken: z.string().regex(OPAQUE_MCP_OAUTH_TOKEN_PATTERN) })
-  .strict();
-
 export const mcpConnectionLiveDetailsSchema = z
   .object({
     server: z

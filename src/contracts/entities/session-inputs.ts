@@ -4,10 +4,8 @@ import { sessionMessageSchema } from "./sessions.ts";
 
 export const sessionInputStateSchema = z.enum([
   "accepted",
-  "delivered",
   "committed",
   "not_placed",
-  "uncertain",
 ]);
 
 export const sessionInputRequestIdSchema = z

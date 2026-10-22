@@ -20,10 +20,6 @@ import {
   createChatConnectionsResource,
 } from "./resources/chat-connections.ts";
 import {
-  type ChatDeliveriesResource,
-  createChatDeliveriesResource,
-} from "./resources/chat-deliveries.ts";
-import {
   createMcpConnectionsResource,
   type McpConnectionsResource,
 } from "./resources/mcp-connections.ts";
@@ -129,7 +125,6 @@ export class BlazingAgents {
   readonly #config: HttpConfig;
 
   readonly chatConnections: ChatConnectionsResource;
-  readonly chatDeliveries: ChatDeliveriesResource;
   readonly agents: AgentsResource;
   readonly sessions: SessionsResource;
   readonly providers: ProvidersResource;
@@ -163,7 +158,6 @@ export class BlazingAgents {
       onResponse: options.onResponse,
     };
     this.chatConnections = createChatConnectionsResource(this.#config);
-    this.chatDeliveries = createChatDeliveriesResource(this.#config);
     this.agents = createAgentsResource(this.#config);
     this.sessions = createSessionsResource(this.#config);
     this.providers = createProvidersResource(this.#config);

@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+This release matches the platform contract. The platform has no production users yet, so each removal ships in one release without a deprecation step.
+
+### Added
+
+- `ErrorCode` includes `agent_busy`. `agents.delete()` fails with `agent_busy` (409) while the Agent has a live Turn or a queued or running Task run. Wait for that work to finish, then delete again.
+
+### Changed
+
+- `workspaces.delete()` resolves to `void`. The API now deletes the Workspace before it responds with 204, so the `"pending"` result can no longer occur. Drop any check of the result:
+
+  ```ts
+  // Before
+  if ((await client.workspaces.delete({ workspaceId })) === "pending") {
+    // …
+  }
+  // After
+  await client.workspaces.delete({ workspaceId });
+  ```
+
+- A spending limit's `availableUsd` is now `max(0, amountUsd - spentUsd)`, because the platform no longer holds funds for running work. The `unpriced` stop reason now also covers a model response whose cost could not be determined; the Turn stops after that response.
+- A Session input receipt `not_placed` now also covers a steer whose Turn read it and then failed or lost its owner (`reason: "owner_lost"`). Send it again as ordinary chat. A resend can repeat Tool effects, as any resend can.
+
+### Removed
+
+- Chat delivery listing and repair: `client.chatDeliveries.list()`, `client.chatConnections.listDeliveries()`, `client.chatConnections.repairDelivery()`, the `ChatDelivery`, `ChatDeliveryList`, `ChatDeliveryListStatus`, `ChatDeliveryResult`, `ChatDeliveryStatus`, `ChatDeliveriesResponse`, `TenantChatDelivery`, `RepairChatDeliveryBody`, `ChatDeliveriesResource` and `ChatDeliveriesListOptions` types, and their schemas in `@blazingagents/sdk/contracts`, including `chatDeliveryIdSchema`. The workflow that runs a Slack or Telegram Turn now posts the reply or approval card itself, at least once with a bounded retry, and a reply that still fails stays in the Session transcript. There is no replacement call; delete code that listed or repaired deliveries.
+- `reservedUsd` from the spending-limit `period` and from the `model_spending_limit_exceeded` details, and the `reserved` and `unknown_usage` stop reasons. Stop reading `reservedUsd`; `reason` is now `exhausted` or `unpriced`.
+- The `delivered` and `uncertain` Session input states. `SessionInputState` is now `accepted`, `committed` or `not_placed`. Treat code that handled `uncertain` as `not_placed`, and `delivered` as `accepted`.
+- The merchant connection's `status` field, the `status` option of `merchantConnection.update()`, and `merchantConnectionStatusSchema`. A current connection is always active. To pause billing, turn monetization off with `client.tenant.patch({ monetizationEnabled: false })` instead of setting `status: "disconnected"`.
+- The `uncertain` and `unmapped` merchant usage event statuses, the `bind_and_release` next action, the summary `counts.uncertain` and `counts.unmapped`, and `merchantUsageEvents.release()`. A delivery whose retries run out now ends `failed` with `lastErrorCode` `MERCHANT_RETRIES_EXHAUSTED`; call `merchantUsageEvents.retry()` on it, which is safe because the provider drops duplicates by the event ID. Usage of an End-user with no customer binding is recorded once as `discarded` with `lastErrorCode` `MERCHANT_CUSTOMER_UNMAPPED` and is never billed later. To bill an End-user, bind them with `merchantBindings.put()` before their first Turn, or turn on the guard so an unbound End-user's Turn fails with `merchant_customer_unmapped`.
+- The `checkout_evidence_mismatch` and `merchant_binding_required` error codes. The API no longer returns them, so delete any branch that compares against them.
+- `approveMcpOauthAuthorizationBodySchema` from `@blazingagents/sdk/contracts`. It described a dashboard-only route that no longer exists.
+
 ## 0.41.0
 
 ### Changed

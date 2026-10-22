@@ -34,9 +34,7 @@ const summary = {
   counts: {
     pending: 1,
     accepted: 2,
-    uncertain: 0,
     failed: 0,
-    unmapped: 0,
     incomplete: 0,
     expired: 0,
     discarded: 0,
@@ -101,7 +99,7 @@ describe("client.merchantUsageEvents", () => {
     expect(calls[0].url).toBe(`${BASE}/v1/merchant-usage-events/summary`);
   });
 
-  it.each(["retry", "release", "discard"] as const)(
+  it.each(["retry", "discard"] as const)(
     "%s posts to the event action",
     async (action) => {
       const { fetch, calls } = createMockFetch({

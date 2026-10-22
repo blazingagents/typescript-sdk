@@ -82,7 +82,7 @@ describe("durable session inputs", () => {
     const body = {
       data: [
         data,
-        { ...data, requestId: "second", sequence: 2, state: "uncertain" },
+        { ...data, requestId: "second", sequence: 2, state: "not_placed" },
       ],
       nextCursor: "next",
       activity,

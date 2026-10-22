@@ -74,7 +74,7 @@ describe("session input contracts", () => {
     ).toEqual({ data, activity });
   });
 
-  it.each(["accepted", "delivered", "committed", "not_placed", "uncertain"])(
+  it.each(["accepted", "committed", "not_placed"])(
     "parses %s without rewriting its lifecycle",
     (state) => {
       const data = [{ ...receipt, state }];
@@ -85,6 +85,19 @@ describe("session input contracts", () => {
           activity,
         })
       ).toEqual({ data, nextCursor: "opaque", activity });
+    }
+  );
+
+  it.each(["delivered", "uncertain"])(
+    "rejects the removed %s state",
+    (state) => {
+      expect(
+        sessionInputsResponseSchema.safeParse({
+          data: [{ ...receipt, state }],
+          nextCursor: null,
+          activity,
+        }).success
+      ).toBe(false);
     }
   );
 

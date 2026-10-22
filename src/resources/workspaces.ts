@@ -6,7 +6,7 @@ import {
   workspaceSchema,
   workspacesListResponseSchema,
 } from "../contracts/entities/workspaces.ts";
-import { apiPath, requestJson, requestStream } from "../http.ts";
+import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
 
 export interface WorkspacesResource {
@@ -22,12 +22,11 @@ export interface WorkspacesResource {
   /**
    * Deletes the Workspace.
    * @param input - `workspaceId`; optional abortSignal.
-   * @returns "pending" while deletion is underway, otherwise "completed".
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   delete(
     input: { workspaceId: string } & ResourceRequestOptions
-  ): Promise<"completed" | "pending">;
+  ): Promise<void>;
   /**
    * Retrieves the Workspace.
    * @param input - `workspaceId`; optional abortSignal.
@@ -85,12 +84,10 @@ export function createWorkspacesResource(
       );
     },
     async delete({ workspaceId, abortSignal }) {
-      const response = await requestStream(
-        config,
-        apiPath`/v1/workspaces/${workspaceId}`,
-        { method: "DELETE", signal: abortSignal }
-      );
-      return response.status === 202 ? "pending" : "completed";
+      await requestJson<void>(config, apiPath`/v1/workspaces/${workspaceId}`, {
+        method: "DELETE",
+        signal: abortSignal,
+      });
     },
     async get({ workspaceId, abortSignal }) {
       return await requestJson(

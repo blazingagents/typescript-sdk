@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.42.0
 
 This release matches the platform contract. The platform has no production users yet, so each removal ships in one release without a deprecation step.
 

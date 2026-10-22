@@ -117,7 +117,6 @@ const publicContractNames = [
   "merchantUsageSummaryQuerySchema",
   "merchantUsageSummaryResponseSchema",
   "merchantUsageSummarySchema",
-  "merchantWorkflowIssueSchema",
   "metadataSchema",
   "parsePromptVariables",
   "promptIdSchema",

@@ -48,7 +48,6 @@ const usageEvent = {
   lastAttemptAt: iso,
   lastErrorCode: null,
   acceptedAt: null,
-  workflowIssue: null,
   nextAction: "wait",
 };
 
@@ -165,6 +164,15 @@ describe("merchantUsageEventSchema", () => {
       }).success
     ).toBe(false);
   });
+
+  it("drops the removed workflowIssue field", () => {
+    expect(
+      merchantUsageEventSchema.parse({
+        ...usageEvent,
+        workflowIssue: "recovery_exhausted",
+      })
+    ).toStrictEqual(usageEvent);
+  });
 });
 
 describe("merchantUsageSummarySchema", () => {
@@ -201,13 +209,13 @@ describe("merchantUsageSummarySchema", () => {
 
 describe("merchantUsageEventNextAction", () => {
   it.each([
-    [{ status: "accepted", workflowIssue: null }, "none"],
-    [{ status: "discarded", workflowIssue: null }, "none"],
-    [{ status: "pending", workflowIssue: null }, "wait"],
-    [{ status: "pending", workflowIssue: "recovery_exhausted" }, "retry"],
-    [{ status: "failed", workflowIssue: null }, "retry"],
-    [{ status: "incomplete", workflowIssue: null }, "investigate"],
-    [{ status: "expired", workflowIssue: null }, "discard"],
+    [{ status: "accepted", automaticDeliveryStopped: false }, "none"],
+    [{ status: "discarded", automaticDeliveryStopped: false }, "none"],
+    [{ status: "pending", automaticDeliveryStopped: false }, "wait"],
+    [{ status: "pending", automaticDeliveryStopped: true }, "retry"],
+    [{ status: "failed", automaticDeliveryStopped: false }, "retry"],
+    [{ status: "incomplete", automaticDeliveryStopped: false }, "investigate"],
+    [{ status: "expired", automaticDeliveryStopped: false }, "discard"],
   ] as const)("maps %j to %s", (event, expected) => {
     expect(merchantUsageEventNextAction(event)).toBe(expected);
   });

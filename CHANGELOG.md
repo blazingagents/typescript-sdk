@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-This release moves Session ownership from your backend to the API. The platform has no production users yet, so the removal ships in one release without a deprecation step.
+This release moves Session ownership from your backend to the API and removes `workflowIssue` from merchant usage events. The platform has no production users yet, so each removal ships in one release without a deprecation step.
 
 ### Changed
 
@@ -10,6 +10,8 @@ This release moves Session ownership from your backend to the API. The platform 
 - A Session that belongs to another End-user, or does not exist, now yields the API's 404 with its error code and request ID, instead of a local 403 `forbidden`.
 - A `context.userId` that `forUser` rejects, such as one with leading or trailing spaces, answers 500 `internal_error` ("Request failed.") without the ID or the validation message, and sends nothing to the API. Fix the resolver that returned it.
 - The `client` option must now provide `forUser`. A `BlazingAgents` client does.
+- `merchantUsageEventNextAction()` takes `automaticDeliveryStopped: boolean` instead of `workflowIssue`. Pass `true` when automatic delivery has given up on a `pending` event; the result is then `retry`.
+- The MCP connection `url` description now says `https`, which is the only scheme the API accepts.
 
 ### Removed
 
@@ -24,6 +26,19 @@ This release moves Session ownership from your backend to the API. The platform 
   });
   // After
   const relay = createChatRelay({ client, resolveContext });
+  ```
+
+- `MerchantUsageEvent.workflowIssue` and `merchantWorkflowIssueSchema`. Read `nextAction` instead. It is `retry` for a `pending` event whose automatic delivery has stopped, which is when `workflowIssue` was set:
+
+  ```ts
+  // Before
+  if (event.workflowIssue !== null) {
+    await client.merchantUsageEvents.retry({ eventId: event.id });
+  }
+  // After
+  if (event.nextAction === "retry") {
+    await client.merchantUsageEvents.retry({ eventId: event.id });
+  }
   ```
 
 ## 0.42.1

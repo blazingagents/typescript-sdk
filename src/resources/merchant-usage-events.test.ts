@@ -27,7 +27,6 @@ const event = {
   lastAttemptAt: "2026-09-01T00:00:01.000Z",
   lastErrorCode: null,
   acceptedAt: null,
-  workflowIssue: null,
   nextAction: "wait",
 };
 const summary = {

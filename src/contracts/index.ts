@@ -151,7 +151,6 @@ export {
   merchantUsageSummaryQuerySchema,
   merchantUsageSummaryResponseSchema,
   merchantUsageSummarySchema,
-  merchantWorkflowIssueSchema,
   updateMerchantConnectionBodySchema,
   upsertMerchantBindingBodySchema,
 } from "./entities/merchant.ts";

@@ -174,7 +174,6 @@ export {
   createChatRelay,
   createCompletionRelay,
   type RelayContext,
-  type SessionOwnershipStore,
 } from "./relay.ts";
 export type {
   AgentsListOptions,

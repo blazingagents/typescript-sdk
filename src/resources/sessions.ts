@@ -59,7 +59,7 @@ export interface SessionsResource {
     } & ResourceRequestOptions
   ): Promise<void>;
   /**
-   * Retry an uncertain acknowledgement with the same explicit idempotencyKey.
+   * Retry a lost acknowledgement with the same explicit idempotencyKey.
    * @param input - `agentId`, `sessionId`, `messageId`; optional abortSignal.
    * @returns The session response.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
@@ -131,7 +131,7 @@ export interface SessionsResource {
       ResourceRequestOptions
   ): Promise<StopSessionResponse>;
   /**
-   * Retry an uncertain acknowledgement with the same requestId and payload.
+   * Retry a lost acknowledgement with the same requestId and payload.
    * @param input - `agentId`, `sessionId`; fields to change; optional abortSignal.
    * @returns The session input response.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.

@@ -90,19 +90,11 @@ export {
   chatConnectionSchema,
   chatConnectionsResponseSchema,
   chatCredentialsSchema,
-  chatDeliveriesResponseSchema,
-  chatDeliveryListSchema,
-  chatDeliveryListStatusSchema,
-  chatDeliveryResultSchema,
-  chatDeliverySchema,
-  chatDeliveryStatusSchema,
   chatHealthCheckSchema,
   chatHealthSchema,
   chatIdentitySchema,
   createChatConnectionBodySchema,
-  repairChatDeliveryBodySchema,
   rotateChatConnectionBodySchema,
-  tenantChatDeliverySchema,
   updateChatConnectionBodySchema,
 } from "./entities/chat-connections.ts";
 export type {
@@ -110,7 +102,6 @@ export type {
   McpConnectionTestErrorCode,
 } from "./entities/mcp-connections.ts";
 export {
-  approveMcpOauthAuthorizationBodySchema,
   createMcpConnectionBodySchema,
   forwardedMetadataKeysSchema,
   mcpAttachmentResponseSchema,
@@ -147,7 +138,6 @@ export {
   merchantBindingsResponseSchema,
   merchantConnectionResponseSchema,
   merchantConnectionSchema,
-  merchantConnectionStatusSchema,
   merchantCustomerBindingSchema,
   merchantEnvironmentSchema,
   merchantGuardSchema,
@@ -332,7 +322,6 @@ export {
 export {
   agentIdSchema,
   apiKeyTokenSchema,
-  chatDeliveryIdSchema,
   functionCallIdSchema,
   isAdminAgentId,
   merchantUsageEventIdSchema,

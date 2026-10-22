@@ -49,18 +49,10 @@ export type {
   ChatConnection,
   ChatConnectionsResponse,
   ChatCredentials,
-  ChatDeliveriesResponse,
-  ChatDelivery,
-  ChatDeliveryList,
-  ChatDeliveryListStatus,
-  ChatDeliveryResult,
-  ChatDeliveryStatus,
   ChatHealth,
   ChatIdentity,
   CreateChatConnectionBody,
-  RepairChatDeliveryBody,
   RotateChatConnectionBody,
-  TenantChatDelivery,
   UpdateChatConnectionBody,
 } from "./contracts/entities/chat-connections.ts";
 export type {
@@ -191,10 +183,6 @@ export type {
 } from "./resources/agents.ts";
 export type { ArtifactsResource } from "./resources/artifacts.ts";
 export type { ChatConnectionsResource } from "./resources/chat-connections.ts";
-export type {
-  ChatDeliveriesListOptions,
-  ChatDeliveriesResource,
-} from "./resources/chat-deliveries.ts";
 export type { McpConnectionsResource } from "./resources/mcp-connections.ts";
 export type {
   MemoriesListOptions,

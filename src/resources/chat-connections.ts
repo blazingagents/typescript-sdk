@@ -1,14 +1,9 @@
 import {
   type ChatConnection,
   type ChatConnectionsResponse,
-  type ChatDeliveryList,
-  type ChatDeliveryResult,
   type CreateChatConnectionBody,
   chatConnectionSchema,
   chatConnectionsResponseSchema,
-  chatDeliveryListSchema,
-  chatDeliveryResultSchema,
-  type RepairChatDeliveryBody,
   type RotateChatConnectionBody,
   type UpdateChatConnectionBody,
 } from "../contracts/entities/chat-connections.ts";
@@ -77,39 +72,6 @@ export interface ChatConnectionsResource {
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   list(input?: ResourceRequestOptions): Promise<ChatConnectionsResponse>;
-  /**
-   * Lists one page of the replies and approval cards the Chat Connection has
-   * sent or tried to send, newest first, in every status. Pass `nextCursor`
-   * as `cursor` to fetch older records.
-   * @param input - `chatConnectionId`; optional `cursor`, `limit` (1 to 100, default 100), and abortSignal.
-   * @returns The page of chat deliveries.
-   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
-   */
-  listDeliveries(
-    input: {
-      chatConnectionId: string;
-      cursor?: string;
-      limit?: number;
-    } & ResourceRequestOptions
-  ): Promise<ChatDeliveryList>;
-  /**
-   * Sends a stuck reply or approval card again, without running a turn or
-   * tool. Use it when the previous send stopped before its outcome was known.
-   * Pass the delivery's current `attempt` as `expectedAttempt`; the repair is
-   * refused if it has changed. `previousSenderStopped` and
-   * `acceptDuplicateRisk` must be `true`: the message can appear twice. The
-   * connection must be enabled. Check `status` in the result, because a
-   * successful request does not by itself mean the message was delivered.
-   * @param input - `chatConnectionId`, `deliveryId`, the repair confirmations, and optional abortSignal.
-   * @returns The delivery outcome.
-   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
-   */
-  repairDelivery(
-    input: RepairChatDeliveryBody & {
-      chatConnectionId: string;
-      deliveryId: string;
-    } & ResourceRequestOptions
-  ): Promise<ChatDeliveryResult>;
   /**
    * Replaces the Chat Connection credentials.
    * @param input - `chatConnectionId`; fields to change; optional abortSignal.
@@ -204,32 +166,6 @@ export function createChatConnectionsResource(
         apiPath`/v1/chat-connections/${chatConnectionId}/health`,
         { credentialBearing: true, signal: abortSignal, method: "POST" },
         chatConnectionSchema
-      );
-    },
-    async listDeliveries({ chatConnectionId, abortSignal, ...query }) {
-      return await requestJson(
-        config,
-        apiPath`/v1/chat-connections/${chatConnectionId}/deliveries`,
-        { credentialBearing: true, signal: abortSignal, query },
-        chatDeliveryListSchema
-      );
-    },
-    async repairDelivery({
-      chatConnectionId,
-      deliveryId,
-      abortSignal,
-      ...body
-    }) {
-      return await requestJson(
-        config,
-        apiPath`/v1/chat-connections/${chatConnectionId}/deliveries/${deliveryId}/repair`,
-        {
-          credentialBearing: true,
-          signal: abortSignal,
-          method: "POST",
-          json: body,
-        },
-        chatDeliveryResultSchema
       );
     },
     async enable({ chatConnectionId, abortSignal }) {

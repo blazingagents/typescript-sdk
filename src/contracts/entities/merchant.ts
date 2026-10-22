@@ -24,10 +24,6 @@ export const merchantProviderSchema = z.enum(["polar", "dodo"]);
 export type MerchantProviderKind = z.infer<typeof merchantProviderSchema>;
 
 export const merchantEnvironmentSchema = z.enum(["sandbox", "live"]);
-export const merchantConnectionStatusSchema = z.enum([
-  "active",
-  "disconnected",
-]);
 
 export const merchantGuardSchema = z
   .object({
@@ -56,7 +52,6 @@ export const merchantConnectionSchema = z
     id: merchantConnectionIdSchema,
     provider: merchantProviderSchema,
     environment: merchantEnvironmentSchema,
-    status: merchantConnectionStatusSchema,
     merchantAccountId: z.string().min(1),
     keyFragment: providerKeyFragmentSchema,
     guard: merchantGuardSchema,
@@ -107,11 +102,6 @@ export const updateMerchantConnectionBodySchema = z
       .optional()
       .describe(
         "A replacement credential. It must belong to the same merchant account as the current one."
-      ),
-    status: merchantConnectionStatusSchema
-      .optional()
-      .describe(
-        "`active` sends usage events to your provider. While `disconnected`, deliveries fail and can be retried after you set it back to `active`, and turns are refused if the guard is on."
       ),
     guard: merchantGuardSchema
       .optional()
@@ -167,8 +157,6 @@ export const merchantUsageEventStatusSchema = z.enum([
   "pending",
   "accepted",
   "failed",
-  "uncertain",
-  "unmapped",
   "incomplete",
   "discarded",
   "expired",
@@ -187,7 +175,6 @@ export const merchantUsageEventNextActionSchema = z.enum([
   "none",
   "wait",
   "retry",
-  "bind_and_release",
   "investigate",
   "discard",
 ]);
@@ -249,9 +236,7 @@ export const merchantUsageSummaryCountsSchema = z
   .object({
     pending: z.number().int().nonnegative(),
     accepted: z.number().int().nonnegative(),
-    uncertain: z.number().int().nonnegative(),
     failed: z.number().int().nonnegative(),
-    unmapped: z.number().int().nonnegative(),
     incomplete: z.number().int().nonnegative(),
     expired: z.number().int().nonnegative(),
     discarded: z.number().int().nonnegative(),
@@ -313,10 +298,7 @@ export function merchantUsageEventNextAction(event: {
     case "pending":
       return event.workflowIssue === null ? "wait" : "retry";
     case "failed":
-    case "uncertain":
       return "retry";
-    case "unmapped":
-      return "bind_and_release";
     case "incomplete":
       return "investigate";
     case "expired":

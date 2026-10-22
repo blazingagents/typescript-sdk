@@ -39,7 +39,7 @@ export interface AgentsResource {
    * Deletes the Agent while preserving its attached Workspace.
    * @param input - `agentId`; optional abortSignal; includeArtifacts controls Artifact deletion.
    * @returns Resolves when the operation completes.
-   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
+   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response; `agent_busy` (409) while the Agent has a live Turn or a queued or running Task run.
    */
   delete(
     input: {

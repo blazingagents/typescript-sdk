@@ -516,7 +516,7 @@ describe("installed SDK consumer contract", () => {
     await expect(skills.delete({ skillId: skill.id })).resolves.toBeUndefined();
     await expect(
       client.workspaces.delete({ workspaceId: workspace.id })
-    ).resolves.toBe("completed");
+    ).resolves.toBeUndefined();
   });
 
   it("round-trips Skill binary values through compiled real HTTP", async () => {

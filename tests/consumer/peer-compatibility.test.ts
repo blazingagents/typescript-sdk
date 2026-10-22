@@ -107,7 +107,6 @@ it.each(["direct", "relay"])(
           scope: "tenant",
           reason: "exhausted",
           spentUsd: 5,
-          reservedUsd: 0,
           availableUsd: 0,
           nextResetAt: null,
         },

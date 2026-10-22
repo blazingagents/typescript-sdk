@@ -65,19 +65,50 @@ describe("spending-limit contracts", () => {
     ).toBe(false);
   });
 
-  it.each(["exhausted", "reserved", "unpriced", "unknown_usage"])(
-    "parses the %s stop reason",
+  it("parses a period without reservedUsd and rejects one that has it", () => {
+    const status = {
+      spendingLimit: config,
+      period: {
+        startsAt: "2026-01-31T00:00:00Z",
+        endsAt: "2026-02-28T00:00:00Z",
+        spentUsd: 5,
+        availableUsd: 20.123_456,
+      },
+      nextResetAt: "2026-02-28T00:00:00Z",
+    };
+    expect(spendingLimitResponseSchema.parse(status)).toEqual(status);
+    expect(
+      spendingLimitResponseSchema.safeParse({
+        ...status,
+        period: { ...status.period, reservedUsd: 0 },
+      }).success
+    ).toBe(false);
+  });
+
+  it.each(["exhausted", "unpriced"])("parses the %s stop reason", (reason) => {
+    expect(
+      spendingLimitStopDetailsSchema.parse({
+        scope: "both",
+        reason,
+        spentUsd: 3,
+        availableUsd: 0,
+        nextResetAt: null,
+      }).reason
+    ).toBe(reason);
+  });
+
+  it.each(["reserved", "unknown_usage"])(
+    "rejects the removed %s stop reason",
     (reason) => {
       expect(
-        spendingLimitStopDetailsSchema.parse({
+        spendingLimitStopDetailsSchema.safeParse({
           scope: "both",
           reason,
           spentUsd: 3,
-          reservedUsd: 0,
           availableUsd: 0,
           nextResetAt: null,
-        }).reason
-      ).toBe(reason);
+        }).success
+      ).toBe(false);
     }
   );
 });
@@ -113,9 +144,8 @@ describe("next spending-limit reset", () => {
 it("validates the details a spending stop carries", () => {
   const details = {
     scope: "agent",
-    reason: "unknown_usage",
+    reason: "unpriced",
     spentUsd: 5,
-    reservedUsd: 0,
     availableUsd: 0,
     nextResetAt: null,
   };

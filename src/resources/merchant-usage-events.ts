@@ -18,7 +18,7 @@ export interface MerchantUsageEventsListOptions extends ResourceRequestOptions {
 
 /**
  * `client.merchantUsageEvents` — the immutable delivery ledger behind
- * `/v1/merchant-usage-events`. `retry`, `release`, and `discard` are the
+ * `/v1/merchant-usage-events`. `retry` and `discard` are the
  * operator actions on unresolved events.
  */
 export interface MerchantUsageEventsResource {
@@ -50,16 +50,7 @@ export interface MerchantUsageEventsResource {
     input?: MerchantUsageEventsListOptions
   ): Promise<MerchantUsageEventsResponse>;
   /**
-   * Releases the merchant usage event.
-   * @param input - `eventId`; optional abortSignal.
-   * @returns The merchant usage event response.
-   * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
-   */
-  release(
-    input: { eventId: string } & ResourceRequestOptions
-  ): Promise<MerchantUsageEventResponse>;
-  /**
-   * Retries delivery of the merchant usage event.
+   * Sends a `failed` event, or a `pending` event whose automatic delivery gave up, to the provider again. Retrying is safe: the provider drops duplicates by the event ID.
    * @param input - `eventId`; optional abortSignal.
    * @returns The merchant usage event response.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
@@ -81,7 +72,7 @@ export interface MerchantUsageEventsResource {
 /**
  * `client.merchantUsageEvents` — the immutable usage-event ledger over
  * `/v1/merchant-usage-events`, plus the delivery-health `summary` aggregate
- * and the per-event operator actions `retry`/`release`/`discard`.
+ * and the per-event operator actions `retry` and `discard`.
  * @param config - Shared authentication and transport configuration.
  * @returns The configured resource client.
  */
@@ -117,14 +108,6 @@ export function createMerchantUsageEventsResource(
       return await requestJson(
         config,
         apiPath`/v1/merchant-usage-events/${eventId}/retry`,
-        { method: "POST", signal: abortSignal },
-        merchantUsageEventResponseSchema
-      );
-    },
-    async release({ eventId, abortSignal }) {
-      return await requestJson(
-        config,
-        apiPath`/v1/merchant-usage-events/${eventId}/release`,
         { method: "POST", signal: abortSignal },
         merchantUsageEventResponseSchema
       );

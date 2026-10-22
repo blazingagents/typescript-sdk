@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   agentIdSchema,
   chatConnectionIdSchema,
-  chatDeliveryIdSchema,
   tenantIdSchema,
 } from "../ids.ts";
 
@@ -201,87 +200,3 @@ export type ChatConnectionsResponse = z.output<
 export type RotateChatConnectionBody = z.input<
   typeof rotateChatConnectionBodySchema
 >;
-
-export const chatDeliveryStatusSchema = z.enum([
-  "pending",
-  "confirmed",
-  "failed",
-  "ambiguous",
-]);
-export type ChatDeliveryStatus = z.infer<typeof chatDeliveryStatusSchema>;
-
-export const chatDeliveryListStatusSchema = z.enum(["failed", "ambiguous"]);
-export type ChatDeliveryListStatus = z.infer<
-  typeof chatDeliveryListStatusSchema
->;
-
-export const chatDeliverySchema = z
-  .object({
-    id: chatDeliveryIdSchema,
-    kind: z.enum(["reply", "card"]),
-    status: z.enum(["pending", "confirmed", "failed", "ambiguous"]),
-    attempt: z.number().int().nonnegative(),
-    credentialVersion: z.number().int().nonnegative(),
-    representation: z.string(),
-    diagnostic: z.string().nullable(),
-    receipts: z.unknown(),
-    sessionId: z.string(),
-    messageId: z.string().nullable(),
-    approvalId: z.string().nullable(),
-    threadId: z.string(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })
-  .strip();
-export type ChatDelivery = z.infer<typeof chatDeliverySchema>;
-
-export const tenantChatDeliverySchema = chatDeliverySchema
-  .extend({
-    connectionId: chatConnectionIdSchema,
-    agentId: agentIdSchema,
-    platform: z.enum(["slack", "telegram"]),
-  })
-  .strict();
-export type TenantChatDelivery = z.infer<typeof tenantChatDeliverySchema>;
-
-export const chatDeliveriesResponseSchema = z
-  .object({
-    data: z.array(tenantChatDeliverySchema),
-    nextCursor: z.string().nullable(),
-  })
-  .strip();
-export type ChatDeliveriesResponse = z.infer<
-  typeof chatDeliveriesResponseSchema
->;
-
-export const chatDeliveryListSchema = z
-  .object({
-    data: z.array(chatDeliverySchema),
-    nextCursor: z.string().nullable(),
-  })
-  .strip();
-export type ChatDeliveryList = z.infer<typeof chatDeliveryListSchema>;
-
-export const repairChatDeliveryBodySchema = z
-  .object({
-    expectedAttempt: z.number().int().min(0).max(99),
-    previousSenderStopped: z.literal(true),
-    acceptDuplicateRisk: z.literal(true),
-  })
-  .strict();
-export type RepairChatDeliveryBody = z.input<
-  typeof repairChatDeliveryBodySchema
->;
-
-export const chatDeliveryResultSchema = z
-  .object({
-    id: chatDeliveryIdSchema,
-    sessionId: z.string(),
-    threadId: z.string(),
-    connectionId: chatConnectionIdSchema,
-    kind: z.enum(["reply", "card"]),
-    status: z.enum(["confirmed", "failed", "ambiguous"]),
-    attempt: z.number().int().nonnegative(),
-  })
-  .strip();
-export type ChatDeliveryResult = z.infer<typeof chatDeliveryResultSchema>;

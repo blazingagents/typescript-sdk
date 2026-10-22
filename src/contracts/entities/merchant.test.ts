@@ -16,7 +16,6 @@ const connection = {
   id: "mch_0123456789abcdef",
   provider: "polar",
   environment: "sandbox",
-  status: "active",
   merchantAccountId: "org_test_account",
   keyFragment: "k1x9",
   guard: { enabled: true, meterId: "meter_1", productIds: ["prod_1"] },
@@ -122,10 +121,8 @@ describe("merchant connection bodies", () => {
   it("update accepts partial fields only", () => {
     expect(updateMerchantConnectionBodySchema.safeParse({}).success).toBe(true);
     expect(
-      updateMerchantConnectionBodySchema.safeParse({
-        status: "disconnected",
-      }).success
-    ).toBe(true);
+      updateMerchantConnectionBodySchema.safeParse({ status: "active" }).success
+    ).toBe(false);
     expect(
       updateMerchantConnectionBodySchema.safeParse({ bogus: 1 }).success
     ).toBe(false);
@@ -151,11 +148,20 @@ describe("merchantUsageEventSchema", () => {
     );
   });
 
-  it("rejects an unknown status", () => {
+  it.each(["delivered", "uncertain", "unmapped"])(
+    "rejects the unknown status %s",
+    (status) => {
+      expect(
+        merchantUsageEventSchema.safeParse({ ...usageEvent, status }).success
+      ).toBe(false);
+    }
+  );
+
+  it("rejects the removed bind_and_release next action", () => {
     expect(
       merchantUsageEventSchema.safeParse({
         ...usageEvent,
-        status: "delivered",
+        nextAction: "bind_and_release",
       }).success
     ).toBe(false);
   });
@@ -167,9 +173,7 @@ describe("merchantUsageSummarySchema", () => {
       counts: {
         pending: 1,
         accepted: 2,
-        uncertain: 0,
         failed: 0,
-        unmapped: 0,
         incomplete: 0,
         expired: 0,
         discarded: 0,
@@ -186,6 +190,12 @@ describe("merchantUsageSummarySchema", () => {
       ],
     };
     expect(merchantUsageSummarySchema.parse(summary)).toStrictEqual(summary);
+    expect(
+      merchantUsageSummarySchema.safeParse({
+        ...summary,
+        counts: { ...summary.counts, uncertain: 0, unmapped: 0 },
+      }).success
+    ).toBe(false);
   });
 });
 
@@ -196,8 +206,6 @@ describe("merchantUsageEventNextAction", () => {
     [{ status: "pending", workflowIssue: null }, "wait"],
     [{ status: "pending", workflowIssue: "recovery_exhausted" }, "retry"],
     [{ status: "failed", workflowIssue: null }, "retry"],
-    [{ status: "uncertain", workflowIssue: null }, "retry"],
-    [{ status: "unmapped", workflowIssue: null }, "bind_and_release"],
     [{ status: "incomplete", workflowIssue: null }, "investigate"],
     [{ status: "expired", workflowIssue: null }, "discard"],
   ] as const)("maps %j to %s", (event, expected) => {

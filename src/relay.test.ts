@@ -237,6 +237,54 @@ describe("createChatRelay", () => {
     });
   });
 
+  it.each([
+    ["without a Location header", {}],
+    [
+      "with a malformed Location header",
+      { location: "/v1/agents/x/sessions/bad" },
+    ],
+  ])(
+    "never relays function calls to the browser when a created Session comes back %s",
+    async (_, location) => {
+      const functionCall = {
+        type: "data-ba-function-call",
+        data: {
+          id: "fc_0123456789abcdef",
+          name: "getOrder",
+          input: { orderId: "o1" },
+          deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+        transient: true,
+      };
+      const { client } = fakeApi(
+        () =>
+          new Response(`data: ${JSON.stringify(functionCall)}\n\n${sseBody}`, {
+            status: 201,
+            headers: {
+              "content-type": "text/event-stream",
+              "x-ba-turn-id": turnId,
+              "x-request-id": "req-chat",
+              ...location,
+            },
+          })
+      );
+      const relay = createChatRelay({
+        client,
+        resolveContext: () => Promise.resolve({ ...context, functions }),
+      });
+
+      const response = await relay(request({ message }));
+      const text = await response.text();
+
+      expect(text).not.toContain("data-ba-function-call");
+      expect(response.status).toBe(502);
+      expect(response.headers.get("x-request-id")).toBe("req-chat");
+      expect(JSON.parse(text)).toMatchObject({
+        error: { code: "stream_error" },
+      });
+    }
+  );
+
   it.each(["not_found", "workspace_not_found"])(
     "answers a Session outside the End-user's scope with the API's %s",
     async (code) => {

@@ -200,6 +200,18 @@ function buildChatResult(
       sessionIdError = error;
     }
   }
+  const { functions } = dispatch;
+  /**
+   * Function calls are dispatched against the Session, so without its id the
+   * stream cannot be filtered; refuse it rather than pass private
+   * `data-ba-function-call` frames through.
+   */
+  if (functions && sessionId === undefined) {
+    response.body?.cancel().catch(() => {
+      /* no-op — the stream is discarded */
+    });
+    throw sessionIdError;
+  }
   const sessionIdPromise =
     sessionId === undefined
       ? Promise.reject(sessionIdError)
@@ -224,9 +236,8 @@ function buildChatResult(
   turnIdPromise.catch(() => {
     /* no-op — prevents unhandled rejection if the caller never awaits */
   });
-  const { functions } = dispatch;
   const streamResponse =
-    functions && sessionId !== undefined
+    functions && sessionId
       ? withFilteredBody(response, (body) =>
           dispatchChatFunctions(
             config,

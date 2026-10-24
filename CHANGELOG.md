@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `chat` with `functions` now rejects with `stream_error` when the API's response to a new chat has a missing or malformed `Location` header, and cancels the stream. It previously returned the stream unfiltered, so `createChatRelay` could forward `data-ba-function-call` events to the browser and the local handlers never ran. `createChatRelay` now answers 502 `stream_error` in that case. Chats without `functions` are unchanged: only `result.sessionId` rejects.
+
 ## 0.43.1
 
 ### Changed

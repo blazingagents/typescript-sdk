@@ -1027,23 +1027,22 @@ describe("chat function dispatch", () => {
     expect((error as BlazingAgentsError).code).toBe("stream_error");
   });
 
-  it("does not dispatch without a Session id", async () => {
+  it("refuses the stream, and cancels it, without a Session id", async () => {
     const source = upstream();
-    const { client, fetch } = harness(source.stream, {
+    const { fetch } = harness(source.stream, {
       other: () => new Response(source.stream, { status: 201 }),
     });
     const { functions } = orderFunctions();
-    const result = await new BlazingAgents({
+    const error = await new BlazingAgents({
       apiKey: "ba_test",
       baseUrl: BASE,
       fetch,
-    }).chat({ agentId, message, functions });
-    await expect(result.sessionId).rejects.toThrow("Location");
-    const event = sse(readyEvent());
-    source.push(event);
-    source.close();
-    expect(await readAll(result.toStream())).toBe(event);
-    expect(client).toBeDefined();
+    })
+      .chat({ agentId, message, functions })
+      .catch((e: unknown) => e);
+    expect((error as BlazingAgentsError).code).toBe("stream_error");
+    expect((error as BlazingAgentsError).message).toContain("Location");
+    expect(source.cancel).toHaveBeenCalled();
   });
 
   it("scopes protocol requests to the End user", async () => {

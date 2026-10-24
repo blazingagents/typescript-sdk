@@ -47,7 +47,8 @@ export const usageSummarySchema = z
     outputTokens: z.number().int().min(0),
     reasoningTokens: z.number().int().min(0).nullable(),
     turnId: turnIdSchema,
-    sessionId: z.union([sessionIdSchema, z.literal("")]),
+    /** Null for a stateless generation, which has no Session. */
+    sessionId: sessionIdSchema.nullable(),
     stepUsages: z.array(
       z
         .object({

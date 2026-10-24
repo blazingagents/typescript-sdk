@@ -93,6 +93,19 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
     }
   });
 
+  it("takes a null sessionId for a stateless generation and refuses the empty string", () => {
+    expect(
+      blazingAgentsChatMessageMetadataSchema.parse({
+        blazingAgents: { usage: { ...validUsage, sessionId: null } },
+      }).blazingAgents.usage.sessionId
+    ).toBeNull();
+    expect(
+      blazingAgentsChatMessageMetadataSchema.safeParse({
+        blazingAgents: { usage: { ...validUsage, sessionId: "" } },
+      }).success
+    ).toBe(false);
+  });
+
   it("strips usage fields outside the contract", () => {
     expect(
       blazingAgentsChatMessageMetadataSchema.parse({

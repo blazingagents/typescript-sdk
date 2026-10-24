@@ -31,6 +31,7 @@ describe("AGENT_TOOLS", () => {
       ["update_memory", ["memory"], false],
       ["delete_memory", ["memory"], false],
       ["web_search", ["web"], false],
+      ["web_fetch", ["web"], false],
     ]);
     expect(agentToolNames).toEqual(AGENT_TOOLS.map((tool) => tool.name));
   });

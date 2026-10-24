@@ -72,6 +72,9 @@ describe("approval contracts", () => {
     expect(
       toolReferenceSchema.parse({ type: "builtin", name: "web_search" })
     ).toEqual({ type: "builtin", name: "web_search" });
+    expect(
+      toolReferenceSchema.parse({ type: "builtin", name: "web_fetch" })
+    ).toEqual({ type: "builtin", name: "web_fetch" });
     for (const invalid of [
       { type: "builtin", name: "workspace" },
       { ...tool, connectionId: "bad" },

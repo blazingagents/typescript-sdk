@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- `web_fetch` joins the Agent tool catalog (`AGENT_TOOLS`, `AgentToolName`). It reads a public web page or text document by URL and returns markdown, and needs no Workspace. Like every tool it is off until you list it in `tools`, and a built-in approval policy can now name it. `"web_fetch"` is also a reserved `chatFunctionNameSchema` name, so a caller function can no longer use it. The `web` group description now reads "Search the public web and read pages by URL."
+
 ### Fixed
 
 - `chat` with `functions` now rejects with `stream_error` when the API's response to a new chat has a missing or malformed `Location` header, and cancels the stream. It previously returned the stream unfiltered, so `createChatRelay` could forward `data-ba-function-call` events to the browser and the local handlers never ran. `createChatRelay` now answers 502 `stream_error` in that case. Chats without `functions` are unchanged: only `result.sessionId` rejects.

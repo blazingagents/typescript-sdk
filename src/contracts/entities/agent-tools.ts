@@ -28,7 +28,7 @@ export const AGENT_TOOL_GROUPS = [
   {
     tag: "web",
     name: "Web",
-    description: "Search the public web for current information.",
+    description: "Search the public web and read pages by URL.",
   },
 ] as const;
 
@@ -160,6 +160,13 @@ const CATALOG = [
     requiresWorkspace: false,
     description:
       "Search the public web for current results. Each search consumes Usage credit.",
+  },
+  {
+    name: "web_fetch",
+    tags: ["web"],
+    requiresWorkspace: false,
+    description:
+      "Read a public web page or text document by URL, returned as markdown.",
   },
 ] as const satisfies readonly (AgentToolDefinition & { tags: CatalogTags })[];
 

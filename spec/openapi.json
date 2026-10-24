@@ -27815,7 +27815,7 @@
       {
         "tag": "web",
         "name": "Web",
-        "description": "Search the public web for current information."
+        "description": "Search the public web and read pages by URL."
       }
     ],
     "tools": [
@@ -27932,6 +27932,14 @@
       {
         "name": "web_search",
         "description": "Search the public web for current results. Each search consumes Usage credit.",
+        "requiresWorkspace": false,
+        "tags": [
+          "web"
+        ]
+      },
+      {
+        "name": "web_fetch",
+        "description": "Read a public web page or text document by URL, returned as markdown.",
         "requiresWorkspace": false,
         "tags": [
           "web"

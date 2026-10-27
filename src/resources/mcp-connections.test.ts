@@ -94,16 +94,16 @@ describe("client.mcpConnections", () => {
     expect(JSON.stringify(bearer)).not.toContain("secret-canary");
   });
 
-  it("sends OAuth Client Credentials only in create and reconnect bodies", async () => {
+  it("sends pre-registered OAuth client credentials only in create and reconnect bodies", async () => {
     const oauth = {
       ...row,
-      authType: "oauth_client_credentials" as const,
+      authType: "oauth_authorization_code" as const,
       credentialFragment: "cret",
       oauthIssuer: "https://issuer.example.com/",
       oauthResource: row.url,
     };
     const body = {
-      authType: "oauth_client_credentials" as const,
+      authType: "oauth_authorization_code" as const,
       clientId: "client-id",
       clientSecret: "secret-canary.client-secret",
       scope: "tools:call",

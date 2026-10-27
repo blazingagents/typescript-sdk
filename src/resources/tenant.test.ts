@@ -7,11 +7,6 @@ const tenantSettings = {
   deletion: null,
   monetizationEnabled: false,
   name: "My Workspace",
-  quota: {
-    monthlyTokenLimit: 1_000_000,
-    monthlyRequestLimit: 1000,
-    resetDay: 1,
-  },
 };
 
 function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
@@ -24,7 +19,6 @@ describe("client.tenant", () => {
     const c = client(fetch);
     const settings = await c.tenant.get();
     expect(settings.name).toBe("My Workspace");
-    expect(settings.quota?.monthlyTokenLimit).toBe(1_000_000);
     expect(settings.deletion).toBeNull();
     expect(settings.monetizationEnabled).toBe(false);
     expect(calls[0].url).toBe(`${BASE}/v1/tenant`);
@@ -44,15 +38,15 @@ describe("client.tenant", () => {
 
   it("patch PATCHes /v1/tenant", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { ...tenantSettings, quota: null },
+      body: { ...tenantSettings, name: "Renamed" },
     });
     const c = client(fetch);
-    const settings = await c.tenant.patch({ quota: null });
-    expect(settings.quota).toBeNull();
+    const settings = await c.tenant.patch({ name: "Renamed" });
+    expect(settings.name).toBe("Renamed");
     expect(calls[0].url).toBe(`${BASE}/v1/tenant`);
     expect(calls[0].init?.method).toBe("PATCH");
     const body = JSON.parse(calls[0].init?.body as string);
-    expect(body).toEqual({ quota: null });
+    expect(body).toEqual({ name: "Renamed" });
   });
 
   it("patch sends the monetization switch", async () => {

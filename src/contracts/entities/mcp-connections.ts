@@ -28,7 +28,6 @@ export const mcpConnectionAuthTypeSchema = z.enum([
   "none",
   "bearer",
   "oauth_authorization_code",
-  "oauth_client_credentials",
 ]);
 
 export const mcpConnectionStatusSchema = z.enum([
@@ -69,7 +68,7 @@ const oauthClientIdSchema = z
   .max(MAX_MCP_OAUTH_CLIENT_ID_LENGTH)
   .regex(/^[!-~]+$/, "Client ID must contain visible ASCII characters only")
   .describe(
-    "OAuth client ID. Required with `clientSecret` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientSecret`."
+    "OAuth client ID. Optional, but send it together with `clientSecret`."
   );
 
 const oauthClientSecretSchema = z
@@ -78,7 +77,7 @@ const oauthClientSecretSchema = z
   .max(MAX_MCP_OAUTH_CLIENT_SECRET_LENGTH)
   .regex(/^[!-~]+$/, "Client secret must contain visible ASCII characters only")
   .describe(
-    "OAuth client secret. Required with `clientId` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientId`. Never returned."
+    "OAuth client secret. Optional, but send it together with `clientId`. Never returned."
   );
 
 const oauthScopeSchema = z
@@ -87,7 +86,7 @@ const oauthScopeSchema = z
   .min(1)
   .max(MAX_MCP_OAUTH_SCOPE_LENGTH)
   .regex(/^[\x20-\x7e]+$/, "Scope must contain printable ASCII characters only")
-  .describe("OAuth scope to request. Optional for either OAuth type.");
+  .describe("OAuth scope to request. Optional.");
 
 const credentialFragmentSchema = z.string().min(1).max(4).nullable();
 
@@ -121,7 +120,7 @@ const mcpConnectionUrlInputSchema = mcpConnectionUrlSchema.describe(
 );
 
 const authTypeDescription =
-  "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it.";
+  "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it.";
 
 export const mcpConnectionResponseSchema = z
   .object({
@@ -205,14 +204,6 @@ const createBearerMcpConnectionBodySchema = z
   })
   .strict();
 
-const oauthClientCredentialsFields = {
-  authType: z.literal("oauth_client_credentials").describe(authTypeDescription),
-  clientId: oauthClientIdSchema,
-  clientSecret: oauthClientSecretSchema,
-  scope: oauthScopeSchema.optional(),
-  url: mcpConnectionUrlInputSchema,
-};
-
 const oauthAuthorizationCodeFields = {
   authType: z.literal("oauth_authorization_code").describe(authTypeDescription),
   clientId: oauthClientIdSchema.optional(),
@@ -228,19 +219,11 @@ const createOauthAuthorizationCodeMcpConnectionBodySchema = z
   })
   .strict();
 
-const createOauthClientCredentialsMcpConnectionBodySchema = z
-  .object({
-    ...oauthClientCredentialsFields,
-    name: mcpConnectionNameInputSchema,
-  })
-  .strict();
-
 export const createMcpConnectionBodySchema = z
   .discriminatedUnion("authType", [
     createNoneMcpConnectionBodySchema,
     createBearerMcpConnectionBodySchema,
     createOauthAuthorizationCodeMcpConnectionBodySchema,
-    createOauthClientCredentialsMcpConnectionBodySchema,
   ])
   .superRefine((body, context) => {
     if (
@@ -280,7 +263,6 @@ export const reconnectMcpConnectionBodySchema = z
       })
       .strict(),
     z.object(oauthAuthorizationCodeFields).strict(),
-    z.object(oauthClientCredentialsFields).strict(),
   ])
   .superRefine((body, context) => {
     if (

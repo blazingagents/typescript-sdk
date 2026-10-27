@@ -283,12 +283,10 @@ export {
   updateTaskBodySchema,
 } from "./entities/tasks.ts";
 export type {
-  Quota,
   TenantDeletion,
   UpdateTenantSettingsBody,
 } from "./entities/tenants.ts";
 export {
-  quotaSchema,
   tenantDeletionSchema,
   tenantSettingsResponseSchema,
   updateTenantSettingsBodySchema,

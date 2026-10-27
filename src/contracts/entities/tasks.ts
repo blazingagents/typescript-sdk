@@ -216,9 +216,9 @@ export const createTaskRunBodySchema = z
 
 /**
  * Task run status. `blocked` is the soft-block terminal state for an expected
- * admission denial, such as quota exhaustion, missing subscription, or
- * insufficient Usage credit. Like the other terminal statuses, it sets
- * `finishedAt` and frees the task's active-run slot for the next scheduled fire.
+ * admission denial, such as a missing subscription or insufficient Usage
+ * credit. Like the other terminal statuses, it sets `finishedAt` and frees the
+ * task's active-run slot for the next scheduled fire.
  */
 export const taskRunStatusSchema = z.enum([
   "queued",
@@ -294,7 +294,7 @@ export const taskRunResponseSchema = z
     errorCode: receivedApiErrorCodeSchema
       .nullable()
       .describe(
-        "Machine-readable reason a run ended `blocked` or `failed`: one of the API error codes, such as `usage_credit_required`, `quota_exceeded` or `provider_required`. `null` for every other run, and for a failure without a code; `error` carries the message."
+        "Machine-readable reason a run ended `blocked` or `failed`: one of the API error codes, such as `usage_credit_required` or `provider_required`. `null` for every other run, and for a failure without a code; `error` carries the message."
       ),
     userId: userIdSchema,
     metadata: metadataSchema,

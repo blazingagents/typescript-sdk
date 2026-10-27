@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.45.0
 
 The platform has no production users yet, so both removals ship in one release without a deprecation step.
 

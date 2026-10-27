@@ -5,7 +5,7 @@ import { z } from "zod";
  * tenant-owned product resource (ADR-0001). `userId` is an opaque
  * tenant-chosen string (`''` = tenant-level, immutable after creation);
  * `metadata` is a mutable jsonb object. Neither is ever on tenant config
- * (apikeys, providers, quotas).
+ * (apikeys, providers).
  *
  * These are the shared zod primitives every attributed entity reuses so the
  * two fields stay shape-identical across agents, Workspaces, prompts,

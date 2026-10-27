@@ -130,7 +130,6 @@ const publicContractNames = [
   "providerResponseSchema",
   "providerTypeSchema",
   "providersResponseSchema",
-  "quotaSchema",
   "receivedApiErrorResponseSchema",
   "reconnectMcpConnectionBodySchema",
   "renderPromptTemplate",

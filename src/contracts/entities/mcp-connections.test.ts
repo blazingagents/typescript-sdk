@@ -38,16 +38,26 @@ const baseConnection = {
 
 describe("MCP connection enums", () => {
   it("accepts all forward-compatible auth types", () => {
-    for (const authType of [
-      "none",
-      "bearer",
-      "oauth_authorization_code",
-      "oauth_client_credentials",
-    ]) {
+    for (const authType of ["none", "bearer", "oauth_authorization_code"]) {
       expect(mcpConnectionAuthTypeSchema.safeParse(authType).success).toBe(
         true
       );
     }
+  });
+
+  it("rejects OAuth Client Credentials, which is no longer an auth type", () => {
+    expect(
+      mcpConnectionAuthTypeSchema.safeParse("oauth_client_credentials").success
+    ).toBe(false);
+    expect(
+      createMcpConnectionBodySchema.safeParse({
+        authType: "oauth_client_credentials",
+        clientId: "service-client",
+        clientSecret: "secret-canary.client-secret",
+        name: "Service tools",
+        url: "https://mcp.example.com/tools",
+      }).success
+    ).toBe(false);
   });
 
   it("accepts all lifecycle statuses", () => {
@@ -201,43 +211,13 @@ describe("MCP connection schemas", () => {
     });
   });
 
-  it("accepts strict OAuth Client Credentials create and reconnect bodies", () => {
-    const credentials = {
-      authType: "oauth_client_credentials" as const,
-      clientId: "service-client",
-      clientSecret: "secret-canary.client-secret",
-      scope: "mcp:tools mcp:read",
-      url: "https://mcp.example.com/tools",
-    };
-
-    expect(
-      createMcpConnectionBodySchema.parse({
-        ...credentials,
-        name: "Service tools",
-      })
-    ).toEqual({ ...credentials, name: "Service tools" });
-    expect(reconnectMcpConnectionBodySchema.parse(credentials)).toEqual(
-      credentials
-    );
-  });
-
   it("accepts OAuth inputs without caller-selected issuers", () => {
-    const clientCredentials = {
-      authType: "oauth_client_credentials" as const,
-      clientId: "service-client",
-      clientSecret: "secret-canary.client-secret",
-      name: "Service tools",
-      url: "https://mcp.example.com/tools",
-    };
     const authorizationCode = {
       authType: "oauth_authorization_code" as const,
       name: "Interactive tools",
       url: "https://mcp.example.com/tools",
     };
 
-    expect(createMcpConnectionBodySchema.parse(clientCredentials)).toEqual(
-      clientCredentials
-    );
     expect(createMcpConnectionBodySchema.parse(authorizationCode)).toEqual(
       authorizationCode
     );
@@ -323,30 +303,6 @@ describe("MCP connection schemas", () => {
       { ...valid, oauthIssuer: "https://auth.example.com/" },
       { ...valid, authorizationCode: "not-an-input" },
       { ...valid, redirectUri: "https://attacker.example.com/callback" },
-    ]) {
-      expect(createMcpConnectionBodySchema.safeParse(invalid).success).toBe(
-        false
-      );
-    }
-  });
-
-  it("rejects incomplete, cross-mode, and unsupported OAuth Client Credentials inputs", () => {
-    const valid = {
-      authType: "oauth_client_credentials",
-      clientId: "service-client",
-      clientSecret: "secret-canary.client-secret",
-      name: "Service tools",
-      url: "https://mcp.example.com/tools",
-    };
-
-    for (const invalid of [
-      { ...valid, clientId: "" },
-      { ...valid, clientSecret: "" },
-      { ...valid, clientSecret: "contains space" },
-      { ...valid, oauthIssuer: "https://auth.example.com/" },
-      { ...valid, refreshToken: "not-supported" },
-      { ...valid, privateKey: "not-supported" },
-      { ...valid, authType: "bearer" },
     ]) {
       expect(createMcpConnectionBodySchema.safeParse(invalid).success).toBe(
         false

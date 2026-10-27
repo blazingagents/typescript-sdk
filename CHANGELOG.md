@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased
+
+The platform has no production users yet, so both removals ship in one release without a deprecation step.
+
+### Removed
+
+- The `oauth_client_credentials` MCP connection auth type. `mcpConnectionAuthTypeSchema`, `createMcpConnectionBodySchema` and `reconnectMcpConnectionBodySchema` no longer accept it. `none`, `bearer` and `oauth_authorization_code` are unchanged, and the optional pre-registered `clientId` and `clientSecret` pair still works with `oauth_authorization_code`. There is no replacement. Delete connections that use it, or connect the server with `bearer` if it accepts a long-lived token:
+
+  ```ts
+  // Before
+  await client.mcpConnections.create({
+    name: "Tools",
+    url,
+    authType: "oauth_client_credentials",
+    clientId,
+    clientSecret,
+  });
+
+  // After
+  await client.mcpConnections.create({
+    name: "Tools",
+    url,
+    authType: "bearer",
+    bearerToken,
+  });
+  ```
+
+- The tenant monthly quota. `tenant.get()` no longer returns `quota`, `tenant.patch()` no longer accepts it, `quotaSchema`, the `Quota` type, `MIN_QUOTA_RESET_DAY` and `MAX_QUOTA_RESET_DAY` are gone, and `quota_exceeded` is no longer an API error code or a `TaskRun.errorCode`. There is no replacement. Delete any `quota` field you send or read and any branch on `quota_exceeded`. The tenant model spending limit (`tenant.updateSpendingLimit()`) is unchanged:
+
+  ```ts
+  // Before
+  await client.tenant.patch({ name: "Acme", quota: null });
+
+  // After
+  await client.tenant.patch({ name: "Acme" });
+  ```
+
 ## 0.44.0
 
 ### Added

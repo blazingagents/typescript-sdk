@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  MAX_QUOTA_RESET_DAY,
-  MAX_TENANT_NAME_LENGTH,
-  MIN_QUOTA_RESET_DAY,
-} from "../limitations.ts";
+import { MAX_TENANT_NAME_LENGTH } from "../limitations.ts";
 import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
 
 /**
@@ -19,31 +15,9 @@ export const tenantDeletionSchema = z
   })
   .strict();
 
-/**
- * Quota — `GET/PATCH /v1/tenant` carries the tenant's self-set quota.
- * `null` means unlimited (no quota row).
- */
-export const quotaSchema = z
-  .object({
-    monthlyTokenLimit: z.number().int().positive().nullable(),
-    monthlyRequestLimit: z.number().int().positive().nullable(),
-    resetDay: z
-      .number()
-      .int()
-      .min(MIN_QUOTA_RESET_DAY)
-      .max(MAX_QUOTA_RESET_DAY),
-  })
-  .strict()
-  .refine(
-    ({ monthlyRequestLimit, monthlyTokenLimit }) =>
-      monthlyRequestLimit !== null || monthlyTokenLimit !== null,
-    { message: "At least one quota limit is required" }
-  );
-
 export const tenantSettingsSchema = z
   .object({
     name: z.string().trim().min(1).max(MAX_TENANT_NAME_LENGTH),
-    quota: quotaSchema.strip().nullable(),
   })
   .strip();
 
@@ -69,18 +43,11 @@ export const updateTenantSettingsBodySchema = z
       .max(MAX_TENANT_NAME_LENGTH)
       .optional()
       .describe("Display name of your tenant."),
-    quota: quotaSchema
-      .nullable()
-      .optional()
-      .describe(
-        "The whole monthly quota, replacing the current one, or `null` to remove it. Send `monthlyTokenLimit`, `monthlyRequestLimit`, and `resetDay`, with at least one limit set."
-      ),
   })
   .strict()
   .refine(hasObjectKeys, {
     message: atLeastOneFieldMessage,
   });
-export type Quota = z.infer<typeof quotaSchema>;
 export type TenantDeletion = z.infer<typeof tenantDeletionSchema>;
 export type TenantSettingsResponse = z.infer<
   typeof tenantSettingsResponseSchema

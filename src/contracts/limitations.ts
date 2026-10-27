@@ -59,10 +59,6 @@ export const DEFAULT_USAGE_RANGE_DAYS = 30;
 export const DEFAULT_USAGE_OVERVIEW_TOP_N = 5;
 export const MAX_USAGE_OVERVIEW_TOP_N = 20;
 
-// Quota — reset day between 1 and 28.
-export const MIN_QUOTA_RESET_DAY = 1;
-export const MAX_QUOTA_RESET_DAY = 28;
-
 /**
  * Tenant (workspace) — display name ≤ 80, set via `PATCH /v1/tenant`.
  */

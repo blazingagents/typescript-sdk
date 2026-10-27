@@ -19,7 +19,6 @@ export const apiErrorCodeSchema = z.enum([
   "forbidden",
   "insufficient_scope",
   "not_found",
-  "quota_exceeded",
   "model_spending_limit_exceeded",
   "subscription_required",
   "usage_credit_required",

@@ -39,8 +39,7 @@ export interface TenantResource {
 }
 
 /**
- * `client.tenant` — get/patch over `/v1/tenant` (the tenant's self-set
- * quota row). `quota: null` means unlimited (no row).
+ * `client.tenant` — get/patch over `/v1/tenant` (the tenant settings).
  * @param config - Shared authentication and transport configuration.
  * @returns The configured resource client.
  */

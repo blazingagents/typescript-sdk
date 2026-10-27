@@ -539,7 +539,7 @@ describe("createCompletionRelay", () => {
 
   it("returns safe errors while preserving the upstream status and request id", async () => {
     const { client } = fakeApi(() =>
-      apiError(429, "quota_exceeded", "request-3")
+      apiError(429, "rate_limited", "request-3")
     );
     const relay = createCompletionRelay({
       client,
@@ -551,7 +551,7 @@ describe("createCompletionRelay", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("x-request-id")).toBe("request-3");
     expect(await response.json()).toEqual({
-      error: { code: "quota_exceeded", message: "quota_exceeded message." },
+      error: { code: "rate_limited", message: "rate_limited message." },
     });
   });
 

@@ -1380,8 +1380,7 @@
             "enum": [
               "none",
               "bearer",
-              "oauth_authorization_code",
-              "oauth_client_credentials"
+              "oauth_authorization_code"
             ]
           },
           "status": {
@@ -1497,8 +1496,7 @@
                   "enum": [
                     "none",
                     "bearer",
-                    "oauth_authorization_code",
-                    "oauth_client_credentials"
+                    "oauth_authorization_code"
                   ]
                 },
                 "status": {
@@ -12107,7 +12105,7 @@
                         "enum": [
                           "none"
                         ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
+                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it."
                       }
                     },
                     "required": [
@@ -12137,7 +12135,7 @@
                         "enum": [
                           "bearer"
                         ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
+                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it."
                       },
                       "bearerToken": {
                         "type": "string",
@@ -12163,28 +12161,28 @@
                         "enum": [
                           "oauth_authorization_code"
                         ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
+                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it."
                       },
                       "clientId": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 2048,
                         "pattern": "^[!-~]+$",
-                        "description": "OAuth client ID. Required with `clientSecret` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientSecret`."
+                        "description": "OAuth client ID. Optional, but send it together with `clientSecret`."
                       },
                       "clientSecret": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 8192,
                         "pattern": "^[!-~]+$",
-                        "description": "OAuth client secret. Required with `clientId` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientId`. Never returned."
+                        "description": "OAuth client secret. Optional, but send it together with `clientId`. Never returned."
                       },
                       "scope": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 2048,
                         "pattern": "^[\\x20-\\x7e]+$",
-                        "description": "OAuth scope to request. Optional for either OAuth type."
+                        "description": "OAuth scope to request. Optional."
                       },
                       "url": {
                         "type": "string",
@@ -12201,59 +12199,6 @@
                     },
                     "required": [
                       "authType",
-                      "url",
-                      "name"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "authType": {
-                        "type": "string",
-                        "enum": [
-                          "oauth_client_credentials"
-                        ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
-                      },
-                      "clientId": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 2048,
-                        "pattern": "^[!-~]+$",
-                        "description": "OAuth client ID. Required with `clientSecret` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientSecret`."
-                      },
-                      "clientSecret": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 8192,
-                        "pattern": "^[!-~]+$",
-                        "description": "OAuth client secret. Required with `clientId` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientId`. Never returned."
-                      },
-                      "scope": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 2048,
-                        "pattern": "^[\\x20-\\x7e]+$",
-                        "description": "OAuth scope to request. Optional for either OAuth type."
-                      },
-                      "url": {
-                        "type": "string",
-                        "maxLength": 2048,
-                        "format": "uri",
-                        "description": "Streamable HTTP URL of the MCP server. Use `https`, with no credentials, query, or fragment."
-                      },
-                      "name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 80,
-                        "description": "Display name of the connection, unique within your tenant."
-                      }
-                    },
-                    "required": [
-                      "authType",
-                      "clientId",
-                      "clientSecret",
                       "url",
                       "name"
                     ],
@@ -12688,7 +12633,7 @@
                         "enum": [
                           "none"
                         ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
+                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it."
                       },
                       "url": {
                         "type": "string",
@@ -12711,7 +12656,7 @@
                         "enum": [
                           "bearer"
                         ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
+                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it."
                       },
                       "bearerToken": {
                         "type": "string",
@@ -12742,28 +12687,28 @@
                         "enum": [
                           "oauth_authorization_code"
                         ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
+                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, or `oauth_authorization_code`. The other fields you send depend on it."
                       },
                       "clientId": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 2048,
                         "pattern": "^[!-~]+$",
-                        "description": "OAuth client ID. Required with `clientSecret` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientSecret`."
+                        "description": "OAuth client ID. Optional, but send it together with `clientSecret`."
                       },
                       "clientSecret": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 8192,
                         "pattern": "^[!-~]+$",
-                        "description": "OAuth client secret. Required with `clientId` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientId`. Never returned."
+                        "description": "OAuth client secret. Optional, but send it together with `clientId`. Never returned."
                       },
                       "scope": {
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 2048,
                         "pattern": "^[\\x20-\\x7e]+$",
-                        "description": "OAuth scope to request. Optional for either OAuth type."
+                        "description": "OAuth scope to request. Optional."
                       },
                       "url": {
                         "type": "string",
@@ -12774,52 +12719,6 @@
                     },
                     "required": [
                       "authType",
-                      "url"
-                    ],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "authType": {
-                        "type": "string",
-                        "enum": [
-                          "oauth_client_credentials"
-                        ],
-                        "description": "How Blazing Agents authenticates to the MCP server: `none`, `bearer`, `oauth_client_credentials`, or `oauth_authorization_code`. The other fields you send depend on it."
-                      },
-                      "clientId": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 2048,
-                        "pattern": "^[!-~]+$",
-                        "description": "OAuth client ID. Required with `clientSecret` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientSecret`."
-                      },
-                      "clientSecret": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 8192,
-                        "pattern": "^[!-~]+$",
-                        "description": "OAuth client secret. Required with `clientId` for `oauth_client_credentials`. Optional for `oauth_authorization_code`, but send it together with `clientId`. Never returned."
-                      },
-                      "scope": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 2048,
-                        "pattern": "^[\\x20-\\x7e]+$",
-                        "description": "OAuth scope to request. Optional for either OAuth type."
-                      },
-                      "url": {
-                        "type": "string",
-                        "maxLength": 2048,
-                        "format": "uri",
-                        "description": "Streamable HTTP URL of the MCP server. Use `https`, with no credentials, query, or fragment."
-                      }
-                    },
-                    "required": [
-                      "authType",
-                      "clientId",
-                      "clientSecret",
                       "url"
                     ],
                     "additionalProperties": false

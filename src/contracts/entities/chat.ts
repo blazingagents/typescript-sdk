@@ -324,9 +324,9 @@ export const chatRequestBodySchema = z
         "Your end user's ID. Starting a session records it on the session, and every turn in that session keeps the session's end user."
       ),
     metadata: metadataSchema
-      .default({})
+      .optional()
       .describe(
-        "Your own key-value data. Recorded on a new session and on the turn's usage."
+        "Your own key-value data. Recorded on a new session and on the turn's usage. An omitted value records the session's metadata on the turn's usage."
       ),
     /**
      * `chatFunctionDefinitionsSchema` validates the value; `z.custom` is opaque

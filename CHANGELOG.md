@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `metadata` on a chat request is optional with no `{}` default, the same way `userId` works. A turn's usage records the `metadata` its request sends. A resume or a tool-approval continuation that sends none records the session's metadata, where it used to record `{}`. A new chat that sends none still records `{}`. `chatRequestBodySchema` no longer fills `metadata` in when you parse a body without it. Pass `metadata: {}` to a resume to record an empty object on its usage:
+
+  ```ts
+  // Before: records {} on the resume's usage
+  await client.chat({ agentId, sessionId, message });
+
+  // After: records the session's metadata; send {} for the old result
+  await client.chat({ agentId, sessionId, message, metadata: {} });
+  ```
+
 ## 0.45.0
 
 The platform has no production users yet, so both removals ship in one release without a deprecation step.

@@ -157,12 +157,11 @@ describe("chatRequestBodySchema", () => {
     >().not.toExtend<ChatRequestBody>();
   });
 
-  it("accepts a minimal body and applies defaults", () => {
+  it("accepts a minimal body, applies defaults and leaves metadata out", () => {
     expect(chatRequestBodySchema.parse(baseBody)).toStrictEqual({
       ...baseBody,
       trigger: "submit-message",
       userId: "",
-      metadata: {},
     });
   });
 

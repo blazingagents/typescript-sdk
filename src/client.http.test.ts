@@ -703,6 +703,36 @@ describe("credential echo", () => {
   });
 });
 
+it("discards a credential-bearing response that embeds a submitted secret", async () => {
+  const secret = "sk-secret-abcdef";
+  const fetch = vi.fn(async () =>
+    Response.json(
+      {
+        id: "prv_0123456789abcdef",
+        name: `leak ${secret}`,
+        providerType: "openrouter",
+        baseUrl: null,
+        keyFragment: "cdef",
+        createdAt: "2026-07-10T10:00:00.000Z",
+        updatedAt: "2026-07-10T10:00:00.000Z",
+      },
+      { status: 201, headers: { "x-request-id": "req_secret" } }
+    )
+  );
+  await expect(
+    client(fetch).providers.create({
+      name: "Prod",
+      providerType: "openrouter",
+      baseUrl: null,
+      apiKey: secret,
+    })
+  ).rejects.toMatchObject({
+    code: "credential_echo",
+    requestId: "req_secret",
+    status: 201,
+  });
+});
+
 describe("transport failures", () => {
   it("throws network_error with the original cause when fetch throws", async () => {
     const cause = new Error("connection refused");

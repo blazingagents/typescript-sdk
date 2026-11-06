@@ -198,6 +198,119 @@ describe("chat function definitions", () => {
     ).toMatchObject({ properties: { text: { type: "string" } } });
   });
 
+  it("sends a named object schema as a JSON object", async () => {
+    const source = upstream();
+    source.close();
+    const { client, calls } = harness(source.stream);
+    await client.chat({
+      agentId,
+      message,
+      functions: {
+        getOrder: defineFunction({
+          description: "Get an order",
+          inputSchema: z
+            .object({ orderId: z.string().describe("The order id") })
+            .meta({ id: "OrderInput", title: "Order" }),
+          execute: () => null,
+        }),
+      },
+    });
+    expect(
+      (calls[0].body as { functions: { getOrder: { inputSchema: unknown } } })
+        .functions.getOrder.inputSchema
+    ).toEqual({
+      type: "object",
+      title: "Order",
+      properties: {
+        orderId: { type: "string", description: "The order id" },
+      },
+      required: ["orderId"],
+    });
+  });
+
+  it("keeps the definitions a named object schema still references", async () => {
+    const source = upstream();
+    source.close();
+    const { client, calls } = harness(source.stream);
+    const Item = z.object({ sku: z.string() }).meta({ id: "Item" });
+    const Node: z.ZodType = z
+      .object({
+        name: z.string(),
+        get kids() {
+          return z.array(Node);
+        },
+      })
+      .meta({ id: "Node" });
+    const Folder: z.ZodType = z
+      .object({
+        get files() {
+          return z.array(File);
+        },
+      })
+      .meta({ id: "Folder" });
+    const File: z.ZodType = z
+      .object({
+        get parent() {
+          return Folder;
+        },
+      })
+      .meta({ id: "File" });
+    await client.chat({
+      agentId,
+      message,
+      functions: {
+        order: defineFunction({
+          description: "Order",
+          inputSchema: z
+            .object({ items: z.array(Item) })
+            .meta({ id: "OrderInput" }),
+          execute: () => null,
+        }),
+        tree: defineFunction({
+          description: "Tree",
+          inputSchema: Node,
+          execute: () => null,
+        }),
+        folder: defineFunction({
+          description: "Folder",
+          inputSchema: Folder,
+          execute: () => null,
+        }),
+      },
+    });
+    const sent = (
+      calls[0].body as {
+        functions: Record<string, { inputSchema: Record<string, unknown> }>;
+      }
+    ).functions;
+    expect(sent.order.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        items: { type: "array", items: { $ref: "#/$defs/Item" } },
+      },
+      required: ["items"],
+      $defs: {
+        Item: {
+          type: "object",
+          properties: { sku: { type: "string" } },
+          required: ["sku"],
+        },
+      },
+    });
+    expect(sent.tree.inputSchema).toMatchObject({
+      type: "object",
+      properties: { kids: { items: { $ref: "#/$defs/Node" } } },
+      $defs: { Node: { type: "object" } },
+    });
+    expect(sent.folder.inputSchema).toMatchObject({
+      type: "object",
+      $defs: {
+        File: { properties: { parent: { $ref: "#/$defs/Folder" } } },
+        Folder: { type: "object" },
+      },
+    });
+  });
+
   it("omits empty definitions but still owns private events", async () => {
     const source = upstream();
     const { client, calls, of } = harness(source.stream);
@@ -240,6 +353,16 @@ describe("chat function definitions", () => {
         text: defineFunction({
           description: "Text",
           inputSchema: z.string(),
+          execute: () => null,
+        }),
+      },
+    ],
+    [
+      "named non-object inputs",
+      {
+        text: defineFunction({
+          description: "Text",
+          inputSchema: z.string().meta({ id: "TextInput" }),
           execute: () => null,
         }),
       },

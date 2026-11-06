@@ -241,6 +241,20 @@ describe("chat function definitions", () => {
         },
       })
       .meta({ id: "Node" });
+    const Folder: z.ZodType = z
+      .object({
+        get files() {
+          return z.array(File);
+        },
+      })
+      .meta({ id: "Folder" });
+    const File: z.ZodType = z
+      .object({
+        get parent() {
+          return Folder;
+        },
+      })
+      .meta({ id: "File" });
     await client.chat({
       agentId,
       message,
@@ -255,6 +269,11 @@ describe("chat function definitions", () => {
         tree: defineFunction({
           description: "Tree",
           inputSchema: Node,
+          execute: () => null,
+        }),
+        folder: defineFunction({
+          description: "Folder",
+          inputSchema: Folder,
           execute: () => null,
         }),
       },
@@ -282,6 +301,13 @@ describe("chat function definitions", () => {
       type: "object",
       properties: { kids: { items: { $ref: "#/$defs/Node" } } },
       $defs: { Node: { type: "object" } },
+    });
+    expect(sent.folder.inputSchema).toMatchObject({
+      type: "object",
+      $defs: {
+        File: { properties: { parent: { $ref: "#/$defs/Folder" } } },
+        Folder: { type: "object" },
+      },
     });
   });
 

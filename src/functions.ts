@@ -74,7 +74,10 @@ function inlineRootObjectDefinition(
   const json = JSON.stringify(inlined);
   if (json.includes('"$ref":"#/$defs/')) {
     const { [name]: _root, ...others } = defs;
-    inlined.$defs = json.includes(JSON.stringify(ref)) ? defs : others;
+    const rootReferenced = `${json}${JSON.stringify(others)}`.includes(
+      JSON.stringify(ref)
+    );
+    inlined.$defs = rootReferenced ? defs : others;
   }
   return inlined;
 }

@@ -56,42 +56,25 @@ export function defineFunction<Schema extends z.ZodType, Output>(
  * with an id and leaves that reference, which is not `type: "object"`.
  */
 function inlineRootObjectDefinition(
-  schema: Record<string, unknown>
-): Record<string, unknown> {
-  const ref = schema.$ref;
-  const defs = schema.$defs;
-  if (
-    typeof ref !== "string" ||
-    !ref.startsWith("#/$defs/") ||
-    typeof defs !== "object" ||
-    defs === null ||
-    Array.isArray(defs)
-  ) {
+  schema: z.core.JSONSchema.BaseSchema
+): z.core.JSONSchema.BaseSchema {
+  const { $ref: ref, $defs: defs, ...rest } = schema;
+  if (ref === undefined || !ref.startsWith("#/$defs/") || defs === undefined) {
     return schema;
   }
   const name = ref
     .slice("#/$defs/".length)
     .replaceAll("~1", "/")
     .replaceAll("~0", "~");
-  const target = (defs as Record<string, unknown>)[name];
-  if (
-    typeof target !== "object" ||
-    target === null ||
-    Array.isArray(target) ||
-    (target as { type?: unknown }).type !== "object"
-  ) {
+  const target = defs[name];
+  if (target === undefined || target.type !== "object") {
     return schema;
   }
-  const { $ref: _ref, $defs, ...rest } = schema;
-  const inlined: Record<string, unknown> = {
-    ...(target as Record<string, unknown>),
-    ...rest,
-  };
-  if (
-    $defs !== undefined &&
-    JSON.stringify(inlined).includes('"$ref":"#/$defs/')
-  ) {
-    inlined.$defs = $defs;
+  const inlined: z.core.JSONSchema.BaseSchema = { ...target, ...rest };
+  const json = JSON.stringify(inlined);
+  if (json.includes('"$ref":"#/$defs/')) {
+    const { [name]: _root, ...others } = defs;
+    inlined.$defs = json.includes(JSON.stringify(ref)) ? defs : others;
   }
   return inlined;
 }

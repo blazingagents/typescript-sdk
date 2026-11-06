@@ -228,6 +228,63 @@ describe("chat function definitions", () => {
     });
   });
 
+  it("keeps the definitions a named object schema still references", async () => {
+    const source = upstream();
+    source.close();
+    const { client, calls } = harness(source.stream);
+    const Item = z.object({ sku: z.string() }).meta({ id: "Item" });
+    const Node: z.ZodType = z
+      .object({
+        name: z.string(),
+        get kids() {
+          return z.array(Node);
+        },
+      })
+      .meta({ id: "Node" });
+    await client.chat({
+      agentId,
+      message,
+      functions: {
+        order: defineFunction({
+          description: "Order",
+          inputSchema: z
+            .object({ items: z.array(Item) })
+            .meta({ id: "OrderInput" }),
+          execute: () => null,
+        }),
+        tree: defineFunction({
+          description: "Tree",
+          inputSchema: Node,
+          execute: () => null,
+        }),
+      },
+    });
+    const sent = (
+      calls[0].body as {
+        functions: Record<string, { inputSchema: Record<string, unknown> }>;
+      }
+    ).functions;
+    expect(sent.order.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        items: { type: "array", items: { $ref: "#/$defs/Item" } },
+      },
+      required: ["items"],
+      $defs: {
+        Item: {
+          type: "object",
+          properties: { sku: { type: "string" } },
+          required: ["sku"],
+        },
+      },
+    });
+    expect(sent.tree.inputSchema).toMatchObject({
+      type: "object",
+      properties: { kids: { items: { $ref: "#/$defs/Node" } } },
+      $defs: { Node: { type: "object" } },
+    });
+  });
+
   it("omits empty definitions but still owns private events", async () => {
     const source = upstream();
     const { client, calls, of } = harness(source.stream);

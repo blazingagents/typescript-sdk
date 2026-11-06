@@ -52,6 +52,51 @@ export function defineFunction<Schema extends z.ZodType, Output>(
 }
 
 /**
+ * Inlines a root `$ref` to an object `$defs` entry. Zod extracts a schema
+ * with an id and leaves that reference, which is not `type: "object"`.
+ */
+function inlineRootObjectDefinition(
+  schema: Record<string, unknown>
+): Record<string, unknown> {
+  const ref = schema.$ref;
+  const defs = schema.$defs;
+  if (
+    typeof ref !== "string" ||
+    !ref.startsWith("#/$defs/") ||
+    typeof defs !== "object" ||
+    defs === null ||
+    Array.isArray(defs)
+  ) {
+    return schema;
+  }
+  const name = ref
+    .slice("#/$defs/".length)
+    .replaceAll("~1", "/")
+    .replaceAll("~0", "~");
+  const target = (defs as Record<string, unknown>)[name];
+  if (
+    typeof target !== "object" ||
+    target === null ||
+    Array.isArray(target) ||
+    (target as { type?: unknown }).type !== "object"
+  ) {
+    return schema;
+  }
+  const { $ref: _ref, $defs, ...rest } = schema;
+  const inlined: Record<string, unknown> = {
+    ...(target as Record<string, unknown>),
+    ...rest,
+  };
+  if (
+    $defs !== undefined &&
+    JSON.stringify(inlined).includes('"$ref":"#/$defs/')
+  ) {
+    inlined.$defs = $defs;
+  }
+  return inlined;
+}
+
+/**
  * Converts caller-local Zod input schemas to validated JSON Schema definitions.
  * @param functions - Caller-local function handlers keyed by name.
  * @returns Validated function descriptions and JSON input schemas.
@@ -68,7 +113,13 @@ export function toChatFunctionDefinitions(
             fn.inputSchema,
             { io: "input" }
           );
-          return [name, { description: fn.description, inputSchema }];
+          return [
+            name,
+            {
+              description: fn.description,
+              inputSchema: inlineRootObjectDefinition(inputSchema),
+            },
+          ];
         })
       )
     );

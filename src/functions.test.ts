@@ -198,6 +198,36 @@ describe("chat function definitions", () => {
     ).toMatchObject({ properties: { text: { type: "string" } } });
   });
 
+  it("sends a named object schema as a JSON object", async () => {
+    const source = upstream();
+    source.close();
+    const { client, calls } = harness(source.stream);
+    await client.chat({
+      agentId,
+      message,
+      functions: {
+        getOrder: defineFunction({
+          description: "Get an order",
+          inputSchema: z
+            .object({ orderId: z.string().describe("The order id") })
+            .meta({ id: "OrderInput", title: "Order" }),
+          execute: () => null,
+        }),
+      },
+    });
+    expect(
+      (calls[0].body as { functions: { getOrder: { inputSchema: unknown } } })
+        .functions.getOrder.inputSchema
+    ).toEqual({
+      type: "object",
+      title: "Order",
+      properties: {
+        orderId: { type: "string", description: "The order id" },
+      },
+      required: ["orderId"],
+    });
+  });
+
   it("omits empty definitions but still owns private events", async () => {
     const source = upstream();
     const { client, calls, of } = harness(source.stream);
@@ -240,6 +270,16 @@ describe("chat function definitions", () => {
         text: defineFunction({
           description: "Text",
           inputSchema: z.string(),
+          execute: () => null,
+        }),
+      },
+    ],
+    [
+      "named non-object inputs",
+      {
+        text: defineFunction({
+          description: "Text",
+          inputSchema: z.string().meta({ id: "TextInput" }),
           execute: () => null,
         }),
       },

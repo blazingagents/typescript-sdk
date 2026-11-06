@@ -387,7 +387,11 @@ export function stripFunctionEvents(
           buffer = buffer.slice(end);
         }
       }
-      handleBlock("", buffer + decoder.decode());
+      /** An unterminated block is not an SSE event: forward public bytes, never dispatch. */
+      const rest = buffer + decoder.decode();
+      if (functionCallFrom(rest) === undefined) {
+        handleBlock("", rest);
+      }
       if (!finished) {
         finished = true;
         output.close();

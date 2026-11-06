@@ -886,6 +886,17 @@ describe("chat function dispatch", () => {
     expect(of("/claim")).toHaveLength(0);
   });
 
+  it("does not forward a function-call event that ends without a blank line", async () => {
+    const source = upstream();
+    const { client } = harness(source.stream);
+    const { functions } = orderFunctions();
+    const result = await client.chat({ agentId, message, functions });
+    const frame = `data: ${JSON.stringify(readyEvent())}`;
+    source.push(frame);
+    source.close();
+    expect(await readAll(result.toStream())).toBe("");
+  });
+
   it.each([
     ["non-transient", sse({ ...readyEvent(), transient: false })],
     ["malformed", `data:${JSON.stringify(readyEvent({ id: "bad" }))}\n\n`],

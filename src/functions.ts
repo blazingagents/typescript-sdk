@@ -387,7 +387,8 @@ export function stripFunctionEvents(
           buffer = buffer.slice(end);
         }
       }
-      handleBlock("", buffer + decoder.decode());
+      const rest = buffer + decoder.decode();
+      handleBlock(rest, rest);
       if (!finished) {
         finished = true;
         output.close();

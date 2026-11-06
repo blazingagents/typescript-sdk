@@ -888,13 +888,14 @@ describe("chat function dispatch", () => {
 
   it("does not forward a function-call event that ends without a blank line", async () => {
     const source = upstream();
-    const { client } = harness(source.stream);
+    const { client, of } = harness(source.stream);
     const { functions } = orderFunctions();
     const result = await client.chat({ agentId, message, functions });
     const frame = `data: ${JSON.stringify(readyEvent())}`;
     source.push(frame);
     source.close();
     expect(await readAll(result.toStream())).toBe("");
+    expect(of("/claim")).toHaveLength(0);
   });
 
   it.each([

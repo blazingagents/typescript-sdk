@@ -34,6 +34,9 @@ const CREDENTIAL_KEYS = new Set([
   "credential",
 ]);
 
+/** Submitted secrets at least this long are rejected when echoed as a substring. */
+const MIN_SUBSTRING_SECRET_LENGTH = 8;
+
 const DOT_OR_EMPTY_SEGMENTS = new Set(["", ".", ".."]);
 
 /**
@@ -152,6 +155,21 @@ export async function requestJson<T>(
       status: response.status,
     });
   }
+  if (
+    options.credentialBearing &&
+    collectLongSecrets(options.json).some((secret) =>
+      JSON.stringify(json).includes(secret)
+    )
+  ) {
+    throw new BlazingAgentsError({
+      code: "credential_echo",
+      headers,
+      message:
+        "The server echoed a submitted secret; the response body was discarded.",
+      requestId: headers.get("x-request-id") ?? undefined,
+      status: response.status,
+    });
+  }
   try {
     return schema === undefined ? (json as T) : schema.parse(json);
   } catch (cause) {
@@ -190,6 +208,35 @@ function findCredentialKey(value: unknown): string | undefined {
       return nested;
     }
   }
+}
+
+/** Credential values (≥8 chars) collected from a request body. */
+function collectLongSecrets(value: unknown): string[] {
+  const secrets: string[] = [];
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        walk(item);
+      }
+      return;
+    }
+    if (node === null || typeof node !== "object") {
+      return;
+    }
+    for (const [key, item] of Object.entries(node)) {
+      if (
+        CREDENTIAL_KEYS.has(key) &&
+        typeof item === "string" &&
+        item.length >= MIN_SUBSTRING_SECRET_LENGTH
+      ) {
+        secrets.push(item);
+      } else {
+        walk(item);
+      }
+    }
+  };
+  walk(value);
+  return secrets;
 }
 
 /**

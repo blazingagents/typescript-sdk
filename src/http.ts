@@ -34,7 +34,7 @@ const CREDENTIAL_KEYS = new Set([
   "credential",
 ]);
 
-/** Submitted secrets at least this long are rejected when echoed as a substring. */
+/** Submitted secrets at least this long match as a substring; shorter ones only as a whole string. */
 const MIN_SUBSTRING_SECRET_LENGTH = 8;
 
 const DOT_OR_EMPTY_SEGMENTS = new Set(["", ".", ".."]);
@@ -157,9 +157,7 @@ export async function requestJson<T>(
   }
   if (
     options.credentialBearing &&
-    collectLongSecrets(options.json).some((secret) =>
-      JSON.stringify(json).includes(secret)
-    )
+    containsSubmittedSecret(json, collectSecrets(options.json))
   ) {
     throw new BlazingAgentsError({
       code: "credential_echo",
@@ -210,33 +208,43 @@ function findCredentialKey(value: unknown): string | undefined {
   }
 }
 
-/** Credential values (≥8 chars) collected from a request body. */
-function collectLongSecrets(value: unknown): string[] {
-  const secrets: string[] = [];
-  const walk = (node: unknown): void => {
-    if (Array.isArray(node)) {
-      for (const item of node) {
-        walk(item);
-      }
-      return;
-    }
-    if (node === null || typeof node !== "object") {
-      return;
-    }
-    for (const [key, item] of Object.entries(node)) {
-      if (
-        CREDENTIAL_KEYS.has(key) &&
-        typeof item === "string" &&
-        item.length >= MIN_SUBSTRING_SECRET_LENGTH
-      ) {
-        secrets.push(item);
-      } else {
-        walk(item);
-      }
-    }
-  };
-  walk(value);
-  return secrets;
+/** Credential values collected from a request body. */
+function collectSecrets(value: unknown): string[] {
+  if (value === null || typeof value !== "object") {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, item]) =>
+    CREDENTIAL_KEYS.has(key) && typeof item === "string"
+      ? [item]
+      : collectSecrets(item)
+  );
+}
+
+/**
+ * Reports whether `text` holds `secret`: anywhere for a secret of
+ * `MIN_SUBSTRING_SECRET_LENGTH` characters or more, else only as the whole
+ * string. An empty secret is never found.
+ */
+function secretIn(text: string, secret: string): boolean {
+  if (secret === "") {
+    return false;
+  }
+  return secret.length >= MIN_SUBSTRING_SECRET_LENGTH
+    ? text.includes(secret)
+    : text === secret;
+}
+
+/** Reports whether any string value in a decoded JSON value holds a submitted secret. */
+function containsSubmittedSecret(value: unknown, secrets: string[]): boolean {
+  if (typeof value === "string") {
+    return secrets.some((secret) => secretIn(value, secret));
+  }
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  return Object.values(value).some((item) =>
+    containsSubmittedSecret(item, secrets)
+  );
 }
 
 /**

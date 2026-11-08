@@ -701,35 +701,76 @@ describe("credential echo", () => {
       data: [],
     });
   });
-});
 
-it("discards a credential-bearing response that embeds a submitted secret", async () => {
-  const secret = "sk-secret-abcdef";
-  const fetch = vi.fn(async () =>
-    Response.json(
-      {
-        id: "prv_0123456789abcdef",
-        name: `leak ${secret}`,
-        providerType: "openrouter",
-        baseUrl: null,
-        keyFragment: "cdef",
-        createdAt: "2026-07-10T10:00:00.000Z",
-        updatedAt: "2026-07-10T10:00:00.000Z",
-      },
-      { status: 201, headers: { "x-request-id": "req_secret" } }
-    )
-  );
-  await expect(
-    client(fetch).providers.create({
-      name: "Prod",
+  describe("submitted secret", () => {
+    const provider = (name: string, extra = "unused") => ({
+      id: "prv_0123456789abcdef",
+      name,
       providerType: "openrouter",
       baseUrl: null,
-      apiKey: secret,
-    })
-  ).rejects.toMatchObject({
-    code: "credential_echo",
-    requestId: "req_secret",
-    status: 201,
+      keyFragment: "cdef",
+      extra,
+      createdAt: "2026-07-10T10:00:00.000Z",
+      updatedAt: "2026-07-10T10:00:00.000Z",
+    });
+    const create = (
+      name: string,
+      apiKey: string,
+      extra?: string,
+      headers: Record<string, string> = { "x-request-id": "req_secret" }
+    ) =>
+      client(
+        vi.fn(async () =>
+          Response.json(provider(name, extra), {
+            status: 201,
+            headers,
+          })
+        )
+      ).providers.create({
+        name: "Prod",
+        providerType: "openrouter",
+        baseUrl: null,
+        apiKey,
+      });
+
+    it("rejects a long secret echoed inside another field", async () => {
+      await expect(
+        create("leak sk-secret-abcdef", "sk-secret-abcdef")
+      ).rejects.toMatchObject({
+        code: "credential_echo",
+        requestId: "req_secret",
+        status: 201,
+      });
+    });
+
+    it("rejects a secret containing a quote echoed inside another field", async () => {
+      await expect(
+        create('leak sk-ab"cdefgh', 'sk-ab"cdefgh')
+      ).rejects.toMatchObject({ code: "credential_echo" });
+    });
+
+    it("rejects a short secret returned as a whole string value", async () => {
+      const error: unknown = await create("abcd", "abcd", undefined, {}).catch(
+        (caught: unknown) => caught
+      );
+
+      expect(error).toMatchObject({
+        code: "credential_echo",
+        requestId: undefined,
+      });
+    });
+
+    it("resolves when a short secret is only a substring of a longer value", async () => {
+      await expect(create("abcdef", "abcd")).resolves.toMatchObject({
+        name: "abcdef",
+      });
+    });
+
+    it("ignores an empty secret", async () => {
+      await expect(create("Prod", "", "")).resolves.toMatchObject({
+        name: "Prod",
+      });
+    });
   });
 });
 

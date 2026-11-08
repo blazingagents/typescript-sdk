@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A credential-bearing call now rejects with `credential_echo` when the response returns a secret you submitted in a string value, matching the Go, Python and Rust SDKs. A secret of 8 or more characters is found anywhere inside a string value, including a secret that contains `"` or `\`. A shorter secret is found only when a string value equals it. An empty secret never matches.
+
 ## 0.46.0
 
 ### Changed

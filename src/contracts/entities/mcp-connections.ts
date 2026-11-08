@@ -55,7 +55,7 @@ const mcpConnectionNameInputSchema = mcpConnectionNameSchema.describe(
 
 const bearerTokenSchema = z
   .string()
-  .min(1)
+  .min(8)
   .max(MAX_MCP_BEARER_TOKEN_LENGTH)
   .regex(/^[!-~]+$/, "Bearer token must contain visible ASCII characters only")
   .describe(
@@ -73,7 +73,7 @@ const oauthClientIdSchema = z
 
 const oauthClientSecretSchema = z
   .string()
-  .min(1)
+  .min(8)
   .max(MAX_MCP_OAUTH_CLIENT_SECRET_LENGTH)
   .regex(/^[!-~]+$/, "Client secret must contain visible ASCII characters only")
   .describe(

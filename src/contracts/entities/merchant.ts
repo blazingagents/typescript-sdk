@@ -79,7 +79,7 @@ export const createMerchantConnectionBodySchema = z
     ),
     credential: z
       .string()
-      .min(1)
+      .min(8)
       .describe(
         "A credential for your provider account: a Polar Organization Access Token, or a Dodo API key in the mode that matches `environment`. It is never returned."
       ),
@@ -98,7 +98,7 @@ export const updateMerchantConnectionBodySchema = z
   .object({
     credential: z
       .string()
-      .min(1)
+      .min(8)
       .optional()
       .describe(
         "A replacement credential. It must belong to the same merchant account as the current one."

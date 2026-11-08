@@ -117,6 +117,30 @@ describe("merchant connection bodies", () => {
     ).toBe(false);
   });
 
+  it("requires a credential of at least 8 characters on create and update", () => {
+    const create = { environment: "live", provider: "polar" };
+    expect(
+      createMerchantConnectionBodySchema.safeParse({
+        ...create,
+        credential: "1234567",
+      }).success
+    ).toBe(false);
+    expect(
+      createMerchantConnectionBodySchema.safeParse({
+        ...create,
+        credential: "12345678",
+      }).success
+    ).toBe(true);
+    expect(
+      updateMerchantConnectionBodySchema.safeParse({ credential: "1234567" })
+        .success
+    ).toBe(false);
+    expect(
+      updateMerchantConnectionBodySchema.safeParse({ credential: "12345678" })
+        .success
+    ).toBe(true);
+  });
+
   it("update accepts partial fields only", () => {
     expect(updateMerchantConnectionBodySchema.safeParse({}).success).toBe(true);
     expect(

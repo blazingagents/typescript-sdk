@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Changed
+
+- A provider `apiKey`, an MCP connection `bearerToken` or OAuth `clientSecret`, and a merchant connection `credential` must be at least 8 characters, matching the Slack `botToken`. The platform returns the last 4 characters of a stored secret as `keyFragment` or `credentialFragment`, and a client refuses a response that contains a secret it sent, so a secret of 4 characters or fewer came back whole and failed after it was saved. `createProviderBodySchema`, `createMcpConnectionBodySchema`, `reconnectMcpConnectionBodySchema` and the merchant connection create and update body schemas now reject a shorter secret with a validation error. Send a longer secret:
+
+  ```ts
+  // Before: accepted, then the client threw on the saved response
+  await client.providers.create({ name: "Test", providerType: "openai", apiKey: "k" });
+
+  // After: rejected before it is saved; send the vendor's real key
+  await client.providers.create({ name: "Test", providerType: "openai", apiKey: "sk-test-12345" });
+  ```
+
 ### Fixed
 
 - A credential-bearing call now rejects with `credential_echo` when the response returns a secret you submitted in a string value, matching the Go, Python and Rust SDKs. A secret of 8 or more characters is found anywhere inside a string value, including a secret that contains `"` or `\`. A shorter secret is found only when a string value equals it. An empty secret never matches.

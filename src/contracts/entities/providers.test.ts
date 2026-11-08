@@ -196,8 +196,23 @@ describe("createProviderBodySchema", () => {
         name: "Custom",
         providerType: "custom",
         baseUrl: "https://api.example.com/v1",
-        apiKey: "k",
+        apiKey: "sk-test-12345",
       }).success
+    ).toBe(true);
+  });
+
+  it("requires an apiKey of at least 8 characters", () => {
+    const body = { name: "X", providerType: "openai" as const };
+    expect(
+      createProviderBodySchema.safeParse({ ...body, apiKey: "1234567" }).success
+    ).toBe(false);
+    expect(
+      createProviderBodySchema.safeParse({ ...body, apiKey: "  1234567  " })
+        .success
+    ).toBe(false);
+    expect(
+      createProviderBodySchema.safeParse({ ...body, apiKey: "12345678" })
+        .success
     ).toBe(true);
   });
 
@@ -217,7 +232,7 @@ describe("createProviderBodySchema", () => {
         name: "X",
         providerType: "openai",
         baseUrl: "not-a-url",
-        apiKey: "k",
+        apiKey: "sk-test-12345",
       }).success
     ).toBe(false);
   });
@@ -227,7 +242,7 @@ describe("createProviderBodySchema", () => {
       createProviderBodySchema.safeParse({
         name: "Custom No URL",
         providerType: "custom",
-        apiKey: "k",
+        apiKey: "sk-test-12345",
       }).success
     ).toBe(false);
   });
@@ -238,7 +253,7 @@ describe("createProviderBodySchema", () => {
         name: "Custom Null URL",
         providerType: "custom",
         baseUrl: null,
-        apiKey: "k",
+        apiKey: "sk-test-12345",
       }).success
     ).toBe(false);
   });
@@ -249,7 +264,7 @@ describe("createProviderBodySchema", () => {
         name: "Custom With URL",
         providerType: "custom",
         baseUrl: "https://api.deepseek.com/v1",
-        apiKey: "k",
+        apiKey: "sk-test-12345",
       }).success
     ).toBe(true);
   });

@@ -91,7 +91,7 @@ export const createProviderBodySchema = z
     apiKey: z
       .string()
       .trim()
-      .min(1)
+      .min(8)
       .describe(
         "The vendor API key. It is stored encrypted, never returned, and cannot be changed later."
       ),

@@ -335,6 +335,37 @@ describe("MCP connection schemas", () => {
     ).toBe(false);
   });
 
+  it("requires a bearer token and an OAuth client secret of at least 8 characters", () => {
+    const url = baseConnection.url;
+    const bearer = { authType: "bearer" as const, url };
+    const oauth = {
+      authType: "oauth_authorization_code" as const,
+      clientId: "interactive-client",
+      url,
+    };
+    for (const [schema, extra] of [
+      [createMcpConnectionBodySchema, { name: "Server" }],
+      [reconnectMcpConnectionBodySchema, {}],
+    ] as const) {
+      expect(
+        schema.safeParse({ ...bearer, ...extra, bearerToken: "1234567" })
+          .success
+      ).toBe(false);
+      expect(
+        schema.safeParse({ ...bearer, ...extra, bearerToken: "12345678" })
+          .success
+      ).toBe(true);
+      expect(
+        schema.safeParse({ ...oauth, ...extra, clientSecret: "1234567" })
+          .success
+      ).toBe(false);
+      expect(
+        schema.safeParse({ ...oauth, ...extra, clientSecret: "12345678" })
+          .success
+      ).toBe(true);
+    }
+  });
+
   it("parses only a Blazing OAuth initiation URL", () => {
     const setupToken = "A".repeat(43);
     expect(
@@ -356,7 +387,7 @@ describe("MCP connection schemas", () => {
         name: "Docs server",
         url: baseConnection.url,
         authType: "none",
-        bearerToken: "secret",
+        bearerToken: "secret-canary",
       }).success
     ).toBe(false);
   });

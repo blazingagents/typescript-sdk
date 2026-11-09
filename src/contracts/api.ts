@@ -29,6 +29,7 @@ export const apiErrorCodeSchema = z.enum([
   "subscription_not_cancelled",
   "agent_disabled",
   "agent_busy",
+  "agent_deleting",
   "admin_agent_managed",
   "agent_mcp_connection_not_found",
   "agent_mcp_connections_invalid",

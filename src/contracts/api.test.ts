@@ -58,6 +58,7 @@ describe("known error codes", () => {
       "mcp_connection_in_use",
       "mcp_connection_unreachable",
       "mcp_connection_discovery_failed",
+      "mcp_connection_needs_auth",
       "workspace_not_found",
       "workspace_in_use",
       "workspace_busy",

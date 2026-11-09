@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `agent_deleting` joins the known error codes (`ApiErrorCode`, `KnownBlazingAgentsErrorCode`). While a delete of an agent that also deletes its artifacts runs, a new chat turn, resume, tool-approval continuation, `completion()`, `object()` or task run for that agent fails with `409 agent_deleting`. If that delete failed, the agent keeps refusing work until you send the delete again, which finishes it.
+
 ## 0.47.0
 
 ### Changed

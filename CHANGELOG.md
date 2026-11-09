@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `mcp_connection_needs_auth` joins the known error codes (`ApiErrorCode`, `KnownBlazingAgentsErrorCode`). A chat turn, resume, tool-approval continuation, `completion()` or `object()` whose agent has an attached MCP connection with status `needs_auth` fails with `409 mcp_connection_needs_auth` before the model runs. The message names the connection, and `error.details.connections` lists each one as `{ connectionId, status }`. Reconnect the connection; retrying does not help until then. A task run that fails this way ends `blocked` with this `errorCode`. A `502 mcp_connection_discovery_failed` from a turn now names its connection the same way, with `status: "error"`.
+
 ## 0.48.0
 
 ### Added

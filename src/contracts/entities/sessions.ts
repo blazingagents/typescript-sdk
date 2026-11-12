@@ -5,6 +5,7 @@ import { toolExecutionReferenceSchema } from "./agent-approval.ts";
 import { agentConfigSchema, agentResponseSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 import { chatRequestBodySchema } from "./chat.ts";
+import { sessionMessageSchema } from "./session-messages.ts";
 
 /**
  * `GET /v1/agents/{agentId}/sessions` list item. `agentId`/`tenantId` never
@@ -58,29 +59,6 @@ export const latestSessionListItemSchema = sessionListItemSchema
 export const latestSessionsListResponseSchema = paginatedResponseSchema(
   latestSessionListItemSchema
 );
-
-/**
- * `GET /v1/agents/{agentId}/sessions/{sessionId}/messages` — transcript as
- * `UIMessage[]` verbatim, paginated backwards (newest page first) with an
- * optional forward `?after={cursor}` for the poll loop.
- */
-export const sessionMessageSchema = z
-  .object({
-    id: z.string().min(1),
-    role: z.enum(["system", "user", "assistant"]),
-    branchable: z.boolean(),
-    parts: z
-      .array(
-        z
-          .object({
-            type: z.string().min(1),
-          })
-          .passthrough()
-      )
-      .min(1),
-    metadata: z.unknown().optional(),
-  })
-  .passthrough();
 
 /**
  * The messages endpoint carries two cursors: `nextCursor` for continuing
@@ -192,7 +170,6 @@ export type TurnStreamErrorEvent = z.infer<typeof turnStreamErrorEventSchema>;
 export type SessionForkedFrom = z.infer<typeof sessionForkedFromSchema>;
 export type SessionListItem = z.infer<typeof sessionListItemSchema>;
 export type LatestSessionListItem = z.infer<typeof latestSessionListItemSchema>;
-export type SessionMessage = z.infer<typeof sessionMessageSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type SessionsListResponse = z.infer<typeof sessionsListResponseSchema>;
 export type LatestSessionsListResponse = z.infer<

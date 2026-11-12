@@ -199,12 +199,15 @@ export {
   stopSessionResponseSchema,
   submitSessionInputBodySchema,
 } from "./entities/session-inputs.ts";
+export {
+  type SessionMessage,
+  sessionMessageSchema,
+} from "./entities/session-messages.ts";
 export type {
   ContinueToolApprovalsBody,
   LatestSessionListItem,
   SessionForkedFrom,
   SessionListItem,
-  SessionMessage,
   ToolApprovalContinuationState,
   ToolApprovalDecision,
   ToolApprovalsResponse,
@@ -216,7 +219,6 @@ export {
   latestSessionsListResponseSchema,
   sessionForkedFromSchema,
   sessionListItemSchema,
-  sessionMessageSchema,
   sessionMessagesResponseSchema,
   sessionResponseSchema,
   sessionsListResponseSchema,

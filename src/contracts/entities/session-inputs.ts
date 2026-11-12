@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { turnIdSchema } from "../ids.ts";
-import { sessionMessageSchema } from "./sessions.ts";
+import { sessionMessageSchema } from "./session-messages.ts";
 
 export const sessionInputStateSchema = z.enum([
   "accepted",

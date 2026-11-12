@@ -1298,6 +1298,7 @@ describe("approval relay without a registry", () => {
       new Request("http://example.test/chat", {
         method: "POST",
         body: JSON.stringify({
+          op: "chat",
           sessionId,
           message: {
             id: "assistant-1",

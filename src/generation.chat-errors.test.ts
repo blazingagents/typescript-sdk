@@ -63,7 +63,7 @@ describe("client.chat failures", () => {
 
     await expect(result.toResponse().text()).rejects.toMatchObject({
       code: "stream_error",
-      message: "[stream_error] socket closed",
+      message: "socket closed",
       requestId: "request-chat-relay-transport",
     });
   });
@@ -93,7 +93,7 @@ describe("client.chat failures", () => {
 
     await expect(result.toResponse().text()).rejects.toMatchObject({
       code: "stream_error",
-      message: "[stream_error] The chat response stream failed.",
+      message: "The chat response stream failed.",
       requestId: "request-chat-non-error",
     });
   });
@@ -223,7 +223,7 @@ describe("client.chat failures", () => {
 
     await expect(result.toResponse().body?.cancel()).rejects.toMatchObject({
       code: "stream_error",
-      message: "[stream_error] cancel failed",
+      message: "cancel failed",
       requestId: "request-chat-cancel",
     });
   });
@@ -255,7 +255,7 @@ describe("client.chat failures", () => {
     expect(error.code).toBe("stream_error");
     expect(error.requestId).toBe("request-missing-location");
     expect(error.message).toBe(
-      "[stream_error] The server did not return a session id (no Location header)."
+      "The server did not return a session id (no Location header)."
     );
   });
 
@@ -288,7 +288,7 @@ describe("client.chat failures", () => {
     expect(error.code).toBe("stream_error");
     expect(error.requestId).toBe("request-malformed-location");
     expect(error.message).toBe(
-      "[stream_error] The server returned a malformed session Location header."
+      "The server returned a malformed session Location header."
     );
   });
 });

@@ -60,7 +60,7 @@ export class BlazingAgentsError extends Error {
     },
     options?: ErrorOptions
   ) {
-    super(`[${code}] ${message}`, options);
+    super(message, options);
     this.name = BLAZING_AGENTS_ERROR_NAME;
     this.code = code;
     this.details = details;

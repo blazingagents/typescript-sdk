@@ -5,8 +5,7 @@ import { agentRow, errorEnvelope, type FetchOption } from "./test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
 const DIAGNOSTIC_BODY_LIMIT_BYTES = 64 * 1024;
-const INVALID_RESPONSE_MESSAGE =
-  "[invalid_response] The server returned an invalid response.";
+const INVALID_RESPONSE_MESSAGE = "The server returned an invalid response.";
 const emptyPage = JSON.stringify({ data: [], nextCursor: null });
 
 function client(
@@ -170,7 +169,7 @@ describe("client requests", () => {
 });
 
 describe("API error decoding", () => {
-  it("renders the API error code before the message for catalog lookup", async () => {
+  it("decodes the API message and code into separate fields", async () => {
     const error = await listFailure(
       vi.fn(
         async () =>
@@ -184,11 +183,9 @@ describe("API error decoding", () => {
       )
     );
 
-    expect(error.message).toBe(
-      "[model_validation_unavailable] Provider model discovery is unavailable"
-    );
+    expect(error.message).toBe("Provider model discovery is unavailable");
     expect(String(error)).toBe(
-      "BlazingAgentsError: [model_validation_unavailable] Provider model discovery is unavailable"
+      "BlazingAgentsError: Provider model discovery is unavailable"
     );
     expect(error.code).toBe("model_validation_unavailable");
   });
@@ -216,8 +213,7 @@ describe("API error decoding", () => {
     expect(error).toMatchObject({
       code: "provider_name_conflict",
       details: { conflictingResourceId: "prv_0123456789abcdef" },
-      message:
-        "[provider_name_conflict] A Provider with this name already exists.",
+      message: "A Provider with this name already exists.",
       param: "/name",
       requestId: "request-response",
       status: 409,
@@ -281,7 +277,7 @@ describe("API error decoding", () => {
     expect(error).toMatchObject({
       code: "future_server_outcome",
       details: { recovery: "refresh" },
-      message: "[future_server_outcome] A newer server outcome.",
+      message: "A newer server outcome.",
       param: "/version",
       requestId: "request-header",
       status: 422,
@@ -819,7 +815,7 @@ describe("transport failures", () => {
     expect(error).toMatchObject({
       cause,
       code: "network_error",
-      message: "[network_error] connection refused",
+      message: "connection refused",
     });
     expect(error.status).toBeUndefined();
   });
@@ -832,8 +828,7 @@ describe("transport failures", () => {
     expect(error).toMatchObject({
       cause: "string error",
       code: "network_error",
-      message:
-        "[network_error] Network request failed (fetch threw before any HTTP exchange).",
+      message: "Network request failed (fetch threw before any HTTP exchange).",
     });
   });
 

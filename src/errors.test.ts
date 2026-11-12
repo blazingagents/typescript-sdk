@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { BlazingAgentsError } from "./errors.ts";
 
 describe("BlazingAgentsError", () => {
+  it("keeps the server message apart from its code", () => {
+    const error = new BlazingAgentsError({
+      code: "agent_deleting",
+      message: "The agent is being deleted.",
+    });
+    expect(error.message).toBe("The agent is being deleted.");
+    expect(error.code).toBe("agent_deleting");
+  });
+
   it("carries the complete HTTP error context", () => {
     const headers = new Headers({
       "retry-after": "30",
@@ -26,8 +35,7 @@ describe("BlazingAgentsError", () => {
       code: "provider_name_conflict",
       details: { conflictingResourceId: "prv_0123456789abcdef" },
       headers,
-      message:
-        "[provider_name_conflict] A Provider with this name already exists.",
+      message: "A Provider with this name already exists.",
       name: "BlazingAgentsError",
       param: "/name",
       requestId: "request-response",

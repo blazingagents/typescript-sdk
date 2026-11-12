@@ -105,8 +105,7 @@ describe("client.chat result", () => {
       expect(() => result[second]()).toThrowError(
         expect.objectContaining({
           code: "stream_error",
-          message:
-            "[stream_error] The chat response body has already been claimed.",
+          message: "The chat response body has already been claimed.",
           requestId: "stream-test",
         })
       );
@@ -155,7 +154,7 @@ describe("client.chat result", () => {
 
     await expect(result.toStream().getReader().read()).rejects.toMatchObject({
       code: "stream_error",
-      message: "[stream_error] socket closed",
+      message: "socket closed",
       requestId: "stream-test",
     });
   });

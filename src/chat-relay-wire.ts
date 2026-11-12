@@ -3,6 +3,8 @@
  * `op`. `relay.ts` parses requests with these schemas and builds responses
  * that satisfy them; `chat-transport.ts` builds requests from the same types
  * and parses the responses. No public entry exports this module.
+ * `docs/relay-contract.md` states the same contract for relays written in
+ * other languages; change both together.
  */
 import { z } from "zod";
 import {

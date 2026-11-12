@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `@blazingagents/sdk/rest` exports `BlazingAgentsRest`, a client with every `/v1` resource of `BlazingAgents` and no chat or generation methods. It never loads the `ai` peer dependency, so it runs where `ai` cannot: a JavaScript engine with no DOM or Node APIs, such as an Exact app's data module on Hermes. `BlazingAgents` now extends it, so both clients share one set of resources.
+
+  ```ts
+  import { BlazingAgentsRest } from "@blazingagents/sdk/rest";
+
+  const client = new BlazingAgentsRest({ apiKey: process.env.BA_API_KEY! });
+  const { data: agents } = await client.agents.list();
+  ```
+
+### Fixed
+
+- `@blazingagents/sdk/contracts` no longer loads `ai` at runtime. `compactedContext` in `blazingAgentsChatMessageMetadataSchema` is still typed `ModelMessage[]` and now checks only that each entry has a string `role`.
+- A response from a `fetch` whose `Response` has no `body` stream is read whole with `arrayBuffer()` instead of failing as `invalid_response`.
+- Requests read the clock only when an `onResponse` observer is set, and validating a cron schedule no longer reads the clock, so neither fails on a host that refuses ambient time.
+
 ## 0.49.0
 
 ### Added

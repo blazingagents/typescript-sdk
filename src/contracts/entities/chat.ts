@@ -1,4 +1,4 @@
-import { modelMessageSchema } from "ai";
+import type { ModelMessage } from "ai";
 import { z } from "zod";
 
 import {
@@ -66,12 +66,25 @@ export const usageSummarySchema = z
   })
   .strip();
 
+/**
+ * A compacted model message, typed as the AI SDK's `ModelMessage`. The shape
+ * is the server's own output, so only its role is checked here; that keeps
+ * the contracts free of the `ai` runtime.
+ */
+const compactedMessageSchema = z.custom<ModelMessage>(
+  (value) =>
+    typeof value === "object" &&
+    value !== null &&
+    "role" in value &&
+    typeof value.role === "string"
+);
+
 export const blazingAgentsChatMessageMetadataSchema = z
   .object({
     blazingAgents: z
       .object({
         usage: usageSummarySchema,
-        compactedContext: z.array(modelMessageSchema).optional(),
+        compactedContext: z.array(compactedMessageSchema).optional(),
       })
       .strip(),
   })

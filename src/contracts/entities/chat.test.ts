@@ -67,6 +67,22 @@ describe("blazingAgentsChatMessageMetadataSchema", () => {
     expect(parsed.blazingAgents.usage.stepUsages[0]?.reasoningTokens).toBe(1);
   });
 
+  it("accepts compacted model messages and refuses entries without a role", () => {
+    const compactedContext = [{ role: "user", content: "Earlier question" }];
+    expect(
+      blazingAgentsChatMessageMetadataSchema.parse({
+        blazingAgents: { usage: validUsage, compactedContext },
+      }).blazingAgents.compactedContext
+    ).toEqual(compactedContext);
+    for (const entry of [null, "user", { content: "no role" }, { role: 1 }]) {
+      expect(
+        blazingAgentsChatMessageMetadataSchema.safeParse({
+          blazingAgents: { usage: validUsage, compactedContext: [entry] },
+        }).success
+      ).toBe(false);
+    }
+  });
+
   it("requires nullable reasoning counts at both levels", () => {
     const { reasoningTokens: _, ...missingSummary } = validUsage;
     expect(

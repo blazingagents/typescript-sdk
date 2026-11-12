@@ -98,7 +98,9 @@ export const taskCronConfigSchema = z
         paused: true,
         timezone: config.timezone,
       });
-      if (cron.nextRun() === null) {
+      // A five-field expression repeats, so a run after the epoch exists
+      // exactly when one after now does; this keeps parsing off the clock.
+      if (cron.nextRun(new Date(0)) === null) {
         throw new Error("no next run");
       }
     } catch {

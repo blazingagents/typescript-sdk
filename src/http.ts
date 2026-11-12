@@ -277,7 +277,7 @@ async function rawRequest(
   const fetchImpl = config.fetch ?? globalThis.fetch;
   const url = buildUrl(config.baseUrl, path, options.query);
   const method = options.method ?? "GET";
-  const startedAt = performance.now();
+  const startedAt = config.onResponse ? performance.now() : 0;
   const clientRequestId = options.clientRequestId ?? config.clientRequestId;
   const headers: Record<string, string> = {
     authorization: `Bearer ${config.apiKey}`,
@@ -408,6 +408,22 @@ async function readResponseBody(
       readFailed: false,
     };
   }
+  // A fetch without body streams (Exact's native hosts) still reads whole.
+  if (response.body === undefined) {
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(await response.arrayBuffer());
+    } catch (cause) {
+      return {
+        bodyText: "",
+        cause,
+        diagnosticBody: "",
+        diagnosticBodyTruncated: true,
+        readFailed: true,
+      };
+    }
+    return completedBody([bytes], bytes.byteLength, stopAtDiagnosticLimit);
+  }
 
   let reader: ReadableStreamDefaultReader<Uint8Array>;
   try {
@@ -445,19 +461,7 @@ async function readResponseBody(
     }
 
     if (read.done) {
-      const diagnostic = decodeDiagnosticChunks(
-        chunks,
-        Math.min(byteLength, DIAGNOSTIC_BODY_LIMIT_BYTES),
-        byteLength > DIAGNOSTIC_BODY_LIMIT_BYTES
-      );
-      return {
-        bodyText: stopAtDiagnosticLimit
-          ? diagnostic.body
-          : decodeChunks(chunks, byteLength, false),
-        diagnosticBody: diagnostic.body,
-        diagnosticBodyTruncated: diagnostic.truncated,
-        readFailed: false,
-      };
+      return completedBody(chunks, byteLength, stopAtDiagnosticLimit);
     }
 
     const chunk = read.value;
@@ -475,6 +479,29 @@ async function readResponseBody(
     chunks.push(chunk);
     byteLength += chunk.byteLength;
   }
+}
+
+/**
+ * The read result for a body received whole.
+ */
+function completedBody(
+  chunks: Uint8Array[],
+  byteLength: number,
+  stopAtDiagnosticLimit: boolean
+): BodyReadResult {
+  const diagnostic = decodeDiagnosticChunks(
+    chunks,
+    Math.min(byteLength, DIAGNOSTIC_BODY_LIMIT_BYTES),
+    byteLength > DIAGNOSTIC_BODY_LIMIT_BYTES
+  );
+  return {
+    bodyText: stopAtDiagnosticLimit
+      ? diagnostic.body
+      : decodeChunks(chunks, byteLength, false),
+    diagnosticBody: diagnostic.body,
+    diagnosticBodyTruncated: diagnostic.truncated,
+    readFailed: false,
+  };
 }
 
 /**

@@ -571,6 +571,43 @@ describe("invalid response diagnostics", () => {
     }
   );
 
+  it("reads a body whole when fetch has no body stream", async () => {
+    const fetch = vi.fn(() => {
+      const response = new Response(emptyPage, { status: 200 });
+      Object.defineProperty(response, "body", { value: undefined });
+      return Promise.resolve(response);
+    });
+
+    await expect(client(fetch).agents.list()).resolves.toEqual({
+      data: [],
+      nextCursor: null,
+    });
+  });
+
+  it("normalizes a failed whole-body read when fetch has no body stream", async () => {
+    const cause = new Error("whole body read failed");
+    const error = await listFailure(
+      vi.fn(() => {
+        const response = new Response(emptyPage, {
+          headers: { "x-request-id": "request-whole-read-failure" },
+          status: 200,
+        });
+        Object.defineProperty(response, "body", { value: undefined });
+        Object.defineProperty(response, "arrayBuffer", {
+          value: () => Promise.reject(cause),
+        });
+        return Promise.resolve(response);
+      })
+    );
+
+    expect(error).toMatchObject({
+      cause,
+      code: "invalid_response",
+      requestId: "request-whole-read-failure",
+      status: 200,
+    });
+  });
+
   it("normalizes a locked response body", async () => {
     const response = new Response(new ReadableStream<Uint8Array>(), {
       status: 500,

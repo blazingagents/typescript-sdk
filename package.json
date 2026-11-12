@@ -21,6 +21,10 @@
     "./contracts": {
       "types": "./dist/contracts/index.d.ts",
       "import": "./dist/contracts/index.js"
+    },
+    "./rest": {
+      "types": "./dist/rest.d.ts",
+      "import": "./dist/rest.js"
     }
   },
   "types": "./dist/index.d.ts",

@@ -25,6 +25,10 @@
     "./rest": {
       "types": "./dist/rest.d.ts",
       "import": "./dist/rest.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
     }
   },
   "types": "./dist/index.d.ts",
@@ -47,20 +51,37 @@
     "croner": "10.0.1"
   },
   "devDependencies": {
+    "@ai-sdk/react": "^4.0.90",
     "@biomejs/biome": "^2.5.8",
+    "@testing-library/react": "^16.3.3",
     "@types/json-schema": "7.0.15",
     "@types/node": "^26.4.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.1.10",
     "ai": "^7.0.84",
+    "happy-dom": "^20.14.6",
     "knip": "^6.41.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "typescript": "^7.0.2",
     "ultracite": "^7.10.2",
     "vitest": "^4.1.10",
     "zod": "4.5.4"
   },
   "peerDependencies": {
+    "@ai-sdk/react": "^4.0.87",
     "ai": "^7.0.84",
+    "react": "^18 || ^19",
     "zod": "^4.5.4"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=24"

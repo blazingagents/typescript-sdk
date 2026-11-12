@@ -15,6 +15,12 @@ const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
 const consumer = mkdtempSync(join(tmpdir(), "blazingagents-consumer-"));
 
+function lockedVersions(names) {
+  return Object.fromEntries(
+    names.map((name) => [name, lock.packages[`node_modules/${name}`].version])
+  );
+}
+
 try {
   execFileSync("npm", ["pack", "--pack-destination", consumer], {
     cwd: root,
@@ -34,15 +40,20 @@ try {
       private: true,
       type: "module",
       dependencies: {
+        "@ai-sdk/react": manifest.peerDependencies["@ai-sdk/react"],
         "@blazingagents/sdk": `file:./blazingagents-sdk-${manifest.version}.tgz`,
         ai: process.env.CONSUMER_AI_VERSION ?? manifest.peerDependencies.ai,
+        ...lockedVersions(["react", "react-dom"]),
         zod: process.env.CONSUMER_ZOD_VERSION ?? manifest.peerDependencies.zod,
       },
-      devDependencies: Object.fromEntries(
-        ["typescript", "vitest", "@types/node", "@types/json-schema"].map(
-          (name) => [name, lock.packages[`node_modules/${name}`].version]
-        )
-      ),
+      devDependencies: lockedVersions([
+        "typescript",
+        "vitest",
+        "@types/node",
+        "@types/json-schema",
+        "@types/react",
+        "@types/react-dom",
+      ]),
     })
   );
   execFileSync(

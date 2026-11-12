@@ -50,6 +50,7 @@ export const relayRequestSchema = z.discriminatedUnion("op", [
   steerRequestSchema,
 ]);
 export type RelayRequest = z.output<typeof relayRequestSchema>;
+export type RelayRequestBody = z.input<typeof relayRequestSchema>;
 
 /**
  * `history` 200 body: one API page, newest page first and chronological

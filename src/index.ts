@@ -9,6 +9,7 @@ export type { UIMessage } from "ai";
 export {
   BlazingAgentsChatTransport,
   type BlazingAgentsChatTransportOptions,
+  type SteerOutcome,
 } from "./chat-transport.ts";
 export { BlazingAgents } from "./client.ts";
 export type {

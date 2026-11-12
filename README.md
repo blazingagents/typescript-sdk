@@ -26,8 +26,9 @@ Node.js 24 or newer.
 - End-user scoped clients through `forUser`.
 - Cursor pagination, uploads, and downloads.
 - Request IDs and typed errors.
-- `BlazingAgentsChatTransport` and `createChatRelay` connect AI SDK `useChat`
-  to your backend.
+- `createChatRelay` serves browser chat from your backend, and
+  `useBlazingAgentsChat` from `@blazingagents/sdk/react` drives it from React:
+  history restore, steering, and rollback included.
 
 ## Installation
 
@@ -96,10 +97,75 @@ export async function chatAsUser(
 
 Call `createAgentForUser` once per user and store the Agent ID with the user.
 A scoped chat with an Agent created without the scope fails with `404`.
-`chatAsUser` returns the chat as a streaming `Response`. To chat from the
-browser with `useChat`, serve `createChatRelay` from your backend and use
-`BlazingAgentsChatTransport`. The relay scopes each request to the user that
-your `resolveContext` returns.
+`chatAsUser` returns the chat as a streaming `Response`.
+
+## Chat from a browser
+
+The browser holds no API key, so it chats through your backend. Serve
+`createChatRelay` on one route. It answers chat, history, and steer requests
+as the End-user that your `resolveContext` returns:
+
+```ts
+import { createChatRelay } from "@blazingagents/sdk";
+
+export const relayChat = createChatRelay({
+  client,
+  resolveContext: async (request) => {
+    const user = await signedInUser(request);
+    return user ? { agentId: user.agentId, userId: user.id } : null;
+  },
+});
+
+app.post("/api/chat", (c) => relayChat(c.req.raw));
+```
+
+`signedInUser` stands for your own session lookup. In React, install the
+optional peers and call `useBlazingAgentsChat`:
+
+```console
+npm install react @ai-sdk/react
+```
+
+```tsx
+import { useBlazingAgentsChat } from "@blazingagents/sdk/react";
+import { useState } from "react";
+
+export function Chat({ token }: { token: string }) {
+  const [text, setText] = useState("");
+  const chat = useBlazingAgentsChat({
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        chat.send(text);
+        setText("");
+      }}
+    >
+      {chat.messages.map((message) => (
+        <p key={message.id}>
+          {message.role}:{" "}
+          {message.parts.map((part) => (part.type === "text" ? part.text : ""))}
+        </p>
+      ))}
+      <input value={text} onChange={(event) => setText(event.target.value)} />
+    </form>
+  );
+}
+```
+
+The hook posts to `/api/chat` unless you pass `api`. It keeps the Session ID
+in `localStorage` and restores the stored transcript after a reload. `send()`
+starts a Turn when the chat is idle and steers the running Turn otherwise. It
+resolves `true` once the message is stored, and `false` when an error, Stop,
+or New Session rolled it back, so you can put the text back in the input. The
+hook also returns `status`, `stop()`, `regenerate()`, `newSession()`,
+`addToolApprovalResponse()`, `pendingIds`, and `error`.
+
+`BlazingAgentsChatTransport` is the same browser side without React, for an
+AI SDK `Chat` in another framework. A relay written in another language
+follows the [browser relay contract](docs/relay-contract.md).
 
 ## Examples
 

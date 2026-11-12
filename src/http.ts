@@ -1,6 +1,11 @@
 import { receivedApiErrorResponseSchema } from "./contracts/api.ts";
 import { BlazingAgentsError } from "./errors.ts";
-import type { HttpConfig, RequestOptions } from "./types.ts";
+import type {
+  BlazingAgentsFetch,
+  BlazingAgentsRequestInit,
+  HttpConfig,
+  RequestOptions,
+} from "./types.ts";
 
 const DIAGNOSTIC_BODY_LIMIT_BYTES = 64 * 1024;
 const INVALID_RESPONSE_MESSAGE = "The server returned an invalid response.";
@@ -294,39 +299,50 @@ async function rawRequest(
     headers["content-type"] = "application/json";
     body = JSON.stringify(options.json);
   }
+  const response = await sendRequest(fetchImpl, url, {
+    method,
+    headers,
+    body,
+    ...(options.signal ? { signal: options.signal } : {}),
+  });
   try {
-    const response = await fetchImpl(url, {
+    config.onResponse?.({
       method,
-      headers,
-      body,
-      ...(options.signal ? { signal: options.signal } : {}),
+      path,
+      status: response.status,
+      durationMs: performance.now() - startedAt,
+      requestId: response.headers.get("x-request-id") ?? undefined,
+      ...(clientRequestId === undefined ? {} : { clientRequestId }),
     });
-    try {
-      config.onResponse?.({
-        method,
-        path,
-        status: response.status,
-        durationMs: performance.now() - startedAt,
-        requestId: response.headers.get("x-request-id") ?? undefined,
-        ...(clientRequestId === undefined ? {} : { clientRequestId }),
-      });
-    } catch {
-      /** Observation must not affect transport or response ownership. */
-    }
-    return response;
+  } catch {
+    /** Observation must not affect transport or response ownership. */
+  }
+  return response;
+}
+
+/**
+ * Calls `fetch` and turns its rejection into a `request_aborted` or
+ * `network_error` SDK error.
+ * @param fetchImpl - The fetch to call.
+ * @param url - Request URL.
+ * @param init - Request options.
+ * @returns The response, whatever its status.
+ */
+export async function sendRequest(
+  fetchImpl: BlazingAgentsFetch,
+  url: string,
+  init: BlazingAgentsRequestInit
+): Promise<Response> {
+  try {
+    return await fetchImpl(url, init);
   } catch (cause) {
-    const requestAborted = isRequestAborted(cause, options.signal);
-    if (requestAborted) {
+    if (isRequestAborted(cause, init.signal ?? undefined)) {
       throw requestAbortedError(cause);
-    }
-    let message = NETWORK_ERROR_MESSAGE;
-    if (cause instanceof Error) {
-      message = cause.message;
     }
     throw new BlazingAgentsError(
       {
         code: "network_error",
-        message,
+        message: cause instanceof Error ? cause.message : NETWORK_ERROR_MESSAGE,
       },
       { cause }
     );
@@ -335,8 +351,11 @@ async function rawRequest(
 
 /**
  * Reads bounded diagnostics and decodes a failed HTTP response.
+ * @param response - A response with a non-2xx status.
+ * @param signal - Signal that cancels the operation.
+ * @returns The decoded error, or `invalid_response` when the body is not an error envelope.
  */
-async function errorFromResponse(
+export async function errorFromResponse(
   response: Response,
   signal?: AbortSignal
 ): Promise<BlazingAgentsError> {
@@ -618,8 +637,14 @@ function parseErrorEnvelope(
 
 /**
  * Builds an invalid_response error with bounded diagnostics and request correlation.
+ * @param headers - Response headers.
+ * @param status - HTTP response status.
+ * @param responseBody - Diagnostic body text.
+ * @param responseBodyTruncated - Whether the diagnostic body was cut short.
+ * @param cause - The parse or validation failure.
+ * @returns The invalid_response error.
  */
-function invalidResponseError(
+export function invalidResponseError(
   headers: Headers,
   status: number,
   responseBody: string,

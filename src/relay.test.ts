@@ -109,6 +109,13 @@ function request(body: unknown, init: RequestInit = {}): Request {
   });
 }
 
+function chatRequest(
+  body: Record<string, unknown>,
+  init: RequestInit = {}
+): Request {
+  return request({ op: "chat", ...body }, init);
+}
+
 /** Resolves the End-user from a header, as a Tenant resolves its session cookie. */
 function userFromHeader(incoming: Request): Promise<RelayContext> {
   return Promise.resolve({
@@ -152,6 +159,31 @@ const decisions = [
   { approvalId: "approval-2", approved: false, reason: "No" },
 ];
 const continuePath = `/v1/agents/${agentId}/sessions/${sessionId}/tool-approvals/continue`;
+const messagesPath = `/v1/agents/${agentId}/sessions/${sessionId}/messages`;
+const inputsPath = `/v1/agents/${agentId}/sessions/${sessionId}/inputs`;
+const storedPage = [
+  { ...message, branchable: true },
+  {
+    id: "assistant-1",
+    role: "assistant",
+    branchable: false,
+    parts: [{ type: "text", text: "Hi" }],
+  },
+];
+
+const steerReceipt = {
+  data: {
+    requestId: "steer-1",
+    sequence: 1,
+    message,
+    state: "accepted",
+    turnId: "turn_0123456789abcdef",
+    createdAt: "2026-11-01T10:00:00Z",
+    updatedAt: "2026-11-01T10:00:00Z",
+    reason: null,
+  },
+  activity: { state: "running", turnId: "turn_0123456789abcdef" },
+};
 
 describe("createChatRelay", () => {
   it("creates a Session as the signed-in End-user and relays the API's headers", async () => {
@@ -162,7 +194,7 @@ describe("createChatRelay", () => {
     });
 
     const response = await relay(
-      request({
+      chatRequest({
         agentId: "ag_attackeragent0000",
         message,
         trigger: "submit-message",
@@ -196,10 +228,10 @@ describe("createChatRelay", () => {
       resolveContext: () => Promise.resolve(context),
     });
 
-    await (await relay(request({ message, sessionId }))).text();
+    await (await relay(chatRequest({ message, sessionId }))).text();
     await (
       await relay(
-        request({
+        chatRequest({
           message,
           messageId: "assistant-1",
           sessionId,
@@ -230,7 +262,7 @@ describe("createChatRelay", () => {
       resolveContext: () => Promise.resolve({ ...context, functions }),
     });
 
-    await (await relay(request({ message }))).text();
+    await (await relay(chatRequest({ message }))).text();
 
     expect(calls[0].body).toMatchObject({
       functions: { getOrder: { description: "Get an order" } },
@@ -273,7 +305,7 @@ describe("createChatRelay", () => {
         resolveContext: () => Promise.resolve({ ...context, functions }),
       });
 
-      const response = await relay(request({ message }));
+      const response = await relay(chatRequest({ message }));
       const text = await response.text();
 
       expect(text).not.toContain("data-ba-function-call");
@@ -295,8 +327,10 @@ describe("createChatRelay", () => {
       });
 
       for (const body of [
-        { message, sessionId },
-        { message: approvalMessage, sessionId },
+        { op: "chat", message, sessionId },
+        { op: "chat", message: approvalMessage, sessionId },
+        { op: "history", sessionId },
+        { op: "steer", sessionId, requestId: "steer-1", message },
       ]) {
         const response = await relay(request(body));
         expect(response.status).toBe(404);
@@ -305,13 +339,153 @@ describe("createChatRelay", () => {
           error: { code, message: `${code} message.` },
         });
       }
-      expect(calls).toHaveLength(2);
       expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+        "user-a",
+        "user-a",
         "user-a",
         "user-a",
       ]);
     }
   );
+
+  it("returns one page of stored history as the End-user, newest page first", async () => {
+    const { calls, client } = fakeApi(() =>
+      Response.json({
+        data: storedPage,
+        nextCursor: "cursor-older",
+        latestCursor: "cursor-latest",
+      })
+    );
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
+
+    const newest = await relay(
+      request({ op: "history", sessionId, userId: "attacker" })
+    );
+    await relay(request({ op: "history", sessionId, cursor: "cursor-older" }));
+
+    expect(calls.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      `GET ${messagesPath}?limit=200`,
+      `GET ${messagesPath}?cursor=cursor-older&limit=200`,
+    ]);
+    expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+      "user-a",
+      "user-a",
+    ]);
+    expect(newest.status).toBe(200);
+    expect(await newest.json()).toEqual({
+      data: storedPage,
+      nextCursor: "cursor-older",
+    });
+  });
+
+  it("submits a steer to the running Turn and answers its receipt state", async () => {
+    const { calls, client } = fakeApi(() =>
+      Response.json(steerReceipt, { status: 202 })
+    );
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
+
+    const response = await relay(
+      request({ op: "steer", sessionId, requestId: "steer-1", message })
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].path).toBe(inputsPath);
+    expect(calls[0].headers.get(SCOPE_HEADER)).toBe("user-a");
+    expect(calls[0].body).toEqual({ requestId: "steer-1", message });
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ state: "accepted" });
+  });
+
+  it("passes the API's 409 steer_not_available through, so the browser resends the message as chat", async () => {
+    const { client } = fakeApi(() =>
+      apiError(409, "steer_not_available", "req-409")
+    );
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(context),
+    });
+
+    const response = await relay(
+      request({ op: "steer", sessionId, requestId: "steer-1", message })
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get("x-request-id")).toBe("req-409");
+    expect(await response.json()).toEqual({
+      error: {
+        code: "steer_not_available",
+        message: "steer_not_available message.",
+      },
+    });
+  });
+
+  it.each([
+    ["an unknown op", { op: "stop", sessionId }],
+    ["no op", { message, sessionId }],
+    ["history without a Session", { op: "history" }],
+    ["history with an empty cursor", { op: "history", sessionId, cursor: "" }],
+    [
+      "a steer without a Session",
+      { op: "steer", requestId: "steer-1", message },
+    ],
+    [
+      "a steer with a dot-segment requestId",
+      { op: "steer", sessionId, requestId: "..", message },
+    ],
+    [
+      "a steer from the assistant",
+      {
+        op: "steer",
+        sessionId,
+        requestId: "steer-1",
+        message: approvalMessage,
+      },
+    ],
+    [
+      "a steer with a malformed message",
+      { op: "steer", sessionId, requestId: "steer-1", message: { nope: true } },
+    ],
+  ])(
+    "answers 400 invalid_request for %s before any API request",
+    async (_, body) => {
+      const { calls, client } = fakeApi(() => chatReply());
+      const relay = createChatRelay({
+        client,
+        resolveContext: () => Promise.resolve(context),
+      });
+
+      const response = await relay(request(body));
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: { code: "invalid_request" },
+      });
+      expect(calls).toHaveLength(0);
+    }
+  );
+
+  it("answers 401 for history and steer before any API request when the resolver finds no End-user", async () => {
+    const { calls, client } = fakeApi(() => chatReply());
+    const relay = createChatRelay({
+      client,
+      resolveContext: () => Promise.resolve(null),
+    });
+
+    const history = await relay(request({ op: "history", sessionId }));
+    const steer = await relay(
+      request({ op: "steer", sessionId, requestId: "steer-1", message })
+    );
+
+    expect([history.status, steer.status]).toEqual([401, 401]);
+    expect(calls).toHaveLength(0);
+  });
 
   it("submits an approval round as the End-user", async () => {
     const { calls, client } = fakeApi(() => continueReply());
@@ -321,7 +495,7 @@ describe("createChatRelay", () => {
     });
 
     const response = await relay(
-      request({ message: approvalMessage, sessionId })
+      chatRequest({ message: approvalMessage, sessionId })
     );
 
     expect(await response.text()).toBe(sseBody);
@@ -343,7 +517,7 @@ describe("createChatRelay", () => {
     });
 
     const response = await relay(
-      request({ message: approvalMessage, sessionId })
+      chatRequest({ message: approvalMessage, sessionId })
     );
 
     expect(await response.text()).toBe(sseBody);
@@ -357,9 +531,9 @@ describe("createChatRelay", () => {
       resolveContext: () => Promise.resolve(context),
     });
 
-    const noSession = await relay(request({ message: approvalMessage }));
+    const noSession = await relay(chatRequest({ message: approvalMessage }));
     const noDecisions = await relay(
-      request({
+      chatRequest({
         message: { id: "assistant-2", role: "assistant", parts: [] },
         sessionId,
       })
@@ -381,8 +555,8 @@ describe("createChatRelay", () => {
       resolveContext: () => Promise.resolve(null),
     });
 
-    expect((await unauthenticated(request({ message }))).status).toBe(401);
-    expect((await relay(request({ message: { nope: true } }))).status).toBe(
+    expect((await unauthenticated(chatRequest({ message }))).status).toBe(401);
+    expect((await relay(chatRequest({ message: { nope: true } }))).status).toBe(
       400
     );
     expect(
@@ -398,7 +572,7 @@ describe("createChatRelay", () => {
     expect(
       (
         await relay(
-          request({
+          chatRequest({
             message: {
               id: "system",
               role: "system",
@@ -418,7 +592,7 @@ describe("createChatRelay", () => {
     for (const userId of ["user-a", "user-b", "user-a"]) {
       await (
         await relay(
-          request({ message }, { headers: { "x-test-user": userId } })
+          chatRequest({ message }, { headers: { "x-test-user": userId } })
         )
       ).text();
     }
@@ -437,7 +611,7 @@ describe("createChatRelay", () => {
       resolveContext: () => Promise.resolve({ ...context, userId: " padded " }),
     });
 
-    const response = await relay(request({ message }));
+    const response = await relay(chatRequest({ message }));
     const text = await response.text();
 
     expect(response.status).toBe(500);
@@ -463,7 +637,7 @@ describe("createChatRelay", () => {
     });
     const stop = new AbortController();
 
-    const pending = relay(request({ message }, { signal: stop.signal }));
+    const pending = relay(chatRequest({ message }, { signal: stop.signal }));
     await expect.poll(() => calls.length).toBe(1);
     stop.abort();
     const response = await pending;

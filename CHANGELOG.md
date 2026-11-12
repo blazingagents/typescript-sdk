@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `@blazingagents/sdk/react` exports `useBlazingAgentsChat`, a React hook for a chat through your relay. It keeps the Session ID in `localStorage`, restores the stored transcript after a reload, steers the running Turn when you send while a reply streams, and rolls back to the stored transcript on an error, Stop, or New Session. When a reply ends without finishing, by Stop, an error, or a dropped connection, the hook reads the stored transcript again and keeps what the Turn stored. `send()` resolves `true` once the message is stored and `false` when it was rolled back. The hook forgets a Session the relay answers `404` for, and keeps the Session in memory where `localStorage` throws. `react` and `@ai-sdk/react` are optional peer dependencies that only this entry loads.
+
+  ```tsx
+  import { useBlazingAgentsChat } from "@blazingagents/sdk/react";
+
+  const chat = useBlazingAgentsChat({ api: "/api/chat", headers });
+  await chat.send("Hello");
+  ```
+
+- `createChatRelay` also answers `{ op: "history" }` with one page of the Session's stored messages and `{ op: "steer" }` by sending a user message into the running Turn. API errors such as `404 not_found` and `409 steer_not_available` keep their status and code. `docs/relay-contract.md` describes the contract for relays in other languages.
+- `BlazingAgentsChatTransport` gains `loadHistory()`, which reads the whole stored transcript through the relay, and `steer()`, which answers a `SteerOutcome` of `accepted`, `committed`, or `resend`. It also gains a `sessionId` getter, `onTurnStart`, called when the relay answers a chat with a stream, `onTurnFinish`, called when that stream carries its `finish` chunk, and `onSteerConsumed`, called when the running Turn reads a steer.
+
+### Changed
+
+- The `createChatRelay` request body names its operation in `op`. A body without a known `op` answers `400 invalid_request`. `BlazingAgentsChatTransport` sends `op: "chat"`, so an app that uses both needs no change. Add `op` to a body your own code posts to the relay:
+
+  ```ts
+  // Before
+  await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message, sessionId }) });
+
+  // After
+  await fetch("/api/chat", { method: "POST", body: JSON.stringify({ op: "chat", message, sessionId }) });
+  ```
+
+- The `client` passed to `createChatRelay` must provide `sessions` as well as `chat` and `continueChat`. A `BlazingAgents` client already does.
+- `BlazingAgentsChatTransport` rejects a relay error response to a chat request with a `BlazingAgentsError` that carries the relay's `status`, `code`, and message. It used to reject with an `Error` whose message was the response body. Read the code instead of parsing the message:
+
+  ```ts
+  // Before
+  const code = JSON.parse(error.message).error.code;
+
+  // After
+  const code = BlazingAgentsError.isInstance(error) ? error.code : undefined;
+  ```
+
 ## 0.51.0
 
 ### Changed

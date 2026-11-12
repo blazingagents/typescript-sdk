@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-const entries = ["src/index.ts", "src/contracts/index.ts"].map((path) =>
-  resolve(root, path)
+const entries = ["src/index.ts", "src/contracts/index.ts", "src/rest.ts"].map(
+  (path) => resolve(root, path)
 );
 const message =
   "Tests must use the public API. Either rewrite this test against the public client, or, if the test really needs this value, the SDK is missing a public way to get it: add one to the public API (with docs) and use that.";

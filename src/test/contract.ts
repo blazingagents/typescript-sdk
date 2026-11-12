@@ -151,15 +151,20 @@ function member(target: object, key: string): unknown {
   return (target as Record<string, unknown>)[key];
 }
 
-/** Own fields plus class methods, so `BlazingAgents` and plain objects walk alike. */
+/** Own fields plus inherited class methods, so `BlazingAgents` and plain objects walk alike. */
 function publicEntries(target: object): [string, unknown][] {
-  const prototype = Object.getPrototypeOf(target) as object;
-  const methods =
-    prototype === Object.prototype
-      ? []
-      : Object.getOwnPropertyNames(prototype).filter(
-          (key) => key !== "constructor"
-        );
+  const methods = new Set<string>();
+  for (
+    let prototype = Object.getPrototypeOf(target) as object | null;
+    prototype !== null && prototype !== Object.prototype;
+    prototype = Object.getPrototypeOf(prototype) as object | null
+  ) {
+    for (const key of Object.getOwnPropertyNames(prototype)) {
+      if (key !== "constructor") {
+        methods.add(key);
+      }
+    }
+  }
   return [...Object.keys(target), ...methods].map((key) => [
     key,
     member(target, key),

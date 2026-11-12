@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { clientConfig } from "./client-config.ts";
 import { parseClientInput } from "./errors.ts";
 import {
   chat,
@@ -6,65 +7,17 @@ import {
   continueChat,
   objectGeneration,
 } from "./generation.ts";
-import {
-  type AgentsResource,
-  createAgentsResource,
-  createUserAgentsResource,
-} from "./resources/agents.ts";
-import {
-  type ArtifactsResource,
-  createArtifactsResource,
-} from "./resources/artifacts.ts";
-import {
-  type ChatConnectionsResource,
-  createChatConnectionsResource,
-} from "./resources/chat-connections.ts";
-import {
-  createMcpConnectionsResource,
-  type McpConnectionsResource,
-} from "./resources/mcp-connections.ts";
-import {
-  createMemoriesResource,
-  type MemoriesResource,
-} from "./resources/memories.ts";
-import {
-  createMerchantBindingsResource,
-  type MerchantBindingsResource,
-} from "./resources/merchant-bindings.ts";
-import {
-  createMerchantConnectionResource,
-  type MerchantConnectionResource,
-} from "./resources/merchant-connection.ts";
-import {
-  createMerchantUsageEventsResource,
-  type MerchantUsageEventsResource,
-} from "./resources/merchant-usage-events.ts";
-import {
-  createPromptsResource,
-  type PromptsResource,
-} from "./resources/prompts.ts";
-import {
-  createProvidersResource,
-  type ProvidersResource,
-} from "./resources/providers.ts";
-import {
-  createSessionsResource,
-  type SessionsResource,
-} from "./resources/sessions.ts";
+import { createUserAgentsResource } from "./resources/agents.ts";
+import { createArtifactsResource } from "./resources/artifacts.ts";
+import { createMemoriesResource } from "./resources/memories.ts";
+import { createPromptsResource } from "./resources/prompts.ts";
+import { createSessionsResource } from "./resources/sessions.ts";
 import { createAgentSkillsResource } from "./resources/skills.ts";
-import { createTasksResource, type TasksResource } from "./resources/tasks.ts";
-import {
-  createTenantResource,
-  type TenantResource,
-} from "./resources/tenant.ts";
-import { createUsageResource, type UsageResource } from "./resources/usage.ts";
-import {
-  createWorkspacesResource,
-  type WorkspacesResource,
-} from "./resources/workspaces.ts";
+import { createTasksResource } from "./resources/tasks.ts";
+import { createUsageResource } from "./resources/usage.ts";
+import { createWorkspacesResource } from "./resources/workspaces.ts";
+import { BlazingAgentsRest } from "./rest-client.ts";
 import type {
-  AgentClient,
-  BlazingAgentsOptions,
   BlazingAgentsRequestOptions,
   ChatInput,
   ChatResult,
@@ -77,9 +30,6 @@ import type {
   UserClient,
 } from "./types.ts";
 
-const DEFAULT_BASE_URL = "https://api.blazingagents.com";
-
-const TRAILING_SLASH_RE = /\/+$/;
 const scopedUserIdSchema = z
   .string()
   .max(256)
@@ -121,67 +71,7 @@ function createUserClient(config: HttpConfig): UserClient {
   };
 }
 
-export class BlazingAgents {
-  readonly #config: HttpConfig;
-
-  readonly chatConnections: ChatConnectionsResource;
-  readonly agents: AgentsResource;
-  readonly sessions: SessionsResource;
-  readonly providers: ProvidersResource;
-  readonly mcpConnections: McpConnectionsResource;
-  readonly memories: MemoriesResource;
-  readonly prompts: PromptsResource;
-  readonly usage: UsageResource;
-  readonly artifacts: ArtifactsResource;
-  readonly tasks: TasksResource;
-  readonly tenant: TenantResource;
-  readonly workspaces: WorkspacesResource;
-  readonly merchantConnection: MerchantConnectionResource;
-  readonly merchantBindings: MerchantBindingsResource;
-  readonly merchantUsageEvents: MerchantUsageEventsResource;
-
-  /**
-   * Creates a client. Defaults to the hosted API and removes trailing base URL slashes.
-   * @param options - Configuration for this operation.
-   */
-  constructor(options: BlazingAgentsOptions) {
-    this.#config = {
-      apiKey: options.apiKey,
-      baseUrl: (options.baseUrl ?? DEFAULT_BASE_URL).replace(
-        TRAILING_SLASH_RE,
-        ""
-      ),
-      ...(options.fetch ? { fetch: options.fetch } : {}),
-      ...(options.clientRequestId === undefined
-        ? {}
-        : { clientRequestId: options.clientRequestId }),
-      onResponse: options.onResponse,
-    };
-    this.chatConnections = createChatConnectionsResource(this.#config);
-    this.agents = createAgentsResource(this.#config);
-    this.sessions = createSessionsResource(this.#config);
-    this.providers = createProvidersResource(this.#config);
-    this.mcpConnections = createMcpConnectionsResource(this.#config);
-    this.memories = createMemoriesResource(this.#config);
-    this.prompts = createPromptsResource(this.#config);
-    this.usage = createUsageResource(this.#config);
-    this.artifacts = createArtifactsResource(this.#config);
-    this.tasks = createTasksResource(this.#config);
-    this.tenant = createTenantResource(this.#config);
-    this.workspaces = createWorkspacesResource(this.#config);
-    this.merchantConnection = createMerchantConnectionResource(this.#config);
-    this.merchantBindings = createMerchantBindingsResource(this.#config);
-    this.merchantUsageEvents = createMerchantUsageEventsResource(this.#config);
-  }
-
-  /**
-   * Returns the Skill operations for the selected Agent.
-   * @returns The selected Agent Skill client.
-   */
-  agent({ agentId }: { agentId: string }): AgentClient {
-    return { skills: createAgentSkillsResource(this.#config, agentId) };
-  }
-
+export class BlazingAgents extends BlazingAgentsRest {
   /**
    * Scope requests to one end user. IDs use printable ASCII, at most 256 characters, without leading or trailing spaces.
    * @param userId - Printable ASCII end-user ID, at most 256 characters with no surrounding spaces.
@@ -190,7 +80,7 @@ export class BlazingAgents {
    */
   forUser(userId: string): UserClient {
     return createUserClient({
-      ...this.#config,
+      ...clientConfig(this),
       scopeUserId: parseClientInput(scopedUserIdSchema, userId, "userId"),
     });
   }
@@ -203,7 +93,7 @@ export class BlazingAgents {
    * @returns The Session ID promise and single-owner SSE accessors.
    */
   chat(input: ChatInput): Promise<ChatResult> {
-    return chat(this.#config, input);
+    return chat(clientConfig(this), input);
   }
 
   /**
@@ -213,7 +103,7 @@ export class BlazingAgents {
    * @returns The Session ID promise and continuation SSE accessors.
    */
   continueChat(input: ContinueChatInput): Promise<ChatResult> {
-    return continueChat(this.#config, input);
+    return continueChat(clientConfig(this), input);
   }
 
   /**
@@ -223,7 +113,7 @@ export class BlazingAgents {
    * @returns Independent text stream, final text promise, and response relay.
    */
   completion(input: CompletionInput): Promise<CompletionResult> {
-    return completion(this.#config, input);
+    return completion(clientConfig(this), input);
   }
 
   /**
@@ -233,7 +123,7 @@ export class BlazingAgents {
    * @returns Partial JSON objects, a final JSON promise, and a text response relay.
    */
   object(input: ObjectInput): Promise<ObjectResult> {
-    return objectGeneration(this.#config, input);
+    return objectGeneration(clientConfig(this), input);
   }
 
   /**
@@ -244,7 +134,7 @@ export class BlazingAgents {
    */
   withOptions(options: BlazingAgentsRequestOptions): BlazingAgents {
     return new BlazingAgents({
-      ...this.#config,
+      ...clientConfig(this),
       clientRequestId: options.clientRequestId,
     });
   }

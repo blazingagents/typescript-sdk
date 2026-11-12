@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `BlazingAgentsError.message` is the API's message unchanged. It no longer starts with the error code in brackets, so an app can show it to a user as it is. Read the code from `error.code`. Node's `console.error` still prints `code` with the error's other fields. A stream error that wraps another SDK error now carries only the inner message, without either code. Read the code instead of parsing the message:
+
+  ```ts
+  // Before: "[agent_deleting] The agent is being deleted."
+  if (error.message.startsWith("[agent_deleting]")) {
+    showDeleting();
+  }
+
+  // After: "The agent is being deleted."
+  if (BlazingAgentsError.isInstance(error) && error.code === "agent_deleting") {
+    showDeleting();
+  }
+  ```
+
 ## 0.50.0
 
 ### Added

@@ -219,12 +219,7 @@ function safeErrorResponse(error: unknown): Response {
     if (requestId) {
       headers.set("x-request-id", requestId);
     }
-    return errorResponse(
-      status,
-      error.code,
-      error.message.slice(`[${error.code}] `.length),
-      headers
-    );
+    return errorResponse(status, error.code, error.message, headers);
   }
   return errorResponse(500, "internal_error", "Request failed.");
 }

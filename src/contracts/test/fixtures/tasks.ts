@@ -21,6 +21,7 @@ export const agentConfigFixture: AgentConfig = {
   model: "openrouter/test-model",
   providerId: "prv_xxxxxxxxxxxxxxxx",
   thinkingLevel: null,
+  autoApprovalModel: null,
   instructions: "Build carefully.",
   tools: [],
   mcpConnectionIds: [],

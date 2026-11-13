@@ -27,6 +27,7 @@ const config: AgentConfig = agentConfigSchema.parse({
   model: null,
   providerId: null,
   thinkingLevel: null,
+  autoApprovalModel: null,
   instructions: "",
   tools: [],
   mcpConnectionIds: [],

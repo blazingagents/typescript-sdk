@@ -17,6 +17,22 @@
 
 - `BlazingAgentsChatTransport.loadHistory()` takes `known`, the messages already known to be stored, oldest first. The read stops at the first page whose oldest message is in `known`.
 
+### Added
+
+- Agents have an optional `autoApprovalModel`. When a tool's approval is `auto`, the platform asks a model to review the call before it runs. By default that review uses the agent's own `model`. Set `autoApprovalModel` to the ID of a model on the agent's provider, such as a cheaper one, to run the review there instead, and `null` to go back to the agent's model. The field is on `Agent`, on the `agentConfig` saved with every session and task run, and on `createAgentBodySchema` and `updateAgentBodySchema`. It needs a provider and model on the agent, and the API checks the ID against the provider's models, as it does for `model`. Changing `providerId` without sending `autoApprovalModel` resets it to `null`, because the old model may not exist on the new provider.
+
+  ```ts
+  const agent = await client.agents.create({
+    name: "Reviewer",
+    providerId,
+    model: "openai/gpt-6-luna",
+    autoApprovalModel: cheaperModelId,
+    approvalInChat: { default: "auto" },
+  });
+
+  await client.agents.update({ agentId: agent.id, autoApprovalModel: null });
+  ```
+
 ### Changed
 
 - `BlazingAgentsRest` from `@blazingagents/sdk/rest` is smaller. A browser bundle of it is 19.9 KB gzipped, down from 28.4 KB, and 73.4 KB minified, down from 101.2 KB, because the SDK no longer loads a cron parser. Cron validation moved from the client to the API. The SDK still checks that a cron `expression` has five numeric fields and that `timezone` is an IANA name. The API checks the field values and impossible dates, such as `60 9 * * *` or `0 0 31 2 *`, and answers `400 validation_failed`, which `client.tasks.create()` and `client.tasks.update()` reject with as a `BlazingAgentsError`. The client no longer parses a cron schedule it reads back from the API, so a stored schedule never fails a `tasks.get()` or `tasks.list()` call.

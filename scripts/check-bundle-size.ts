@@ -38,7 +38,7 @@ const entries: Entry[] = [
     specifier: "@blazingagents/sdk/rest",
     name: "BlazingAgentsRest",
     source: "src/rest.ts",
-    gzipBudget: 32_700,
+    gzipBudget: 22_900,
     forbiddenExternals: ["ai", "@ai-sdk/react"],
     forbiddenInputs: ["src/relay.ts"],
   },

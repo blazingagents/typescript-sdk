@@ -1,4 +1,3 @@
-import { Cron } from "croner";
 import { z } from "zod";
 import { paginatedResponseSchema, receivedApiErrorCodeSchema } from "../api.ts";
 import {
@@ -20,8 +19,8 @@ import { metadataSchema, userIdSchema } from "./attribution.ts";
 import { sessionMessagesResponseSchema } from "./sessions.ts";
 
 /**
- * Schedule kinds — discriminated union, Cohand's kinds with croner-forked
- * next-run math. `staggerMs` is an optional cron load-spreading offset.
+ * Schedule kinds — discriminated union. `staggerMs` is an optional cron
+ * load-spreading offset.
  */
 export const taskScheduleKindSchema = z.enum(["once", "interval", "cron"]);
 
@@ -40,7 +39,7 @@ export const taskIntervalConfigSchema = z
 const CRON_FIELDS_SEPARATOR = /\s+/;
 const NUMERIC_CRON_EXPRESSION = /^[\d*,/\-\s]+$/;
 
-/** Croner owns cron grammar; the product limits schedules to five numeric fields. */
+/** The product limits schedules to five numeric fields. The API checks the values. */
 const cronExpressionSchema = z
   .string()
   .trim()
@@ -56,7 +55,7 @@ const cronExpressionSchema = z
 /**
  * Canonical IANA timezone: `UTC` or `Area/Location` (optionally
  * `Area/Location/Sublocation`). Rejects legacy abbreviations (`PST`, `GMT`)
- * that `Intl` quietly accepts but `croner` cannot resolve deterministically.
+ * that `Intl` quietly accepts but a scheduler cannot resolve deterministically.
  */
 const IANA_TIMEZONE_REGEX =
   /^(UTC|[A-Za-z_]+\/[A-Za-z0-9_+-]+(\/[A-Za-z0-9_+-]+)?)$/;
@@ -82,8 +81,10 @@ const ianaTimezoneSchema = z
   );
 
 /**
- * Croner validates the expression in the schedule's own timezone. The DBOS
- * schedule plan uses that validated expression and timezone unchanged.
+ * A cron schedule: five numeric fields in an IANA timezone. The schema checks
+ * only that shape. The API validates the expression's values in the
+ * schedule's own timezone, so an out-of-range field or an impossible date
+ * fails there.
  */
 export const taskCronConfigSchema = z
   .object({
@@ -91,26 +92,7 @@ export const taskCronConfigSchema = z
     staggerMs: z.number().int().min(0).optional(),
     timezone: ianaTimezoneSchema.default("UTC"),
   })
-  .strict()
-  .superRefine((config, ctx) => {
-    try {
-      const cron = new Cron(config.expression, {
-        paused: true,
-        timezone: config.timezone,
-      });
-      // A five-field expression repeats, so a run after the epoch exists
-      // exactly when one after now does; this keeps parsing off the clock.
-      if (cron.nextRun(new Date(0)) === null) {
-        throw new Error("no next run");
-      }
-    } catch {
-      ctx.addIssue({
-        code: "custom",
-        message: "Invalid cron expression.",
-        path: ["expression"],
-      });
-    }
-  });
+  .strict();
 
 export const taskScheduleInputSchema = z.discriminatedUnion("kind", [
   z

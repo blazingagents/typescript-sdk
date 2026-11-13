@@ -100,59 +100,6 @@ describe("schedule config schemas", () => {
     }
   });
 
-  it("rejects out-of-range numeric values per field", () => {
-    for (const expr of [
-      "60 9 * * *", // minute 60
-      "0 24 * * *", // hour 24
-      "0 9 32 * *", // day-of-month 32
-      "0 9 * 13 *", // month 13
-      "99 99 * * *", // both minute and hour out of range
-      "0 9 0 * *", // day-of-month 0
-      "0 9 * 0 *", // month 0
-    ]) {
-      expect(
-        taskCronConfigSchema.safeParse({
-          expression: expr,
-          timezone: "UTC",
-        }).success
-      ).toBe(false);
-    }
-  });
-
-  it("rejects an expression that never fires (nonexistent date)", () => {
-    expect(
-      taskCronConfigSchema.safeParse({
-        expression: "0 0 31 2 *",
-        timezone: "UTC",
-      }).success
-    ).toBe(false);
-  });
-
-  it("accepts Croner's Sunday alias", () => {
-    expect(
-      taskCronConfigSchema.safeParse({
-        expression: "0 9 * * 7",
-        timezone: "UTC",
-      }).success
-    ).toBe(true);
-  });
-
-  it("rejects inverted ranges and invalid steps", () => {
-    for (const expr of [
-      "10-5 * * * *", // inverted range (lo > hi)
-      "0 9 * * 5-3", // inverted range in dow
-      "*/0 * * * *", // step 0
-      "0 9 1-10/0 * *", // step 0 in range/step
-    ]) {
-      expect(
-        taskCronConfigSchema.safeParse({
-          expression: expr,
-          timezone: "UTC",
-        }).success
-      ).toBe(false);
-    }
-  });
-
   it("accepts an optional staggerMs on cron config", () => {
     expect(
       taskCronConfigSchema.parse({

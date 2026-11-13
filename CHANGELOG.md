@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `BlazingAgentsRest` from `@blazingagents/sdk/rest` is smaller. A browser bundle of it is 19.9 KB gzipped, down from 28.4 KB, and 73.4 KB minified, down from 101.2 KB, because the SDK no longer loads a cron parser. Cron validation moved from the client to the API. The SDK still checks that a cron `expression` has five numeric fields and that `timezone` is an IANA name. The API checks the field values and impossible dates, such as `60 9 * * *` or `0 0 31 2 *`, and answers `400 validation_failed`, which `client.tasks.create()` and `client.tasks.update()` reject with as a `BlazingAgentsError`. The client no longer parses a cron schedule it reads back from the API, so a stored schedule never fails a `tasks.get()` or `tasks.list()` call.
+
+  ```ts
+  try {
+    await client.tasks.create({
+      agentId,
+      name: "Daily",
+      prompt: "Run",
+      schedule: { kind: "cron", config: { expression: "60 9 * * *" } },
+    });
+  } catch (error) {
+    // The API's 400, with the same `code` and `message` as before.
+    if (BlazingAgentsError.isInstance(error) && error.code === "validation_failed") {
+      showScheduleError(error.message);
+    }
+  }
+  ```
+
+  If your own code validates a form with `taskCronConfigSchema`, `taskScheduleInputSchema` or `createTaskBodySchema` from `@blazingagents/sdk/contracts`, those schemas now accept an out-of-range cron expression. Validate the values with a cron library of your own, or let the API answer.
+
+### Removed
+
+- The `croner` runtime dependency. `@blazingagents/sdk` installs nothing besides its peer dependencies.
+
 ## 0.52.0
 
 ### Added

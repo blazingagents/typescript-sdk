@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { BlazingAgents } from "../client.ts";
 import { agentConfigFixture } from "../contracts/test/fixtures/tasks.ts";
 import type { BlazingAgentsErrorCode, TasksResource } from "../index.ts";
-import { createMockFetch } from "../test/fixtures.ts";
+import { createMockFetch, errorEnvelope } from "../test/fixtures.ts";
 
 const BASE = "http://localhost:8787";
 const taskRow = {
@@ -119,6 +119,67 @@ describe("client.tasks", () => {
     const body = JSON.parse(calls[0].init?.body as string);
     expect(body.userId).toBe("user-42");
     expect(body.metadata).toEqual({ tier: "pro" });
+  });
+
+  it("create sends a cron expression with an out-of-range field and surfaces the API's 400", async () => {
+    const { fetch, calls } = createMockFetch({
+      status: 400,
+      text: errorEnvelope("validation_failed", "Invalid cron expression.", {
+        param: "schedule.config.expression",
+      }),
+    });
+    const schedule = {
+      kind: "cron" as const,
+      config: { expression: "60 9 * * *", timezone: "UTC" },
+    };
+    await expect(
+      client(fetch).tasks.create({
+        agentId: "ag_0123456789abcdef",
+        name: "Daily",
+        prompt: "Run",
+        schedule,
+      })
+    ).rejects.toMatchObject({
+      code: "validation_failed",
+      message: "Invalid cron expression.",
+      name: "BlazingAgentsError",
+      status: 400,
+    });
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(String(calls[0].init?.body)).schedule).toStrictEqual(
+      schedule
+    );
+  });
+
+  it("update sends an impossible cron date and surfaces the API's 400", async () => {
+    const { fetch, calls } = createMockFetch({
+      status: 400,
+      text: errorEnvelope("validation_failed", "Invalid cron expression."),
+    });
+    const schedule = {
+      kind: "cron" as const,
+      config: { expression: "0 0 31 2 *", timezone: "UTC" },
+    };
+    await expect(
+      client(fetch).tasks.update({ taskId: "tk_0123456789abcdef", schedule })
+    ).rejects.toMatchObject({ code: "validation_failed", status: 400 });
+    expect(JSON.parse(String(calls[0].init?.body)).schedule).toStrictEqual(
+      schedule
+    );
+  });
+
+  it("returns a stored cron schedule without evaluating it", async () => {
+    const schedule = {
+      kind: "cron",
+      config: { expression: "0 0 31 2 *", timezone: "Europe/London" },
+    };
+    const { fetch } = createMockFetch({
+      body: { ...taskRow, schedule },
+    });
+    const task = await client(fetch).tasks.get({
+      taskId: "tk_0123456789abcdef",
+    });
+    expect(task.schedule).toStrictEqual(schedule);
   });
 
   it("list gets /v1/tasks with agentId+cursor+limit", async () => {

@@ -23,7 +23,19 @@ const entries: Entry[] = [
     name: "BlazingAgentsChatTransport",
     source: "src/index.ts",
     gzipBudget: 5100,
-    forbiddenExternals: ["react", "@ai-sdk/react"],
+    forbiddenExternals: ["react"],
+    forbiddenInputs: [
+      "src/relay.ts",
+      "src/chat-controller.ts",
+      "src/chat-state.ts",
+    ],
+  },
+  {
+    specifier: "@blazingagents/sdk",
+    name: "BlazingAgentsChat",
+    source: "src/index.ts",
+    gzipBudget: 8500,
+    forbiddenExternals: ["react"],
     forbiddenInputs: ["src/relay.ts"],
   },
   {
@@ -39,12 +51,12 @@ const entries: Entry[] = [
     name: "BlazingAgentsRest",
     source: "src/rest.ts",
     gzipBudget: 22_900,
-    forbiddenExternals: ["ai", "@ai-sdk/react"],
+    forbiddenExternals: ["ai", "react"],
     forbiddenInputs: ["src/relay.ts"],
   },
 ];
 
-const externals = ["ai", "zod", "react", "@ai-sdk/react"];
+const externals = ["ai", "zod", "react"];
 
 const failures: string[] = [];
 

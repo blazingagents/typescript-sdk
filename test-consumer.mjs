@@ -40,7 +40,6 @@ try {
       private: true,
       type: "module",
       dependencies: {
-        "@ai-sdk/react": manifest.peerDependencies["@ai-sdk/react"],
         "@blazingagents/sdk": `file:./blazingagents-sdk-${manifest.version}.tgz`,
         ai: process.env.CONSUMER_AI_VERSION ?? manifest.peerDependencies.ai,
         ...lockedVersions(["react", "react-dom"]),

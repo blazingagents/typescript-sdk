@@ -3,9 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("react", () => {
   throw new Error("the react package is not installed");
 });
-vi.mock("@ai-sdk/react", () => {
-  throw new Error("the @ai-sdk/react package is not installed");
-});
 
 describe("entries without React", () => {
   it("reads history through the root entry's chat transport", async () => {
@@ -24,6 +21,16 @@ describe("entries without React", () => {
     });
 
     expect(await transport.loadHistory()).toHaveLength(1);
+  });
+
+  it("starts the root entry's chat", async () => {
+    const { BlazingAgentsChat } = await import("../index.ts");
+    const chat = new BlazingAgentsChat({ storageKey: null });
+
+    chat.start();
+
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    chat.dispose();
   });
 
   it("builds the REST client", async () => {

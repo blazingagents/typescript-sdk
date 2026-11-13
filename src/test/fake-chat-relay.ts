@@ -1,5 +1,9 @@
-import { waitFor } from "@testing-library/react";
-import { expect } from "vitest";
+import { expect, vi } from "vitest";
+import {
+  BlazingAgentsChat,
+  type BlazingAgentsChatOptions,
+  type BlazingAgentsUIMessage,
+} from "../index.ts";
 
 export const sessionId = "ss_0123456789abcdef";
 export const sessionLocation = `/v1/agents/ag_0123456789abcdef/sessions/${sessionId}`;
@@ -14,16 +18,21 @@ export interface RelayCall {
 
 /**
  * The app's relay as the browser sees it: every request waits until the test
- * answers it, so a test can inspect what the hook sent before replying.
+ * answers it, so a test can inspect what the chat sent before replying.
  */
 export function fakeRelay() {
   const calls: RelayCall[] = [];
   let read = 0;
   const fetch = (_input: RequestInfo | URL, init?: RequestInit) =>
     new Promise<Response>((resolve, reject) => {
-      init?.signal?.addEventListener("abort", () =>
-        reject(new DOMException("The request was aborted.", "AbortError"))
-      );
+      const abort = () =>
+        reject(new DOMException("The request was aborted.", "AbortError"));
+      // As fetch does, an aborted signal sends nothing.
+      if (init?.signal?.aborted) {
+        abort();
+        return;
+      }
+      init?.signal?.addEventListener("abort", abort);
       calls.push({
         body: JSON.parse(String(init?.body)) as Record<string, unknown>,
         fail: () => reject(new TypeError("Failed to fetch")),
@@ -36,7 +45,7 @@ export function fakeRelay() {
     fetch,
     /** The next unanswered request, which must carry `op`. */
     async next(op: "chat" | "history" | "steer"): Promise<RelayCall> {
-      await waitFor(() => expect(calls.length).toBeGreaterThan(read));
+      await vi.waitFor(() => expect(calls.length).toBeGreaterThan(read));
       const call = calls[read];
       read += 1;
       expect(call.body.op).toBe(op);
@@ -44,6 +53,45 @@ export function fakeRelay() {
     },
     /** Requests not answered through `next` yet. */
     unread: () => calls.slice(read),
+  };
+}
+
+const startedChats: BlazingAgentsChat<BlazingAgentsUIMessage>[] = [];
+
+/** A started `BlazingAgentsChat` over the fake relay, disposed by `disposeChats`. */
+export function startChat(
+  relay: { fetch: typeof globalThis.fetch },
+  options: BlazingAgentsChatOptions = {}
+): BlazingAgentsChat {
+  const chat = new BlazingAgentsChat({ fetch: relay.fetch, ...options });
+  startedChats.push(chat);
+  chat.start();
+  return chat;
+}
+
+/** Disposes every chat `startChat` started; run after each test. */
+export function disposeChats(): void {
+  for (const chat of startedChats.splice(0)) {
+    chat.dispose();
+  }
+}
+
+/** A `localStorage` stand-in, since Node has none. */
+export function memoryStorage(): Storage {
+  const items = new Map<string, string>();
+  return {
+    get length() {
+      return items.size;
+    },
+    clear: () => items.clear(),
+    getItem: (key) => items.get(key) ?? null,
+    key: (index) => [...items.keys()][index] ?? null,
+    removeItem: (key) => {
+      items.delete(key);
+    },
+    setItem: (key, value) => {
+      items.set(key, value);
+    },
   };
 }
 

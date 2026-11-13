@@ -48,9 +48,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
     "unused": "knip && knip --production --include exports,types,duplicates"
   },
-  "dependencies": {
-    "croner": "10.0.1"
-  },
   "devDependencies": {
     "@ai-sdk/react": "^4.0.90",
     "@biomejs/biome": "^2.5.8",

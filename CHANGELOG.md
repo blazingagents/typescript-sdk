@@ -1,21 +1,6 @@
 # Changelog
 
-## 0.53.0
-
-### Added
-
-- `BlazingAgentsChat`, exported from `@blazingagents/sdk`, runs the browser chat of `useBlazingAgentsChat` without React, so Vue, Angular, Svelte, or plain JavaScript apps get the same Session storage, history restore, steering, and rollback. Render `getSnapshot()` and read it again each time a `subscribe` listener runs. The snapshot is a new object only when something in it changed, so it works with `useSyncExternalStore`, Vue refs, and Angular signals. Call `start()` once the component is in the page and `dispose()` when it leaves. The constructor reads no storage, so it is safe in server rendering. `setHeaders()` sends a new token with the next request, and `headers` can also be a function that returns them, read at each request.
-
-  ```ts
-  import { BlazingAgentsChat } from "@blazingagents/sdk";
-
-  const chat = new BlazingAgentsChat({ api: "/api/chat", headers });
-  chat.subscribe(() => render(chat.getSnapshot()));
-  chat.start();
-  await chat.send("Hello");
-  ```
-
-- `BlazingAgentsChatTransport.loadHistory()` takes `known`, the messages already known to be stored, oldest first. The read stops at the first page whose oldest message is in `known`.
+## Unreleased
 
 ### Added
 
@@ -32,6 +17,23 @@
 
   await client.agents.update({ agentId: agent.id, autoApprovalModel: null });
   ```
+
+## 0.53.0
+
+### Added
+
+- `BlazingAgentsChat`, exported from `@blazingagents/sdk`, runs the browser chat of `useBlazingAgentsChat` without React, so Vue, Angular, Svelte, or plain JavaScript apps get the same Session storage, history restore, steering, and rollback. Render `getSnapshot()` and read it again each time a `subscribe` listener runs. The snapshot is a new object only when something in it changed, so it works with `useSyncExternalStore`, Vue refs, and Angular signals. Call `start()` once the component is in the page and `dispose()` when it leaves. The constructor reads no storage, so it is safe in server rendering. `setHeaders()` sends a new token with the next request, and `headers` can also be a function that returns them, read at each request.
+
+  ```ts
+  import { BlazingAgentsChat } from "@blazingagents/sdk";
+
+  const chat = new BlazingAgentsChat({ api: "/api/chat", headers });
+  chat.subscribe(() => render(chat.getSnapshot()));
+  chat.start();
+  await chat.send("Hello");
+  ```
+
+- `BlazingAgentsChatTransport.loadHistory()` takes `known`, the messages already known to be stored, oldest first. The read stops at the first page whose oldest message is in `known`.
 
 ### Changed
 

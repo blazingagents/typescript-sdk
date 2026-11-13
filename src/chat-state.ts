@@ -398,6 +398,26 @@ function turnEnded<M extends UIMessage>(
       effects: [...settlePending(state), { type: "forgetSession" }],
     };
   }
+  if (phase.kind === "starting" && !phase.prompt) {
+    // A failed approval continuation or regenerate stored nothing, but the
+    // Session may have moved on without it, as when another client decided
+    // the approval (409), and steers the finished Turn read are still unplaced.
+    // Stored history decides; queued messages wait for it.
+    return {
+      state: {
+        ...state,
+        error,
+        outbox: state.outbox.map((entry) =>
+          entry.stage === "accepted" ? resend(entry, newId) : entry
+        ),
+        phase: { kind: "reconciling" },
+      },
+      effects: [
+        { type: "show", messages: state.completed },
+        { type: "loadHistory", known: state.completed },
+      ],
+    };
+  }
   if (phase.kind === "starting") {
     // The relay never answered with a stream, so the Turn stored nothing.
     return {

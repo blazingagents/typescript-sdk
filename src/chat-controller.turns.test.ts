@@ -870,6 +870,138 @@ describe("BlazingAgentsChat turns", () => {
     ]);
   });
 
+  it("shows stored history and sends the queued message when the approval was already decided elsewhere", async () => {
+    const { chat, relay } = await startIdle();
+    chat.send("Look up my order");
+    const turn = await answerChat(relay, true);
+    turn.stream.push(...approvalReply("reply-1", false));
+    turn.stream.close();
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    const queued = chat.send("Quickly please");
+
+    chat.addToolApprovalResponse({ id: "approval-1", approved: true });
+    (await relay.next("chat")).respond(
+      relayError(409, "tool_approval_continuation_settled")
+    );
+
+    const history = await relay.next("history");
+    history.respond(
+      historyPage([
+        userMessage("user-1", "Look up my order"),
+        {
+          id: "reply-1",
+          role: "assistant",
+          parts: [
+            { type: "step-start" },
+            {
+              type: "tool-getOrder",
+              toolCallId: "call-1",
+              state: "output-available",
+              input: { orderId: "o1" },
+              output: { status: "shipped" },
+              approval: { id: "approval-1", approved: true },
+            },
+            { type: "text", text: "It shipped" },
+          ],
+        },
+      ])
+    );
+    await vi.waitFor(() =>
+      expect(transcript(chat.getSnapshot().messages)).toEqual([
+        "user: Look up my order",
+        "assistant: It shipped",
+        "user: Quickly please",
+      ])
+    );
+    expect(chat.getSnapshot().error).toMatchObject({
+      code: "tool_approval_continuation_settled",
+    });
+    const next = await answerChat(relay);
+    expect(next.call.body).toMatchObject({
+      message: {
+        role: "user",
+        parts: [{ type: "text", text: "Quickly please" }],
+      },
+    });
+    next.stream.push(...reply("reply-2", "On it"));
+    next.stream.close();
+    expect(await queued).toBe(true);
+  });
+
+  it("keeps a steer the finished Turn read when its automatic approval continuation fails", async () => {
+    const { chat, relay } = await startIdle();
+    const first = chat.send("Look up my order");
+    const turn = await answerChat(relay, true);
+    const steered = chat.send("Quickly please");
+    const steer = await relay.next("steer");
+    steer.respond(accepted());
+    turn.stream.push(
+      steerConsumed(String(steer.body.requestId), "Quickly please"),
+      ...approvalReply("reply-1", true)
+    );
+    turn.stream.close();
+
+    (await relay.next("chat")).respond(relayError(502, "network_error"));
+
+    const history = await relay.next("history");
+    await vi.waitFor(() =>
+      expect(transcript(chat.getSnapshot().messages)).toContain(
+        "user: Quickly please"
+      )
+    );
+    history.respond(
+      historyPage([
+        userMessage("user-1", "Look up my order"),
+        userMessage("user-2", "Quickly please"),
+        assistantMessage("reply-1", "Checking"),
+      ])
+    );
+    expect(await first).toBe(true);
+    expect(await steered).toBe(true);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
+      "user: Look up my order",
+      "user: Quickly please",
+      "assistant: Checking",
+    ]);
+    expect(chat.getSnapshot().error).toMatchObject({ code: "network_error" });
+  });
+
+  it("resends a steer accepted while an automatic approval continuation starts, once that continuation fails", async () => {
+    const { chat, relay } = await startIdle();
+    chat.send("Look up my order");
+    const turn = await answerChat(relay, true);
+    const steered = chat.send("Quickly please");
+    const steer = await relay.next("steer");
+    turn.stream.push(...approvalReply("reply-1", true));
+    turn.stream.close();
+    const continuation = await relay.next("chat");
+
+    steer.respond(accepted());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    continuation.respond(relayError(502, "network_error"));
+    (await relay.next("history")).respond(
+      historyPage([
+        userMessage("user-1", "Look up my order"),
+        assistantMessage("reply-1", "Checking"),
+      ])
+    );
+
+    const resent = await answerChat(relay);
+    expect(resent.call.body).toMatchObject({
+      message: {
+        role: "user",
+        parts: [{ type: "text", text: "Quickly please" }],
+      },
+    });
+    expect((resent.call.body.message as { id: string }).id).not.toBe(
+      (steer.body.message as { id: string }).id
+    );
+    resent.stream.push(...reply("reply-2", "On it"));
+    resent.stream.close();
+    expect(await steered).toBe(true);
+  });
+
   it("publishes each pending message in the snapshot that names it, across a send, a steer, a failed Turn, and an unclean end", async () => {
     const { chat, relay } = await startIdle();
     const published: BlazingAgentsChatSnapshot[] = [];

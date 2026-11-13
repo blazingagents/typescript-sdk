@@ -57,9 +57,18 @@ relay copies the API's `x-request-id` header when the API sent one.
 | `400` | `invalid_request` | The body is not JSON, has no known `op`, or has a field that breaks a rule above, or `message` is not a valid `UIMessage` of the required role. |
 | `401` | `unauthorized` | The relay found no signed-in End-user. |
 | The API's status | The API's code | The API answered an error, such as `404 not_found`, `409 steer_not_available`, or `409 input_idempotency_conflict`. |
-| `499` | `request_aborted` | The browser aborted the request. |
+| `499` | `request_aborted` | The browser aborted the request. Only relays whose runtime reports the abort send it (TypeScript, Go); the browser never reads it either way. |
 | `502` | The SDK's code | The API request failed another way, such as `network_error` or `stream_error`. |
 | `500` | `internal_error` | Anything else. The message never names the cause. |
+
+## SDK relays
+
+`createChatRelay` (TypeScript), `AsyncChatRelay` and `ChatRelay` (Python), `NewChatRelay` (Go), and `relay::ChatRelay` (Rust) implement this contract. They differ only in requests and failures the browser never produces:
+
+- An optional field sent as JSON `null` is a `400` everywhere except Rust, which treats it as absent. The browser omits unset fields.
+- A history page the API answers malformed is `502 invalid_response` in Go and Rust, `500 internal_error` in Python, and passed through in TypeScript.
+- An error the resolver raises keeps the API's status and code in TypeScript, Python, and Go, and is a `500` in Rust.
+- Go and Rust refuse a body over 15 MiB, the API's own limit.
 
 ## How the browser reads the answers
 

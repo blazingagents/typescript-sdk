@@ -8,6 +8,7 @@
 - A browser chat whose Tool approval was already decided in another tab or client no longer locks. Answering the stale approval fails with `409 tool_approval_continuation_settled`; the chat now shows the error, reads the stored transcript, and sends any message queued behind the approval. Before, it kept the stale approval request, so every later `send()` waited forever.
 - When the automatic approval continuation that follows a Turn fails, a message steered into that Turn stays in the transcript and its `send()` resolves `true`, because the Turn stored it. Before, it disappeared and resolved `false`. Messages queued meanwhile wait for the stored transcript and then go out, instead of resolving `false`.
 - `createChatRelay` and `createCompletionRelay` work when `resolveContext` reads the request body, for example to pick the Agent from an extra field the browser sends with the transport's `body` option. Before, the relay's own read of the body then failed and every request answered `500 internal_error`. The resolver gets the original request and the relay parses a copy.
+- A browser chat's `send()` now resolves `false` when the stored transcript cannot be read. Before, a message sent while the restore kept failing waited forever. The chat still reads the transcript again on new headers, the next `send()`, or `clearError()`.
 
 ## 0.54.0
 

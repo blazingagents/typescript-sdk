@@ -345,16 +345,22 @@ function historyFailed<M extends UIMessage>(
         effects: [{ type: "forgetSession" }],
       };
     }
+    // Messages sent before the read failed roll back with it; otherwise a
+    // restore that keeps failing would leave their `send()` waiting forever.
     return phase.load === "stale"
       ? {
           state: { ...state, phase: { kind: "restoring", load: "running" } },
           effects: [{ type: "loadHistory", known: [] }],
         }
-      : noEffects({
-          ...state,
-          error,
-          phase: { kind: "restoring", load: "failed" },
-        });
+      : {
+          state: {
+            ...state,
+            error,
+            outbox: [],
+            phase: { kind: "restoring", load: "failed" },
+          },
+          effects: settlePending(state),
+        };
   }
   if (phase.kind === "reconciling") {
     // A completed Turn stored its steers, but where they sit is unknown; append

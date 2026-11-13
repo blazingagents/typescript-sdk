@@ -63,9 +63,10 @@ export interface BlazingAgentsChatSnapshot<
   readonly sessionId: string | undefined;
   /**
    * `restoring`: reading the stored transcript, or, after that read failed
-   * (see `error`), waiting for new headers, a `send`, or `clearError` to read
-   * it again. `running`: a Turn is starting, streaming, or being placed in
-   * stored history. `send` works in every status.
+   * (see `error`) and rolled back the messages sent during it, waiting for new
+   * headers, a `send`, or `clearError` to read it again. `running`: a Turn is
+   * starting, streaming, or being placed in stored history. `send` works in
+   * every status.
    */
   readonly status: "restoring" | "idle" | "running";
 }

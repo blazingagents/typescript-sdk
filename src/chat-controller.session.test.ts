@@ -324,6 +324,29 @@ describe("BlazingAgentsChat Sessions", () => {
     }
   );
 
+  it("resolves a send false when the history read it retried fails again", async () => {
+    localStorage.setItem(STORAGE_KEY, sessionId);
+    const relay = fakeRelay();
+    const chat = startChat(relay);
+    (await relay.next("history")).respond(relayError(500, "internal_error"));
+    await vi.waitFor(() =>
+      expect(chat.getSnapshot().error).toMatchObject({ code: "internal_error" })
+    );
+
+    const sent = chat.send("Hello");
+    (await relay.next("history")).respond(relayError(500, "internal_error"));
+
+    expect(await sent).toBe(false);
+    expect(chat.getSnapshot().status).toBe("restoring");
+    expect(chat.getSnapshot().error).toMatchObject({ code: "internal_error" });
+    expect(chat.getSnapshot().messages).toEqual([]);
+    expect(chat.getSnapshot().pendingIds.size).toBe(0);
+    chat.setHeaders({ authorization: "Bearer fresh" });
+    (await relay.next("history")).respond(historyPage(stored));
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(relay.unread()).toEqual([]);
+  });
+
   it("New Session cancels the running Turn, forgets the Session, and starts the next send without one", async () => {
     localStorage.setItem(STORAGE_KEY, sessionId);
     const relay = fakeRelay();

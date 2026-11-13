@@ -28,6 +28,7 @@ it("forks through the installed package and exposes typed child fields", async (
       name: "Agent",
       model: null,
       thinkingLevel: null,
+      autoApprovalModel: null,
       providerId: null,
       autoCompaction: true,
       compactionReserveTokens: 16_384,

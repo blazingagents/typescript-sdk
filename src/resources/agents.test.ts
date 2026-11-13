@@ -104,6 +104,34 @@ describe("client.agents", () => {
     }
   );
 
+  it("round-trips the auto-approval model and preserves omission", async () => {
+    const { fetch, calls } = createMockFetch({
+      body: agentRow({ autoApprovalModel: "openrouter/cheap-model" }),
+    });
+    const c = client(fetch);
+    const created = await c.agents.create({
+      name: "Reviewer",
+      model: "openrouter/test",
+      providerId: "prv_0123456789abcdef",
+      autoApprovalModel: "openrouter/cheap-model",
+    });
+    await c.agents.update({
+      agentId: "ag_0123456789abcdef",
+      autoApprovalModel: null,
+    });
+    await c.agents.update({ agentId: "ag_0123456789abcdef", name: "Renamed" });
+    expect(created.autoApprovalModel).toBe("openrouter/cheap-model");
+    expect(JSON.parse(calls[0].init?.body as string).autoApprovalModel).toBe(
+      "openrouter/cheap-model"
+    );
+    expect(JSON.parse(calls[1].init?.body as string)).toEqual({
+      autoApprovalModel: null,
+    });
+    expect(JSON.parse(calls[2].init?.body as string)).not.toHaveProperty(
+      "autoApprovalModel"
+    );
+  });
+
   it("create posts to /v1/agents and parses the response", async () => {
     const { fetch, calls } = createMockFetch({ body: agentRow() });
     const c = client(fetch);

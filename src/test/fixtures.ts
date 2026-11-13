@@ -115,6 +115,7 @@ export function agentRow(
     model: "openrouter/test-model",
     providerId: "prv_0123456789abcdef",
     thinkingLevel: null,
+    autoApprovalModel: null,
     autoCompaction: true,
     compactionReserveTokens: 16_384,
     workspaceId: "ws_0123456789abcdef",

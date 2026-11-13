@@ -30,6 +30,7 @@ const agent = {
   approvalInChat: { default: "full", overrides: [] },
   approvalInTasks: { default: "full", overrides: [] },
   thinkingLevel: null,
+  autoApprovalModel: null,
   workspaceId: "ws_0123456789abcdef",
   status: "active",
   tenantId: "ten_0123456789abcdef",

@@ -24,6 +24,7 @@ const baseAgent = {
   name: "Builder",
   providerId,
   thinkingLevel: null,
+  autoApprovalModel: null,
   autoCompaction: true,
   approvalInChat: { default: "full", overrides: [] },
   approvalInTasks: { default: "full", overrides: [] },
@@ -45,6 +46,7 @@ const baseAgentConfig = {
   model: "openrouter/test-model",
   providerId,
   thinkingLevel: null,
+  autoApprovalModel: null,
   autoCompaction: true,
   approvalInChat: { default: "full", overrides: [] },
   approvalInTasks: { default: "full", overrides: [] },
@@ -84,6 +86,38 @@ describe("Agent current and config contracts", () => {
     expect(
       agentConfigSchema.safeParse({ ...baseAgentConfig, providerId: null })
         .success
+    ).toBe(false);
+  });
+
+  it("accepts an auto-approval model only when the Agent has a Provider", () => {
+    expect(
+      agentResponseSchema.parse({
+        ...baseAgent,
+        autoApprovalModel: "openrouter/cheap-model",
+      }).autoApprovalModel
+    ).toBe("openrouter/cheap-model");
+    expect(
+      agentResponseSchema.safeParse({
+        ...baseAgent,
+        model: null,
+        providerId: null,
+        autoApprovalModel: "openrouter/cheap-model",
+      }).success
+    ).toBe(false);
+
+    expect(
+      agentConfigSchema.parse({
+        ...baseAgentConfig,
+        autoApprovalModel: "openrouter/cheap-model",
+      }).autoApprovalModel
+    ).toBe("openrouter/cheap-model");
+    expect(
+      agentConfigSchema.safeParse({
+        ...baseAgentConfig,
+        model: null,
+        providerId: null,
+        autoApprovalModel: "openrouter/cheap-model",
+      }).success
     ).toBe(false);
   });
 
@@ -187,12 +221,56 @@ describe("Agent mutation contracts", () => {
     ).toBe("gpt-4.1");
   });
 
+  it("defaults the auto-approval model to the Agent's own model", () => {
+    expect(
+      createAgentBodySchema.parse({ name: "Builder" }).autoApprovalModel
+    ).toBeNull();
+    expect(
+      createAgentBodySchema.parse({
+        name: "Builder",
+        model: "openrouter/test-model",
+        providerId,
+        autoApprovalModel: " openrouter/cheap-model ",
+      }).autoApprovalModel
+    ).toBe("openrouter/cheap-model");
+    expect(
+      createAgentBodySchema.safeParse({
+        name: "Builder",
+        autoApprovalModel: "openrouter/cheap-model",
+      }).success
+    ).toBe(false);
+  });
+
+  it("accepts and clears the auto-approval model on update", () => {
+    expect(
+      updateAgentBodySchema.parse({ autoApprovalModel: "openrouter/cheap" })
+    ).toEqual({ autoApprovalModel: "openrouter/cheap" });
+    expect(updateAgentBodySchema.parse({ autoApprovalModel: null })).toEqual({
+      autoApprovalModel: null,
+    });
+    expect(
+      updateAgentBodySchema.parse({
+        model: "openrouter/test-model",
+        providerId,
+        autoApprovalModel: "openrouter/cheap",
+      }).autoApprovalModel
+    ).toBe("openrouter/cheap");
+    expect(
+      updateAgentBodySchema.safeParse({
+        model: null,
+        providerId: null,
+        autoApprovalModel: "openrouter/cheap",
+      }).success
+    ).toBe(false);
+  });
+
   it("omits Workspace attachment when implicit creation is requested", () => {
     expect(createAgentBodySchema.parse({ name: "Builder" })).toEqual({
       name: "Builder",
       model: null,
       providerId: null,
       thinkingLevel: null,
+      autoApprovalModel: null,
       autoCompaction: true,
       approvalInChat: { default: "full", overrides: [] },
       approvalInTasks: { default: "full", overrides: [] },

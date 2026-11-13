@@ -60,6 +60,8 @@ export const agentStatusSchema = z.enum(["active", "disabled"]);
 
 const providerModelPairMessage =
   "Provider and model must either both be set or both be null.";
+const autoApprovalModelMessage =
+  "autoApprovalModel needs a provider and model on the agent.";
 
 /**
  * Checks that provider and model selections are both present or both absent.
@@ -71,6 +73,20 @@ function hasProviderModelPair(input: {
   return (input.model === null) === (input.providerId === null);
 }
 
+/**
+ * Checks that an auto-approval model runs on a configured Provider and model.
+ */
+function hasProviderForAutoApprovalModel(input: {
+  autoApprovalModel?: string | null | undefined;
+  providerId?: string | null | undefined;
+}): boolean {
+  return (
+    input.autoApprovalModel === undefined ||
+    input.autoApprovalModel === null ||
+    input.providerId !== null
+  );
+}
+
 export const agentResponseSchema = z
   .object({
     ...approvalFields,
@@ -80,6 +96,7 @@ export const agentResponseSchema = z
     model: agentModelIdSchema.nullable(),
     thinkingLevel: z.string().min(1).nullable(),
     providerId: providerIdSchema.nullable(),
+    autoApprovalModel: agentModelIdSchema.nullable(),
     workspaceId: workspaceIdSchema,
     autoCompaction: z.boolean(),
     compactionReserveTokens: z
@@ -103,6 +120,10 @@ export const agentResponseSchema = z
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],
+  })
+  .refine(hasProviderForAutoApprovalModel, {
+    message: autoApprovalModelMessage,
+    path: ["autoApprovalModel"],
   });
 
 export const agentsResponseSchema =
@@ -138,6 +159,7 @@ export const agentConfigSchema = z
     model: agentResponseSchema.shape.model,
     thinkingLevel: agentResponseSchema.shape.thinkingLevel,
     providerId: agentResponseSchema.shape.providerId,
+    autoApprovalModel: agentResponseSchema.shape.autoApprovalModel,
     autoCompaction: agentResponseSchema.shape.autoCompaction,
     compactionReserveTokens: agentResponseSchema.shape.compactionReserveTokens,
     memoryInjectionEnabled: agentResponseSchema.shape.memoryInjectionEnabled,
@@ -150,6 +172,10 @@ export const agentConfigSchema = z
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],
+  })
+  .refine(hasProviderForAutoApprovalModel, {
+    message: autoApprovalModelMessage,
+    path: ["autoApprovalModel"],
   });
 
 const agentFieldDescriptions = {
@@ -163,6 +189,8 @@ const agentFieldDescriptions = {
     "How much reasoning to request from the model, such as `high`. Needs a provider and model, and must be a level the model supports.",
   providerId:
     "ID of the provider whose key runs the model. Send it together with `model`.",
+  autoApprovalModel:
+    "Model ID, on the agent's provider, that reviews tool calls whose approval is `auto`. `null` uses the agent's model. Needs a provider and model. Changing `providerId` without sending this sets it to `null`.",
   workspaceId: "ID of the workspace the agent reads and writes files in.",
   autoCompaction:
     "Summarize older context automatically when a conversation nears the model's context limit.",
@@ -207,6 +235,10 @@ export const createAgentBodySchema = z
       .nullable()
       .default(null)
       .describe(agentFieldDescriptions.providerId),
+    autoApprovalModel: agentModelIdSchema
+      .nullable()
+      .default(null)
+      .describe(agentFieldDescriptions.autoApprovalModel),
     workspaceId: workspaceIdSchema
       .optional()
       .describe(
@@ -251,6 +283,10 @@ export const createAgentBodySchema = z
   .refine(hasProviderModelPair, {
     message: providerModelPairMessage,
     path: ["providerId"],
+  })
+  .refine(hasProviderForAutoApprovalModel, {
+    message: autoApprovalModelMessage,
+    path: ["autoApprovalModel"],
   });
 
 export const updateAgentBodySchema = z
@@ -276,6 +312,10 @@ export const updateAgentBodySchema = z
       .nullable()
       .optional()
       .describe(agentFieldDescriptions.providerId),
+    autoApprovalModel: agentModelIdSchema
+      .nullable()
+      .optional()
+      .describe(agentFieldDescriptions.autoApprovalModel),
     workspaceId: workspaceIdSchema
       .optional()
       .describe(agentFieldDescriptions.workspaceId),
@@ -326,7 +366,11 @@ export const updateAgentBodySchema = z
       message: providerModelPairMessage,
       path: ["providerId"],
     }
-  );
+  )
+  .refine(hasProviderForAutoApprovalModel, {
+    message: autoApprovalModelMessage,
+    path: ["autoApprovalModel"],
+  });
 
 export type Agent = z.infer<typeof agentResponseSchema>;
 export type AgentsResponse = z.infer<typeof agentsResponseSchema>;

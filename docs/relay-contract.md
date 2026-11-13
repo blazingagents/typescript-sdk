@@ -77,9 +77,9 @@ relay copies the API's `x-request-id` header when the API sent one.
 | `chat` `Location` header on the first reply | Takes the last path segment as the Session ID. A cross-origin relay must expose `Location` through CORS. |
 | `chat` stream that ends with a `finish` chunk | Treats the Turn as stored. |
 | `chat` stream that ends without a `finish` chunk: Stop, an `abort` chunk, an `error` chunk, or a dropped connection | Shows the stored transcript and reads `history` again. Each message sent for that Turn, steers included, stays when the history holds its message ID and rolls back when it does not. |
-| `chat` error response | Shows it as a `BlazingAgentsError` with the relay's status and `code`, and rolls back without reading `history`. A `404` also forgets the stored Session. |
+| `chat` error response | Shows it as a `BlazingAgentsError` with the relay's status and `code`, and rolls back without reading `history`. A `404 not_found` also forgets the stored Session; any other `404` code, such as `provider_not_found`, keeps it. |
 | `history` `nextCursor` | Requests the next older page with it as `cursor`. Stops at `null`, at a cursor it already sent, or after 50 pages. When it reads history to place the messages of a Turn, it also stops at the first page whose oldest message it already holds. |
-| `history` `404` | Forgets the stored Session and starts the next message on a new one. |
+| `history` `404 not_found` | Forgets the stored Session and starts the next message on a new one. Any other `404` code is handled as the other errors below. |
 | `history` other errors | Shows the error. On restore, reads history again when the request headers change, on the next send, or on `clearError()`. After a Turn that ended without `finish`, rolls back every message sent for it. |
 | `steer` `accepted`, or no answer because the request failed in transit | Waits for the Turn in flight. A steer that Turn has not read when its stream ends is sent again as `chat`, with a new message ID, and so is one answered when no Turn is in flight. |
 | `steer` `committed` | Treats the message as stored with the Turn. |

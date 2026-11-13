@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `BlazingAgentsChat` and `useBlazingAgentsChat` forget the stored Session only when the relay answers `404 not_found`. A chat or history read answered with another `404` code, such as `provider_not_found`, `message_not_found`, or `workspace_not_found`, now keeps the Session and its transcript and shows the error, so fixing the Agent's provider or Workspace lets the conversation go on.
+
 ## 0.54.0
 
 ### Added

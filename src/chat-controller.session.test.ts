@@ -169,6 +169,51 @@ describe("BlazingAgentsChat Sessions", () => {
     expect((await relay.next("chat")).body).not.toHaveProperty("sessionId");
   });
 
+  it("keeps the Session and its transcript when the relay answers a chat with a 404 other than not_found", async () => {
+    localStorage.setItem(STORAGE_KEY, sessionId);
+    const relay = fakeRelay();
+    const chat = startChat(relay);
+    (await relay.next("history")).respond(historyPage(stored));
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    const sent = chat.send("Again");
+
+    (await relay.next("chat")).respond(relayError(404, "provider_not_found"));
+
+    expect(await sent).toBe(false);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(chat.getSnapshot().error).toMatchObject({
+      code: "provider_not_found",
+      status: 404,
+    });
+    expect(chat.getSnapshot().sessionId).toBe(sessionId);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(sessionId);
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
+      "user: Hello",
+      "assistant: Hi there",
+    ]);
+    chat.send("Retry");
+    expect((await relay.next("chat")).body).toMatchObject({ sessionId });
+  });
+
+  it("keeps the Session when history answers a 404 other than not_found, and shows the error", async () => {
+    localStorage.setItem(STORAGE_KEY, sessionId);
+    const relay = fakeRelay();
+    const chat = startChat(relay);
+
+    (await relay.next("history")).respond(
+      relayError(404, "workspace_not_found")
+    );
+
+    await vi.waitFor(() =>
+      expect(chat.getSnapshot().error).toMatchObject({
+        code: "workspace_not_found",
+      })
+    );
+    expect(chat.getSnapshot().status).toBe("restoring");
+    expect(chat.getSnapshot().sessionId).toBe(sessionId);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(sessionId);
+  });
+
   it("reads history again once the headers carry new credentials after a 401", async () => {
     localStorage.setItem(STORAGE_KEY, sessionId);
     const relay = fakeRelay();

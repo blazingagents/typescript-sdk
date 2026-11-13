@@ -509,7 +509,15 @@ function turnResult<M extends UIMessage>(
   return { outcome: "closed", messages };
 }
 
-/** The relay answers 404 for a deleted Session or another End-user's. */
+/**
+ * The relay answers 404 `not_found` for a deleted Session or another
+ * End-user's. Other 404 codes, such as `provider_not_found`, name a missing
+ * resource the Session still points at.
+ */
 function sessionGone(error: Error): boolean {
-  return BlazingAgentsError.isInstance(error) && error.status === 404;
+  return (
+    BlazingAgentsError.isInstance(error) &&
+    error.status === 404 &&
+    error.code === "not_found"
+  );
 }

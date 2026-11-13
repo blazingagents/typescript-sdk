@@ -74,7 +74,7 @@ export interface ChatState<M extends UIMessage> {
 /**
  * How the AI SDK chat's request ended. `closed`: without an error or a Stop; the Turn
  * completed only if its stream carried `finish`. `sessionGone`: the relay
- * answered 404, so the Session is deleted or another End-user's.
+ * answered 404 `not_found`, so the Session is deleted or another End-user's.
  */
 export type TurnResult<M extends UIMessage> =
   | { outcome: "closed"; messages: M[] }
@@ -86,7 +86,7 @@ export type ChatEvent<M extends UIMessage> =
   | { type: "restore" }
   | { type: "credentialsChanged" }
   | { type: "historyLoaded"; messages: M[] }
-  /** `sessionGone`: the relay answered 404, so the Session is deleted or another End-user's. */
+  /** `sessionGone`: the relay answered 404 `not_found`, so the Session is deleted or another End-user's. */
   | { type: "historyFailed"; error: Error; sessionGone: boolean }
   | { type: "send"; sent: Sent<M> }
   | { type: "regenerate" }

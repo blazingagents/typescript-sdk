@@ -7,6 +7,7 @@
 - `BlazingAgentsChat` and `useBlazingAgentsChat` forget the stored Session only when the relay answers `404 not_found`. A chat or history read answered with another `404` code, such as `provider_not_found`, `message_not_found`, or `workspace_not_found`, now keeps the Session and its transcript and shows the error, so fixing the Agent's provider or Workspace lets the conversation go on.
 - A browser chat whose Tool approval was already decided in another tab or client no longer locks. Answering the stale approval fails with `409 tool_approval_continuation_settled`; the chat now shows the error, reads the stored transcript, and sends any message queued behind the approval. Before, it kept the stale approval request, so every later `send()` waited forever.
 - When the automatic approval continuation that follows a Turn fails, a message steered into that Turn stays in the transcript and its `send()` resolves `true`, because the Turn stored it. Before, it disappeared and resolved `false`. Messages queued meanwhile wait for the stored transcript and then go out, instead of resolving `false`.
+- `createChatRelay` and `createCompletionRelay` work when `resolveContext` reads the request body, for example to pick the Agent from an extra field the browser sends with the transport's `body` option. Before, the relay's own read of the body then failed and every request answered `500 internal_error`. The resolver gets the original request and the relay parses a copy.
 
 ## 0.54.0
 

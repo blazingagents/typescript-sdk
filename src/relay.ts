@@ -34,7 +34,7 @@ interface RelayOptions<Method extends keyof UserClient> {
   client: { forUser(userId: string): Pick<UserClient, Method> };
   /**
    * Resolves authenticated Agent and end-user context, or null for an unauthenticated request.
-   * @param request - Incoming HTTP request.
+   * @param request - Incoming HTTP request. Its body is unread, so the resolver may read extras the browser sent in it; the relay parses its own copy.
    * @returns Authenticated context, or null when authentication fails.
    */
   resolveContext(request: Request): Promise<RelayContext | null>;
@@ -62,12 +62,14 @@ export function createChatRelay(
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {
+      // The resolver may read the body too, so the relay reads its own copy.
+      const copy = request.clone();
       const context = await options.resolveContext(request);
       if (!context) {
         return errorResponse(401, "unauthorized", "Authentication required.");
       }
       const client = scopeTo(options.client, context.userId);
-      const body = relayRequestSchema.parse(await request.json());
+      const body = relayRequestSchema.parse(await copy.json());
       return await answer(client, context, body, request.signal);
     } catch (error) {
       return safeErrorResponse(error);
@@ -255,12 +257,13 @@ export function createCompletionRelay(
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {
+      const copy = request.clone();
       const context = await options.resolveContext(request);
       if (!context) {
         return errorResponse(401, "unauthorized", "Authentication required.");
       }
       const client = scopeTo(options.client, context.userId);
-      const body = completionBodySchema.parse(await request.json());
+      const body = completionBodySchema.parse(await copy.json());
       const result = await client.completion({
         agentId: context.agentId,
         metadata: context.metadata,

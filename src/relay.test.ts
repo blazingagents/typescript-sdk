@@ -487,6 +487,48 @@ describe("createChatRelay", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("serves chat, history, and steer when the resolver reads an extra field from the body", async () => {
+    const { calls, client } = fakeApi((call) => {
+      if (call.method === "GET") {
+        return Response.json({ data: storedPage, nextCursor: null });
+      }
+      return call.path === inputsPath
+        ? Response.json(steerReceipt, { status: 202 })
+        : chatReply();
+    });
+    const relay = createChatRelay({
+      client,
+      resolveContext: async (incoming) => {
+        const { workspace } = (await incoming.json()) as { workspace: string };
+        return { ...context, userId: `user-${workspace}` };
+      },
+    });
+
+    const chat = await relay(chatRequest({ message, workspace: "w1" }));
+    const history = await relay(
+      request({ op: "history", sessionId, workspace: "w1" })
+    );
+    const steer = await relay(
+      request({
+        op: "steer",
+        sessionId,
+        requestId: "steer-1",
+        message,
+        workspace: "w1",
+      })
+    );
+
+    expect([chat.status, history.status, steer.status]).toEqual([
+      201, 200, 202,
+    ]);
+    expect(calls.map((call) => call.headers.get(SCOPE_HEADER))).toEqual([
+      "user-w1",
+      "user-w1",
+      "user-w1",
+    ]);
+    expect(calls[0].body).not.toHaveProperty("workspace");
+  });
+
   it("submits an approval round as the End-user", async () => {
     const { calls, client } = fakeApi(() => continueReply());
     const relay = createChatRelay({
@@ -670,6 +712,22 @@ describe("createCompletionRelay", () => {
       output: { type: "text" },
       prompt: "Explain",
     });
+  });
+
+  it("relays completion text when the resolver reads the body", async () => {
+    const { calls, client } = fakeApi(() => completionReply());
+    const relay = createCompletionRelay({
+      client,
+      resolveContext: async (incoming) => {
+        const { workspace } = (await incoming.json()) as { workspace: string };
+        return { ...context, userId: `user-${workspace}` };
+      },
+    });
+
+    const response = await relay(request({ prompt: "Hello", workspace: "w1" }));
+
+    expect(response.status).toBe(200);
+    expect(calls[0].headers.get(SCOPE_HEADER)).toBe("user-w1");
   });
 
   it("scopes each request to its own resolved End-user", async () => {

@@ -1,54 +1,37 @@
-// @vitest-environment happy-dom
-import {
-  act,
-  cleanup,
-  type RenderHookResult,
-  renderHook,
-  waitFor,
-} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { BlazingAgentsChat, BlazingAgentsChatSnapshot } from "./index.ts";
 import {
   approvalReply,
   assistantMessage,
+  disposeChats,
   fakeRelay,
   historyPage,
   liveStream,
+  memoryStorage,
   type RelayCall,
   relayError,
   reply,
   sessionId,
   sessionLocation,
+  startChat,
   steerConsumed,
   transcript,
   userMessage,
-} from "../test/fake-chat-relay.ts";
-import { type BlazingAgentsChat, useBlazingAgentsChat } from "./index.ts";
+} from "./test/fake-chat-relay.ts";
 
-type Hook = RenderHookResult<BlazingAgentsChat, unknown>["result"];
 type Relay = ReturnType<typeof fakeRelay>;
 
-// Node's own localStorage global shadows happy-dom's, so give each test a fresh one.
-beforeEach(() => vi.stubGlobal("localStorage", new Storage()));
+beforeEach(() => vi.stubGlobal("localStorage", memoryStorage()));
 afterEach(() => {
-  cleanup();
+  disposeChats();
   vi.unstubAllGlobals();
 });
 
-async function mountIdle() {
+async function startIdle() {
   const relay = fakeRelay();
-  const { result } = renderHook(() =>
-    useBlazingAgentsChat({ fetch: relay.fetch })
-  );
-  await waitFor(() => expect(result.current.status).toBe("idle"));
-  return { relay, result };
-}
-
-function send(result: Hook, text: string): Promise<boolean> {
-  let sent!: Promise<boolean>;
-  act(() => {
-    sent = result.current.send(text);
-  });
-  return sent;
+  const chat = startChat(relay);
+  await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+  return { chat, relay };
 }
 
 /** Answers the next chat request with a stream the test keeps open. */
@@ -60,13 +43,13 @@ async function answerChat(relay: Relay, first = false) {
 }
 
 /** Runs one whole Turn on a new Session: Hello, then Hi there. */
-async function firstTurn(relay: Relay, result: Hook) {
-  const sent = send(result, "Hello");
+async function firstTurn(relay: Relay, chat: BlazingAgentsChat) {
+  const sent = chat.send("Hello");
   const { stream } = await answerChat(relay, true);
   stream.push(...reply("reply-1", "Hi there"));
   stream.close();
   expect(await sent).toBe(true);
-  await waitFor(() => expect(result.current.status).toBe("idle"));
+  await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
 }
 
 const accepted = () => Response.json({ state: "accepted" }, { status: 202 });
@@ -84,18 +67,18 @@ const partialReply = [
 const historyReads = (relay: Relay) =>
   relay.calls.filter((call) => call.body.op === "history").length;
 
-describe("useBlazingAgentsChat turns", () => {
+describe("BlazingAgentsChat turns", () => {
   it("starts a Session, streams the reply, and remembers the Session", async () => {
-    const { relay, result } = await mountIdle();
+    const { chat, relay } = await startIdle();
 
-    const sent = send(result, "Hello");
+    const sent = chat.send("Hello");
     const { call, stream } = await answerChat(relay, true);
     stream.push(...reply("reply-1", "Hi there"));
     stream.close();
 
     expect(await sent).toBe(true);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
     ]);
@@ -104,26 +87,42 @@ describe("useBlazingAgentsChat turns", () => {
       message: { role: "user", parts: [{ type: "text", text: "Hello" }] },
     });
     expect(call.body).not.toHaveProperty("sessionId");
-    expect(result.current.sessionId).toBe(sessionId);
+    expect(chat.getSnapshot().sessionId).toBe(sessionId);
     expect(localStorage.getItem("blazing-agents-session")).toBe(sessionId);
   });
 
-  it("starts one Turn for two sends in one tick and steers the second into it", async () => {
-    const { relay, result } = await mountIdle();
-
-    let second!: Promise<boolean>;
-    act(() => {
-      result.current.send("First");
-      second = result.current.send("Second");
+  it("completes a send where structuredClone throws unless called on the global, as in browsers", async () => {
+    const clone = structuredClone;
+    vi.stubGlobal("structuredClone", function (this: unknown, value: unknown) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return clone(value);
     });
-    const chat = await relay.next("chat");
+    const { chat, relay } = await startIdle();
+
+    const sent = chat.send("Hello");
+    const { stream } = await answerChat(relay, true);
+    stream.push(...reply("reply-1", "Hi there"));
+    stream.close();
+
+    expect(await sent).toBe(true);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+  });
+
+  it("starts one Turn for two sends in one tick and steers the second into it", async () => {
+    const { chat, relay } = await startIdle();
+
+    chat.send("First");
+    const second = chat.send("Second");
+    const request = await relay.next("chat");
     expect(relay.unread()).toEqual([]);
-    expect(result.current.status).toBe("running");
-    expect(transcript(result.current.messages)).toEqual([
+    expect(chat.getSnapshot().status).toBe("running");
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: First",
       "user: Second",
     ]);
-    chat.respond(liveStream({ location: sessionLocation }).response);
+    request.respond(liveStream({ location: sessionLocation }).response);
 
     const steer = await relay.next("steer");
     expect(steer.body).toMatchObject({
@@ -132,17 +131,17 @@ describe("useBlazingAgentsChat turns", () => {
       message: { role: "user", parts: [{ type: "text", text: "Second" }] },
     });
     expect(steer.body.requestId).toEqual(expect.any(String));
-    act(() => result.current.stop());
+    chat.stop();
     (await relay.next("history")).respond(historyPage([]));
     expect(await second).toBe(false);
   });
 
   it("steers a message sent while the reply streams, then places it where stored history puts it", async () => {
-    const { relay, result } = await mountIdle();
-    const first = send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    const first = chat.send("Hello");
     const { stream } = await answerChat(relay, true);
 
-    const second = send(result, "Also this");
+    const second = chat.send("Also this");
     const steer = await relay.next("steer");
     steer.respond(accepted());
     stream.push(
@@ -153,8 +152,8 @@ describe("useBlazingAgentsChat turns", () => {
 
     const history = await relay.next("history");
     expect(history.body).toEqual({ op: "history", sessionId });
-    expect(result.current.status).toBe("running");
-    expect(transcript(result.current.messages)).toEqual([
+    expect(chat.getSnapshot().status).toBe("running");
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Both noted",
       "user: Also this",
@@ -169,21 +168,21 @@ describe("useBlazingAgentsChat turns", () => {
 
     expect(await first).toBe(true);
     expect(await second).toBe(true);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "user: Also this",
       "assistant: Both noted",
     ]);
-    expect(result.current.pendingIds.size).toBe(0);
+    expect(chat.getSnapshot().pendingIds.size).toBe(0);
   });
 
   it("places a steer whose receipt is already committed", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
     const { stream } = await answerChat(relay, true);
 
-    const second = send(result, "Also this");
+    const second = chat.send("Also this");
     (await relay.next("steer")).respond(
       Response.json({ state: "committed" }, { status: 202 })
     );
@@ -202,10 +201,10 @@ describe("useBlazingAgentsChat turns", () => {
   });
 
   it("appends a read steer when stored history cannot be read afterwards", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
     const { stream } = await answerChat(relay, true);
-    const second = send(result, "Also this");
+    const second = chat.send("Also this");
     const steer = await relay.next("steer");
     steer.respond(accepted());
     stream.push(
@@ -217,21 +216,21 @@ describe("useBlazingAgentsChat turns", () => {
     (await relay.next("history")).respond(relayError(500, "internal_error"));
 
     expect(await second).toBe(true);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Both noted",
       "user: Also this",
     ]);
-    expect(result.current.error).toMatchObject({ code: "internal_error" });
-    expect(result.current.pendingIds.size).toBe(0);
+    expect(chat.getSnapshot().error).toMatchObject({ code: "internal_error" });
+    expect(chat.getSnapshot().pendingIds.size).toBe(0);
   });
 
   it("resends an accepted steer the Turn never read as ordinary chat with a fresh message ID", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
     const { stream } = await answerChat(relay, true);
-    const second = send(result, "Also this");
+    const second = chat.send("Also this");
     const steer = await relay.next("steer");
     steer.respond(accepted());
 
@@ -251,8 +250,8 @@ describe("useBlazingAgentsChat turns", () => {
     resent.stream.close();
 
     expect(await second).toBe(true);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
       "user: Also this",
@@ -275,14 +274,14 @@ describe("useBlazingAgentsChat turns", () => {
   ])(
     "sends a steer answered with %s as the next Turn, without steering it again",
     async (_, answer) => {
-      const { relay, result } = await mountIdle();
-      send(result, "Hello");
+      const { chat, relay } = await startIdle();
+      chat.send("Hello");
       const { stream } = await answerChat(relay, true);
-      const second = send(result, "Also this");
+      const second = chat.send("Also this");
       answer(await relay.next("steer"));
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(relay.unread()).toEqual([]);
-      expect(result.current.error).toBeUndefined();
+      expect(chat.getSnapshot().error).toBeUndefined();
 
       stream.push(...reply("reply-1", "Hi there"));
       stream.close();
@@ -298,61 +297,61 @@ describe("useBlazingAgentsChat turns", () => {
   );
 
   it("rolls back a steer the relay rejects and keeps the Turn streaming", async () => {
-    const { relay, result } = await mountIdle();
-    const first = send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    const first = chat.send("Hello");
     const { stream } = await answerChat(relay, true);
-    const second = send(result, "Also this");
+    const second = chat.send("Also this");
 
     (await relay.next("steer")).respond(relayError(401, "unauthorized"));
 
     expect(await second).toBe(false);
-    await waitFor(() =>
-      expect(result.current.error).toMatchObject({ code: "unauthorized" })
+    await vi.waitFor(() =>
+      expect(chat.getSnapshot().error).toMatchObject({ code: "unauthorized" })
     );
-    expect(transcript(result.current.messages)).toEqual(["user: Hello"]);
+    expect(transcript(chat.getSnapshot().messages)).toEqual(["user: Hello"]);
     stream.push(...reply("reply-1", "Hi there"));
     stream.close();
     expect(await first).toBe(true);
-    act(() => result.current.clearError());
-    expect(result.current.error).toBeUndefined();
+    chat.clearError();
+    expect(chat.getSnapshot().error).toBeUndefined();
   });
 
   it("rolls back to the stored transcript when a Turn fails, and resolves every pending send false", async () => {
-    const { relay, result } = await mountIdle();
-    await firstTurn(relay, result);
+    const { chat, relay } = await startIdle();
+    await firstTurn(relay, chat);
 
-    const prompt = send(result, "Break");
+    const prompt = chat.send("Break");
     const { stream } = await answerChat(relay);
-    const steered = send(result, "And this");
+    const steered = chat.send("And this");
     (await relay.next("steer")).respond(accepted());
     stream.push({ type: "error", errorText: "The model failed." });
     (await relay.next("history")).respond(historyPage(firstTurnStored));
 
     expect(await prompt).toBe(false);
     expect(await steered).toBe(false);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
     ]);
-    expect(result.current.error?.message).toBe("The model failed.");
-    expect(result.current.pendingIds.size).toBe(0);
+    expect(chat.getSnapshot().error?.message).toBe("The model failed.");
+    expect(chat.getSnapshot().pendingIds.size).toBe(0);
   });
 
   it("rolls back without reading history when the relay refuses the chat", async () => {
-    const { relay, result } = await mountIdle();
-    await firstTurn(relay, result);
+    const { chat, relay } = await startIdle();
+    await firstTurn(relay, chat);
 
-    const sent = send(result, "Again");
+    const sent = chat.send("Again");
     (await relay.next("chat")).respond(relayError(401, "unauthorized"));
 
     expect(await sent).toBe(false);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
     ]);
-    expect(result.current.error).toMatchObject({
+    expect(chat.getSnapshot().error).toMatchObject({
       code: "unauthorized",
       status: 401,
     });
@@ -371,52 +370,54 @@ describe("useBlazingAgentsChat turns", () => {
   ])(
     "rolls back a reply whose stream ends %s once stored history lacks its prompt",
     async (_, ending, error) => {
-      const { relay, result } = await mountIdle();
-      await firstTurn(relay, result);
-      const sent = send(result, "Again");
+      const { chat, relay } = await startIdle();
+      await firstTurn(relay, chat);
+      const sent = chat.send("Again");
       const { stream } = await answerChat(relay);
 
       stream.push(...partialReply, ...ending);
       stream.close();
 
       const history = await relay.next("history");
-      await waitFor(() =>
-        expect(transcript(result.current.messages)).toEqual([
+      await vi.waitFor(() =>
+        expect(transcript(chat.getSnapshot().messages)).toEqual([
           "user: Hello",
           "assistant: Hi there",
           "user: Again",
         ])
       );
-      expect(result.current.status).toBe("running");
+      expect(chat.getSnapshot().status).toBe("running");
       history.respond(historyPage(firstTurnStored));
       expect(await sent).toBe(false);
-      await waitFor(() => expect(result.current.status).toBe("idle"));
-      expect(transcript(result.current.messages)).toEqual([
+      await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+      expect(transcript(chat.getSnapshot().messages)).toEqual([
         "user: Hello",
         "assistant: Hi there",
       ]);
-      expect(result.current.pendingIds.size).toBe(0);
-      expect(result.current.error?.message).toBe(error);
+      expect(chat.getSnapshot().pendingIds.size).toBe(0);
+      expect(chat.getSnapshot().error?.message).toBe(error);
       expect(relay.unread()).toEqual([]);
     }
   );
 
   it("keeps what a Turn stored before its connection dropped, and rolls back the rest", async () => {
-    const { relay, result } = await mountIdle();
-    await firstTurn(relay, result);
-    const prompt = send(result, "Again");
+    const { chat, relay } = await startIdle();
+    await firstTurn(relay, chat);
+    const prompt = chat.send("Again");
     const { call, stream } = await answerChat(relay);
-    const read = send(result, "Also this");
+    const read = chat.send("Also this");
     const readSteer = await relay.next("steer");
     readSteer.respond(accepted());
-    const unread = send(result, "And this");
+    const unread = chat.send("And this");
     await relay.next("steer");
     stream.push(
       steerConsumed(String(readSteer.body.requestId), "Also this"),
       ...partialReply
     );
-    await waitFor(() =>
-      expect(transcript(result.current.messages)).toContain("assistant: Part")
+    await vi.waitFor(() =>
+      expect(transcript(chat.getSnapshot().messages)).toContain(
+        "assistant: Part"
+      )
     );
 
     stream.fail();
@@ -434,21 +435,21 @@ describe("useBlazingAgentsChat turns", () => {
     expect(await prompt).toBe(true);
     expect(await read).toBe(true);
     expect(await unread).toBe(false);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
       "user: Again",
       "user: Also this",
       "assistant: Partly done",
     ]);
-    expect(result.current.pendingIds.size).toBe(0);
+    expect(chat.getSnapshot().pendingIds.size).toBe(0);
   });
 
   it("rolls back a Turn that ended without finish when stored history cannot be read", async () => {
-    const { relay, result } = await mountIdle();
-    await firstTurn(relay, result);
-    const sent = send(result, "Again");
+    const { chat, relay } = await startIdle();
+    await firstTurn(relay, chat);
+    const sent = chat.send("Again");
     const { stream } = await answerChat(relay);
     stream.push(...partialReply, { type: "abort" });
     stream.close();
@@ -456,61 +457,63 @@ describe("useBlazingAgentsChat turns", () => {
     (await relay.next("history")).respond(relayError(500, "internal_error"));
 
     expect(await sent).toBe(false);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
     ]);
-    expect(result.current.error).toMatchObject({ code: "internal_error" });
+    expect(chat.getSnapshot().error).toMatchObject({ code: "internal_error" });
   });
 
   it.each([
     ["before the relay answers, without reading history", false],
     ["while the reply streams, once stored history lacks the Turn", true],
   ])("rolls back on Stop %s", async (_, streaming) => {
-    const { relay, result } = await mountIdle();
-    await firstTurn(relay, result);
+    const { chat, relay } = await startIdle();
+    await firstTurn(relay, chat);
 
-    const sent = send(result, "Never mind");
-    const steered = send(result, "Really");
+    const sent = chat.send("Never mind");
+    const steered = chat.send("Really");
     let steer: RelayCall | undefined;
     if (streaming) {
       const { stream } = await answerChat(relay);
       steer = await relay.next("steer");
       stream.push(...partialReply);
-      await waitFor(() => expect(result.current.messages).toHaveLength(5));
+      await vi.waitFor(() =>
+        expect(chat.getSnapshot().messages).toHaveLength(5)
+      );
     } else {
       await relay.next("chat");
     }
-    act(() => result.current.stop());
+    chat.stop();
     if (streaming) {
       (await relay.next("history")).respond(historyPage(firstTurnStored));
     }
 
     expect(await sent).toBe(false);
     expect(await steered).toBe(false);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
     steer?.fail();
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(transcript(result.current.messages)).toEqual([
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
     ]);
-    expect(result.current.error).toBeUndefined();
+    expect(chat.getSnapshot().error).toBeUndefined();
     expect(relay.unread()).toEqual([]);
     expect(historyReads(relay)).toBe(streaming ? 1 : 0);
   });
 
   it("regenerates the last reply", async () => {
-    const { relay, result } = await mountIdle();
-    expect(result.current.canRegenerate).toBe(false);
-    act(() => result.current.regenerate());
-    act(() => result.current.stop());
+    const { chat, relay } = await startIdle();
+    expect(chat.getSnapshot().canRegenerate).toBe(false);
+    chat.regenerate();
+    chat.stop();
     expect(relay.calls).toHaveLength(0);
-    await firstTurn(relay, result);
-    expect(result.current.canRegenerate).toBe(true);
+    await firstTurn(relay, chat);
+    expect(chat.getSnapshot().canRegenerate).toBe(true);
 
-    act(() => result.current.regenerate());
+    chat.regenerate();
     const { call, stream } = await answerChat(relay);
     expect(call.body).toMatchObject({
       op: "chat",
@@ -521,27 +524,27 @@ describe("useBlazingAgentsChat turns", () => {
     stream.push(...reply("reply-2", "Hello again"));
     stream.close();
 
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hello again",
     ]);
   });
 
   it("re-reads history after a Stop during a regenerate, and shows what the Turn stored", async () => {
-    const { relay, result } = await mountIdle();
-    await firstTurn(relay, result);
-    act(() => result.current.regenerate());
+    const { chat, relay } = await startIdle();
+    await firstTurn(relay, chat);
+    chat.regenerate();
     const { stream } = await answerChat(relay);
     stream.push(...partialReply);
-    await waitFor(() =>
-      expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() =>
+      expect(transcript(chat.getSnapshot().messages)).toEqual([
         "user: Hello",
         "assistant: Part",
       ])
     );
 
-    act(() => result.current.stop());
+    chat.stop();
 
     (await relay.next("history")).respond(
       historyPage([
@@ -549,37 +552,35 @@ describe("useBlazingAgentsChat turns", () => {
         assistantMessage("reply-2", "Hello again"),
       ])
     );
-    await waitFor(() =>
-      expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() =>
+      expect(transcript(chat.getSnapshot().messages)).toEqual([
         "user: Hello",
         "assistant: Hello again",
       ])
     );
-    expect(result.current.status).toBe("idle");
-    expect(result.current.canRegenerate).toBe(true);
+    expect(chat.getSnapshot().status).toBe("idle");
+    expect(chat.getSnapshot().canRegenerate).toBe(true);
   });
 
   it("waits for a pending approval before starting a Turn, then steers into the continuation", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Look up my order");
+    const { chat, relay } = await startIdle();
+    chat.send("Look up my order");
     const turn = await answerChat(relay, true);
     turn.stream.push(...approvalReply("reply-1", false));
     turn.stream.close();
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(result.current.canRegenerate).toBe(false);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(chat.getSnapshot().canRegenerate).toBe(false);
 
-    const queued = send(result, "Quickly please");
+    const queued = chat.send("Quickly please");
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(relay.unread()).toEqual([]);
-    expect(transcript(result.current.messages).at(-1)).toBe(
+    expect(transcript(chat.getSnapshot().messages).at(-1)).toBe(
       "user: Quickly please"
     );
-    act(() =>
-      result.current.addToolApprovalResponse({
-        id: "approval-1",
-        approved: true,
-      })
-    );
+    chat.addToolApprovalResponse({
+      id: "approval-1",
+      approved: true,
+    });
 
     const continuation = await answerChat(relay);
     expect(continuation.call.body).toMatchObject({
@@ -610,10 +611,10 @@ describe("useBlazingAgentsChat turns", () => {
   });
 
   it("lets an automatic approval continuation run before a queued message", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Look up my order");
+    const { chat, relay } = await startIdle();
+    chat.send("Look up my order");
     const turn = await answerChat(relay, true);
-    const queued = send(result, "Quickly please");
+    const queued = chat.send("Quickly please");
     (await relay.next("steer")).respond(relayError(409, "steer_not_available"));
 
     turn.stream.push(...approvalReply("reply-1", true));
@@ -644,8 +645,8 @@ describe("useBlazingAgentsChat turns", () => {
   });
 
   it("sends nothing until every approval of a round is answered", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Look up my orders");
+    const { chat, relay } = await startIdle();
+    chat.send("Look up my orders");
     const turn = await answerChat(relay, true);
     turn.stream.push(
       { type: "start", messageId: "reply-1" },
@@ -666,38 +667,32 @@ describe("useBlazingAgentsChat turns", () => {
       { type: "finish", finishReason: "tool-calls" }
     );
     turn.stream.close();
-    await waitFor(() => expect(result.current.status).toBe("idle"));
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
 
-    act(() =>
-      result.current.addToolApprovalResponse({
-        id: "approval-1",
-        approved: true,
-      })
-    );
+    chat.addToolApprovalResponse({
+      id: "approval-1",
+      approved: true,
+    });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(relay.unread()).toEqual([]);
-    expect(result.current.status).toBe("idle");
+    expect(chat.getSnapshot().status).toBe("idle");
 
-    act(() =>
-      result.current.addToolApprovalResponse({
-        id: "approval-2",
-        approved: false,
-      })
-    );
+    chat.addToolApprovalResponse({
+      id: "approval-2",
+      approved: false,
+    });
     await relay.next("chat");
-    expect(result.current.status).toBe("running");
+    expect(chat.getSnapshot().status).toBe("running");
   });
   it("sends text with files as one user message", async () => {
-    const { relay, result } = await mountIdle();
+    const { chat, relay } = await startIdle();
     const file = {
       type: "file" as const,
       mediaType: "image/png",
       url: "data:image/png;base64,AA==",
     };
 
-    act(() => {
-      result.current.send({ text: "What is this?", files: [file] });
-    });
+    chat.send({ text: "What is this?", files: [file] });
 
     expect((await relay.next("chat")).body).toMatchObject({
       message: {
@@ -708,17 +703,17 @@ describe("useBlazingAgentsChat turns", () => {
   });
 
   it("keeps each steer's fate apart when answers race the stream", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
     const { stream } = await answerChat(relay, true);
-    const lost = send(result, "Second");
-    const read = send(result, "Third");
+    const lost = chat.send("Second");
+    const read = chat.send("Third");
     const lostSteer = await relay.next("steer");
     const readSteer = await relay.next("steer");
 
     stream.push(steerConsumed(String(readSteer.body.requestId), "Third"));
-    await waitFor(() =>
-      expect(transcript(result.current.messages)).toHaveLength(3)
+    await vi.waitFor(() =>
+      expect(transcript(chat.getSnapshot().messages)).toHaveLength(3)
     );
     readSteer.respond(accepted());
     lostSteer.fail();
@@ -740,8 +735,8 @@ describe("useBlazingAgentsChat turns", () => {
     resent.stream.push(...reply("reply-2", "And second"));
     resent.stream.close();
     expect(await lost).toBe(true);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "user: Third",
       "assistant: Noted",
@@ -756,15 +751,15 @@ describe("useBlazingAgentsChat turns", () => {
   ])(
     "resends a steer whose answer is %s after its Turn ended, as ordinary chat with a fresh message ID",
     async (_, answer) => {
-      const { relay, result } = await mountIdle();
-      send(result, "Hello");
+      const { chat, relay } = await startIdle();
+      chat.send("Hello");
       const { stream } = await answerChat(relay, true);
-      const late = send(result, "Late");
+      const late = chat.send("Late");
       const steer = await relay.next("steer");
       stream.push(...reply("reply-1", "Hi there"));
       stream.close();
-      await waitFor(() =>
-        expect(transcript(result.current.messages)).toEqual([
+      await vi.waitFor(() =>
+        expect(transcript(chat.getSnapshot().messages)).toEqual([
           "user: Hello",
           "assistant: Hi there",
           "user: Late",
@@ -789,12 +784,12 @@ describe("useBlazingAgentsChat turns", () => {
   );
 
   it("leaves a steer accepted while the next Turn starts for that Turn's end to place", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Hello");
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
     const first = await answerChat(relay, true);
-    const second = send(result, "Second");
+    const second = chat.send("Second");
     (await relay.next("steer")).respond(relayError(409, "steer_not_available"));
-    const third = send(result, "Third");
+    const third = chat.send("Third");
     const steer = await relay.next("steer");
     first.stream.push(...reply("reply-1", "Hi there"));
     first.stream.close();
@@ -826,7 +821,7 @@ describe("useBlazingAgentsChat turns", () => {
     expect(await second).toBe(true);
     expect(await third).toBe(true);
     expect(relay.unread()).toEqual([]);
-    expect(transcript(result.current.messages)).toEqual([
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Hello",
       "assistant: Hi there",
       "user: Second",
@@ -836,10 +831,10 @@ describe("useBlazingAgentsChat turns", () => {
   });
 
   it("finishes an approval continuation that starts while stored history is re-read", async () => {
-    const { relay, result } = await mountIdle();
-    send(result, "Look up my order");
+    const { chat, relay } = await startIdle();
+    chat.send("Look up my order");
     const turn = await answerChat(relay, true);
-    const steered = send(result, "Quickly please");
+    const steered = chat.send("Quickly please");
     const steer = await relay.next("steer");
     steer.respond(accepted());
     turn.stream.push(
@@ -849,14 +844,12 @@ describe("useBlazingAgentsChat turns", () => {
     turn.stream.close();
     const staleHistory = await relay.next("history");
 
-    act(() =>
-      result.current.addToolApprovalResponse({
-        id: "approval-1",
-        approved: true,
-      })
-    );
+    chat.addToolApprovalResponse({
+      id: "approval-1",
+      approved: true,
+    });
     const continuation = await answerChat(relay);
-    await waitFor(() => expect(result.current.status).toBe("running"));
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("running"));
     staleHistory.respond(historyPage([]));
     continuation.stream.push(...reply("reply-2", "Order found"));
     continuation.stream.close();
@@ -869,11 +862,108 @@ describe("useBlazingAgentsChat turns", () => {
       ])
     );
     expect(await steered).toBe(true);
-    await waitFor(() => expect(result.current.status).toBe("idle"));
-    expect(transcript(result.current.messages)).toEqual([
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
       "user: Look up my order",
       "user: Quickly please",
       "assistant: Order found",
+    ]);
+  });
+
+  it("publishes each pending message in the snapshot that names it, across a send, a steer, a failed Turn, and an unclean end", async () => {
+    const { chat, relay } = await startIdle();
+    const published: BlazingAgentsChatSnapshot[] = [];
+    chat.subscribe(() => published.push(chat.getSnapshot()));
+
+    const first = chat.send("Hello");
+    const turn = await answerChat(relay, true);
+    chat.send("Also this");
+    const steer = await relay.next("steer");
+    steer.respond(accepted());
+    turn.stream.push(
+      steerConsumed(String(steer.body.requestId), "Also this"),
+      ...reply("reply-1", "Both noted")
+    );
+    turn.stream.close();
+    const stored = [
+      userMessage("user-1", "Hello"),
+      userMessage("user-2", "Also this"),
+      assistantMessage("reply-1", "Both noted"),
+    ];
+    (await relay.next("history")).respond(historyPage(stored));
+    expect(await first).toBe(true);
+
+    const failed = chat.send("Break");
+    const broken = await answerChat(relay);
+    broken.stream.push({ type: "error", errorText: "The model failed." });
+    (await relay.next("history")).respond(historyPage(stored));
+    expect(await failed).toBe(false);
+
+    const again = chat.send("Again");
+    const cut = await answerChat(relay);
+    cut.stream.push(...partialReply, { type: "abort" });
+    cut.stream.close();
+    const prompt = cut.call.body.message as { id: string };
+    (await relay.next("history")).respond(
+      historyPage([
+        ...stored,
+        userMessage(prompt.id, "Again"),
+        assistantMessage("reply-2", "Partly done"),
+      ])
+    );
+    expect(await again).toBe(true);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+
+    const hidden = published.flatMap((snapshot) =>
+      [...snapshot.pendingIds].filter(
+        (id) => !snapshot.messages.some((message) => message.id === id)
+      )
+    );
+    expect(hidden).toEqual([]);
+    const shown = published.map((snapshot) => transcript(snapshot.messages));
+    const sinceAgain = shown.slice(
+      shown.findIndex((messages) => messages.includes("user: Again"))
+    );
+    expect(
+      sinceAgain.filter((messages) => !messages.includes("user: Again"))
+    ).toEqual([]);
+    expect(shown.at(-1)).toEqual([
+      "user: Hello",
+      "user: Also this",
+      "assistant: Both noted",
+      "user: Again",
+      "assistant: Partly done",
+    ]);
+  });
+
+  it("keeps a prompt sent from a listener visible while its Turn runs", async () => {
+    localStorage.setItem("blazing-agents-session", sessionId);
+    const relay = fakeRelay();
+    const chat = startChat(relay);
+    let queued: Promise<boolean> | undefined;
+    chat.subscribe(() => {
+      if (!queued && chat.getSnapshot().status === "idle") {
+        queued = chat.send("Queued");
+      }
+    });
+
+    (await relay.next("history")).respond(historyPage(firstTurnStored));
+
+    const { stream } = await answerChat(relay);
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
+      "user: Hello",
+      "assistant: Hi there",
+      "user: Queued",
+    ]);
+    stream.push(...reply("reply-2", "Got it"));
+    stream.close();
+    expect(await queued).toBe(true);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
+      "user: Hello",
+      "assistant: Hi there",
+      "user: Queued",
+      "assistant: Got it",
     ]);
   });
 });

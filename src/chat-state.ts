@@ -1,16 +1,17 @@
 /**
- * The browser chat's policy as one pure function, `step(state, event)`. The
- * hook owns the only mutable copy of `ChatState`, feeds it events from `Chat`
- * and the transport, and runs the effects it returns. `Chat` owns the rendered
- * transcript and the transport owns the Session ID; this module owns what the
- * server is known to store, the phase, and the user messages not stored yet.
+ * The browser chat's policy as one pure function, `step(state, event)`.
+ * `BlazingAgentsChat` owns the only mutable copy of `ChatState`, feeds it
+ * events from its AI SDK chat and the transport, and runs the effects it
+ * returns. The AI SDK chat owns the rendered transcript and the transport owns
+ * the Session ID; this module owns what the server is known to store, the
+ * phase, and the user messages not stored yet.
  */
 import {
   isToolUIPart,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import type { SteerOutcome } from "../chat-transport.ts";
+import type { SteerOutcome } from "./chat-transport.ts";
 
 export type UserMessage<M extends UIMessage> = M & { role: "user" };
 
@@ -71,7 +72,7 @@ export interface ChatState<M extends UIMessage> {
 }
 
 /**
- * How `Chat`'s request ended. `closed`: without an error or a Stop; the Turn
+ * How the AI SDK chat's request ended. `closed`: without an error or a Stop; the Turn
  * completed only if its stream carried `finish`. `sessionGone`: the relay
  * answered 404, so the Session is deleted or another End-user's.
  */
@@ -81,7 +82,7 @@ export type TurnResult<M extends UIMessage> =
   | { outcome: "failed"; error: Error; sessionGone: boolean };
 
 export type ChatEvent<M extends UIMessage> =
-  /** Read the stored transcript; the hook sends it once per mount. */
+  /** Read the stored transcript; sent by each `start()`. */
   | { type: "restore" }
   | { type: "credentialsChanged" }
   | { type: "historyLoaded"; messages: M[] }
@@ -89,12 +90,12 @@ export type ChatEvent<M extends UIMessage> =
   | { type: "historyFailed"; error: Error; sessionGone: boolean }
   | { type: "send"; sent: Sent<M> }
   | { type: "regenerate" }
-  /** The user completed an approval round; `Chat` sends the continuation itself. */
+  /** The user completed an approval round; the AI SDK chat sends the continuation itself. */
   | { type: "approvalAnswered" }
   | { type: "turnStarted" }
   /** The stream carried its `finish` chunk. */
   | { type: "turnFinished" }
-  /** `Chat`'s request ended, however it ended. */
+  /** The AI SDK chat's request ended, however it ended. */
   | { type: "turnEnded"; result: TurnResult<M> }
   | { type: "steerAnswered"; requestId: string; outcome: SteerOutcome }
   /** `answerLost`: the request failed in transit, so the relay may have taken it. */
@@ -107,7 +108,7 @@ export type ChatEvent<M extends UIMessage> =
   | { type: "steerConsumed"; requestId: string }
   | { type: "stop" }
   | { type: "newSession" }
-  | { type: "unmount" }
+  | { type: "dispose" }
   | { type: "clearError" };
 
 export type ChatEffect<M extends UIMessage> =
@@ -115,7 +116,8 @@ export type ChatEffect<M extends UIMessage> =
   | { type: "regenerate" }
   | { type: "submitSteer"; message: UserMessage<M>; requestId: string }
   | { type: "show"; messages: M[] }
-  | { type: "loadHistory" }
+  /** `known`: messages already known to be stored, so the read can stop at the newest page that reaches them; empty reads every page. */
+  | { type: "loadHistory"; known: M[] }
   | { type: "abort" }
   /** Forget the stored Session and open a new conversation without one. */
   | { type: "forgetSession" }
@@ -188,7 +190,7 @@ function apply<M extends UIMessage>(
     case "restore":
       return {
         state: { ...state, phase: { kind: "restoring", load: "running" } },
-        effects: [{ type: "loadHistory" }],
+        effects: [{ type: "loadHistory", known: [] }],
       };
     case "credentialsChanged":
       if (phase.kind === "restoring" && phase.load !== "failed") {
@@ -224,7 +226,7 @@ function apply<M extends UIMessage>(
         ? noEffects({ ...state, phase: { kind: "starting", prompt: null } })
         : noEffects(state);
     case "turnStarted":
-      // Outside `starting`, Chat sent an approval continuation on its own.
+      // Outside `starting`, the AI SDK chat sent an approval continuation on its own.
       return noEffects({
         ...state,
         phase: {
@@ -276,7 +278,7 @@ function apply<M extends UIMessage>(
         effects: [...ended, { type: "forgetSession" }],
       };
     }
-    case "unmount":
+    case "dispose":
       return { state: initialChatState, effects: endConversation(state) };
     case "clearError":
       return restoreAgain({ ...state, error: undefined });
@@ -288,7 +290,7 @@ function restoreAgain<M extends UIMessage>(state: ChatState<M>): Step<M> {
   return state.phase.kind === "restoring" && state.phase.load === "failed"
     ? {
         state: { ...state, phase: { kind: "restoring", load: "running" } },
-        effects: [{ type: "loadHistory" }],
+        effects: [{ type: "loadHistory", known: [] }],
       }
     : noEffects(state);
 }
@@ -346,7 +348,7 @@ function historyFailed<M extends UIMessage>(
     return phase.load === "stale"
       ? {
           state: { ...state, phase: { kind: "restoring", load: "running" } },
-          effects: [{ type: "loadHistory" }],
+          effects: [{ type: "loadHistory", known: [] }],
         }
       : noEffects({
           ...state,
@@ -422,7 +424,7 @@ function turnEnded<M extends UIMessage>(
       },
       effects: [
         { type: "show", messages: state.completed },
-        { type: "loadHistory" },
+        { type: "loadHistory", known: state.completed },
       ],
     };
   }
@@ -596,7 +598,7 @@ function drain<M extends UIMessage>(
   if (state.outbox.some(placedByHistory)) {
     return {
       state: { ...state, phase: { kind: "reconciling" } },
-      effects: [...effects, { type: "loadHistory" }],
+      effects: [...effects, { type: "loadHistory", known: state.completed }],
     };
   }
   const next = state.outbox.find((entry) => entry.stage === "waiting");

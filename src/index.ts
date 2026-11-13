@@ -7,6 +7,11 @@
 export type { UIMessage } from "ai";
 // biome-ignore lint/performance/noBarrelFile: package entry point
 export {
+  BlazingAgentsChat,
+  type BlazingAgentsChatOptions,
+  type BlazingAgentsChatSnapshot,
+} from "./chat-controller.ts";
+export {
   BlazingAgentsChatTransport,
   type BlazingAgentsChatTransportOptions,
   type SteerOutcome,

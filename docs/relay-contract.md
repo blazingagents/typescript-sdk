@@ -1,8 +1,8 @@
 # Browser relay contract
 
-`BlazingAgentsChatTransport` and `useBlazingAgentsChat` (from
-`@blazingagents/sdk/react`) reach the Blazing Agents API through one endpoint
-on the app's backend, because the browser holds no API key. `createChatRelay`
+`BlazingAgentsChatTransport`, `BlazingAgentsChat`, and `useBlazingAgentsChat`
+(from `@blazingagents/sdk/react`) reach the Blazing Agents API through one
+endpoint on the app's backend, because the browser holds no API key. `createChatRelay`
 implements that endpoint in TypeScript. A relay in Python, Go, Rust, or any
 other language serves the same browser code when it follows this contract.
 `src/chat-relay-wire.ts` holds the schemas that `createChatRelay` and the
@@ -69,7 +69,7 @@ relay copies the API's `x-request-id` header when the API sent one.
 | `chat` stream that ends with a `finish` chunk | Treats the Turn as stored. |
 | `chat` stream that ends without a `finish` chunk: Stop, an `abort` chunk, an `error` chunk, or a dropped connection | Shows the stored transcript and reads `history` again. Each message sent for that Turn, steers included, stays when the history holds its message ID and rolls back when it does not. |
 | `chat` error response | Shows it as a `BlazingAgentsError` with the relay's status and `code`, and rolls back without reading `history`. A `404` also forgets the stored Session. |
-| `history` `nextCursor` | Requests the next older page with it as `cursor`. Stops at `null`, at a cursor it already sent, or after 50 pages. |
+| `history` `nextCursor` | Requests the next older page with it as `cursor`. Stops at `null`, at a cursor it already sent, or after 50 pages. When it reads history to place the messages of a Turn, it also stops at the first page whose oldest message it already holds. |
 | `history` `404` | Forgets the stored Session and starts the next message on a new one. |
 | `history` other errors | Shows the error. On restore, reads history again when the request headers change, on the next send, or on `clearError()`. After a Turn that ended without `finish`, rolls back every message sent for it. |
 | `steer` `accepted`, or no answer because the request failed in transit | Waits for the Turn in flight. A steer that Turn has not read when its stream ends is sent again as `chat`, with a new message ID, and so is one answered when no Turn is in flight. |
@@ -79,3 +79,4 @@ relay copies the API's `x-request-id` header when the API sent one.
 ## Known limits
 
 - A steer sent just before Stop can land in the next Turn. The API places a steer in the Turn that runs when the request arrives, so a Turn that starts while the request is in flight stores it, though the browser already resolved its `send()` as `false`.
+- When `history` fails after a Turn that read a steer, the browser shows the steer after the Turn's reply. In a Session of more than 200 messages, a later read that stops at the newest page can keep it there, instead of where the Turn stored it, until the next reload.

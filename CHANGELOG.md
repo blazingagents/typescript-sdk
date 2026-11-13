@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Added
+
+- `BlazingAgentsChat`, exported from `@blazingagents/sdk`, runs the browser chat of `useBlazingAgentsChat` without React, so Vue, Angular, Svelte, or plain JavaScript apps get the same Session storage, history restore, steering, and rollback. Render `getSnapshot()` and read it again each time a `subscribe` listener runs. The snapshot is a new object only when something in it changed, so it works with `useSyncExternalStore`, Vue refs, and Angular signals. Call `start()` once the component is in the page and `dispose()` when it leaves. The constructor reads no storage, so it is safe in server rendering. `setHeaders()` sends a new token with the next request, and `headers` can also be a function that returns them, read at each request.
+
+  ```ts
+  import { BlazingAgentsChat } from "@blazingagents/sdk";
+
+  const chat = new BlazingAgentsChat({ api: "/api/chat", headers });
+  chat.subscribe(() => render(chat.getSnapshot()));
+  chat.start();
+  await chat.send("Hello");
+  ```
+
+- `BlazingAgentsChatTransport.loadHistory()` takes `known`, the messages already known to be stored, oldest first. The read stops at the first page whose oldest message is in `known`.
+
 ### Changed
 
 - `BlazingAgentsRest` from `@blazingagents/sdk/rest` is smaller. A browser bundle of it is 19.9 KB gzipped, down from 28.4 KB, and 73.4 KB minified, down from 101.2 KB, because the SDK no longer loads a cron parser. Cron validation moved from the client to the API. The SDK still checks that a cron `expression` has five numeric fields and that `timezone` is an IANA name. The API checks the field values and impossible dates, such as `60 9 * * *` or `0 0 31 2 *`, and answers `400 validation_failed`, which `client.tasks.create()` and `client.tasks.update()` reject with as a `BlazingAgentsError`. The client no longer parses a cron schedule it reads back from the API, so a stored schedule never fails a `tasks.get()` or `tasks.list()` call.
@@ -24,9 +39,23 @@
 
   If your own code validates a form with `taskCronConfigSchema`, `taskScheduleInputSchema` or `createTaskBodySchema` from `@blazingagents/sdk/contracts`, those schemas now accept an out-of-range cron expression. Validate the values with a cron library of your own, or let the API answer.
 
+- After a reply ends without finishing, and after a Turn that read a steer, the chat reads history only back to the first page whose oldest message it already holds. A long Session costs one history request there instead of one per 200 messages. Restoring after a reload still reads every page.
+- `useBlazingAgentsChat` runs a `BlazingAgentsChat`. Its return type is now named `UseBlazingAgentsChatResult`, because `BlazingAgentsChat` names the class:
+
+  ```ts
+  // Before
+  import type { BlazingAgentsChat } from "@blazingagents/sdk/react";
+
+  // After
+  import type { UseBlazingAgentsChatResult } from "@blazingagents/sdk/react";
+  ```
+
+- `useBlazingAgentsChat` reads `api`, `credentials`, `fetch`, and `storageKey` on its first render. New `headers` still apply to the next request.
+
 ### Removed
 
 - The `croner` runtime dependency. `@blazingagents/sdk` installs nothing besides its peer dependencies.
+- `@ai-sdk/react` is no longer a peer dependency of `@blazingagents/sdk/react`. Uninstall it unless your app imports it itself.
 
 ## 0.52.0
 

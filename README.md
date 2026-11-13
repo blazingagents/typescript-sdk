@@ -26,9 +26,10 @@ Node.js 24 or newer.
 - End-user scoped clients through `forUser`.
 - Cursor pagination, uploads, and downloads.
 - Request IDs and typed errors.
-- `createChatRelay` serves browser chat from your backend, and
-  `useBlazingAgentsChat` from `@blazingagents/sdk/react` drives it from React:
-  history restore, steering, and rollback included.
+- `createChatRelay` serves browser chat from your backend.
+  `BlazingAgentsChat` drives it from any UI framework, and
+  `useBlazingAgentsChat` from `@blazingagents/sdk/react` drives it from React,
+  with history restore, steering, and rollback.
 
 ## Installation
 
@@ -119,11 +120,64 @@ export const relayChat = createChatRelay({
 app.post("/api/chat", (c) => relayChat(c.req.raw));
 ```
 
-`signedInUser` stands for your own session lookup. In React, install the
-optional peers and call `useBlazingAgentsChat`:
+`signedInUser` stands for your own session lookup.
+
+In the browser, `BlazingAgentsChat` runs the chat in any UI framework. It
+keeps the Session ID in `localStorage`, restores the stored transcript after a
+reload, steers the running Turn when you send while a reply streams, and rolls
+back to the stored transcript on an error, Stop, or New Session. Render
+`getSnapshot()` and read it again each time a `subscribe` listener runs. The
+snapshot is a new object only when something in it changed. Call `start()`
+once the component is in the page and `dispose()` when it leaves. In Vue:
+
+```ts
+import { BlazingAgentsChat } from "@blazingagents/sdk";
+import { onMounted, onUnmounted, shallowRef } from "vue";
+
+export function useChat(headers: Record<string, string>) {
+  const chat = new BlazingAgentsChat({ headers });
+  const snapshot = shallowRef(chat.getSnapshot());
+  const unsubscribe = chat.subscribe(() => {
+    snapshot.value = chat.getSnapshot();
+  });
+  onMounted(chat.start);
+  onUnmounted(() => {
+    unsubscribe();
+    chat.dispose();
+  });
+  return { chat, snapshot };
+}
+```
+
+In Angular, keep the snapshot in a signal and render `snapshot().messages`:
+
+```ts
+import { afterNextRender, Component, DestroyRef, inject, signal } from "@angular/core";
+import { BlazingAgentsChat } from "@blazingagents/sdk";
+
+@Component({ selector: "app-chat", templateUrl: "./chat.component.html" })
+export class ChatComponent {
+  readonly chat = new BlazingAgentsChat({ api: "/api/chat" });
+  readonly snapshot = signal(this.chat.getSnapshot());
+
+  constructor() {
+    const unsubscribe = this.chat.subscribe(() =>
+      this.snapshot.set(this.chat.getSnapshot())
+    );
+    afterNextRender(this.chat.start);
+    inject(DestroyRef).onDestroy(() => {
+      unsubscribe();
+      this.chat.dispose();
+    });
+  }
+}
+```
+
+In React, install the optional `react` peer and call `useBlazingAgentsChat`,
+which runs one `BlazingAgentsChat` per component:
 
 ```console
-npm install react @ai-sdk/react
+npm install react
 ```
 
 ```tsx
@@ -155,17 +209,19 @@ export function Chat({ token }: { token: string }) {
 }
 ```
 
-The hook posts to `/api/chat` unless you pass `api`. It keeps the Session ID
-in `localStorage` and restores the stored transcript after a reload. `send()`
-starts a Turn when the chat is idle and steers the running Turn otherwise. It
-resolves `true` once the message is stored, and `false` when an error, Stop,
-or New Session rolled it back, so you can put the text back in the input. The
-hook also returns `status`, `stop()`, `regenerate()`, `newSession()`,
-`addToolApprovalResponse()`, `pendingIds`, and `error`.
+The chat posts to `/api/chat` unless you pass `api`. `send()` starts a Turn
+when the chat is idle and steers the running Turn otherwise. It resolves
+`true` once the message is stored, and `false` when an error, Stop, or New
+Session rolled it back, so you can put the text back in the input. The
+snapshot also holds `status`, `pendingIds`, `sessionId`, `canRegenerate`, and
+`error`, and the chat has `stop()`, `regenerate()`, `newSession()`, and
+`addToolApprovalResponse()`. To send a new token, call `setHeaders()`, pass
+`headers` as a function that returns the current ones, or pass new `headers`
+to the hook.
 
-`BlazingAgentsChatTransport` is the same browser side without React, for an
-AI SDK `Chat` in another framework. A relay written in another language
-follows the [browser relay contract](docs/relay-contract.md).
+`BlazingAgentsChatTransport` is the transport alone, for an AI SDK `Chat` that
+you run yourself. A relay written in another language follows the
+[browser relay contract](docs/relay-contract.md).
 
 ## Examples
 

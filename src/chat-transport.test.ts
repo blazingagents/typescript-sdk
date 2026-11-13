@@ -4,6 +4,11 @@ import { BlazingAgentsChatTransport, BlazingAgentsError } from "./index.ts";
 import { sseStream } from "./test/fixtures.ts";
 import { chatChunks } from "./test/generation-fixtures.ts";
 
+const zerothMessage: UIMessage = {
+  id: "message-0",
+  parts: [{ text: "Zeroth", type: "text" }],
+  role: "user",
+};
 const firstMessage: UIMessage = {
   id: "message-1",
   parts: [{ text: "First", type: "text" }],
@@ -557,6 +562,84 @@ describe("BlazingAgentsChatTransport.loadHistory", () => {
       firstResponse,
       secondMessage,
     ]);
+  });
+
+  it("stops at the first page whose oldest message is known, and orders known messages by the pages", async () => {
+    const { calls, fetch } = fakeRelay(() =>
+      historyPage([firstResponse, secondMessage], "cursor-older")
+    );
+    const transport = new BlazingAgentsChatTransport({ fetch, sessionId });
+
+    const messages = await transport.loadHistory({
+      known: [firstMessage, secondMessage, firstResponse],
+    });
+
+    expect(messages).toEqual([firstMessage, firstResponse, secondMessage]);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("reads past an empty newest page, and keeps no known message when the stored transcript is empty", async () => {
+    const { calls, fetch } = fakeRelay((body) =>
+      body.cursor === undefined
+        ? historyPage([], "cursor-older")
+        : historyPage([firstMessage, firstResponse], null)
+    );
+    const empty = fakeRelay(() => historyPage([], null));
+
+    const read = await new BlazingAgentsChatTransport({
+      fetch,
+      sessionId,
+    }).loadHistory({ known: [firstMessage, firstResponse] });
+    const cleared = await new BlazingAgentsChatTransport({
+      fetch: empty.fetch,
+      sessionId,
+    }).loadHistory({ known: [firstMessage] });
+
+    expect(read).toEqual([firstMessage, firstResponse]);
+    expect(calls).toHaveLength(2);
+    expect(cleared).toEqual([]);
+  });
+
+  it("keeps one copy of a message on two pages when the read stops at a known message", async () => {
+    const { calls, fetch } = fakeRelay((body) =>
+      body.cursor === undefined
+        ? historyPage([firstResponse, secondMessage], "cursor-older")
+        : historyPage([firstMessage, firstResponse], "cursor-oldest")
+    );
+    const transport = new BlazingAgentsChatTransport({ fetch, sessionId });
+
+    const messages = await transport.loadHistory({
+      known: [zerothMessage, firstMessage],
+    });
+
+    expect(messages).toEqual([
+      zerothMessage,
+      firstMessage,
+      firstResponse,
+      secondMessage,
+    ]);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("places a kept message where a newer page puts it when the read stops at an older page", async () => {
+    const { calls, fetch } = fakeRelay((body) =>
+      body.cursor === undefined
+        ? historyPage([firstResponse, secondMessage], "cursor-older")
+        : historyPage([firstMessage], "cursor-oldest")
+    );
+    const transport = new BlazingAgentsChatTransport({ fetch, sessionId });
+
+    const messages = await transport.loadHistory({
+      known: [zerothMessage, secondMessage, firstMessage],
+    });
+
+    expect(messages).toEqual([
+      zerothMessage,
+      firstMessage,
+      firstResponse,
+      secondMessage,
+    ]);
+    expect(calls).toHaveLength(2);
   });
 
   it("stops at a repeated cursor and after 50 pages", async () => {

@@ -222,52 +222,53 @@ export class BlazingAgentsChatTransport<
 
   /**
    * Reads the Session's stored transcript through the relay, oldest first.
-   * @param options - Optional cancellation signal.
+   * Pages are read newest first. With `known`, the read stops at the first
+   * page whose oldest message is in `known`, and the known messages before
+   * that one complete the transcript, so a transcript that changed only near
+   * its end costs one request.
+   * @param options - `known`: messages already known to be stored, oldest first. Optional cancellation signal.
    * @returns The stored messages, validated as `UIMessage`s; empty without a Session.
    * @throws BlazingAgentsError - The relay's error, such as 404 `not_found` when the Session is gone or belongs to another End-user; `invalid_response` when a page or message is malformed; `network_error` or `request_aborted` when the request fails.
    */
   async loadHistory(
-    options: { abortSignal?: AbortSignal } = {}
+    options: { abortSignal?: AbortSignal; known?: readonly UI_MESSAGE[] } = {}
   ): Promise<UI_MESSAGE[]> {
     const sessionId = this.#sessionId;
     if (sessionId === undefined) {
       return [];
     }
-    const pages: unknown[][] = [];
+    const { abortSignal, known = [] } = options;
+    const pages: UI_MESSAGE[][] = [];
     const cursors = new Set<string>();
     let cursor: string | undefined;
+    let kept: readonly UI_MESSAGE[] = [];
     do {
       const page = await this.#post(
         { op: "history", sessionId, cursor },
         relayHistoryPageSchema,
-        options.abortSignal
+        abortSignal
       );
-      pages.unshift(page.data);
+      const messages = await validateHistory<UI_MESSAGE>(page.data);
+      pages.unshift(messages);
+      const oldest = known.findIndex(
+        (message) => message.id === messages[0]?.id
+      );
+      if (oldest !== -1) {
+        kept = known.slice(0, oldest);
+        break;
+      }
       if (page.nextCursor === null || cursors.has(page.nextCursor)) {
         break;
       }
       cursor = page.nextCursor;
       cursors.add(cursor);
     } while (pages.length < HISTORY_PAGE_LIMIT);
-    const messages = pages.flat();
-    if (messages.length === 0) {
-      return [];
-    }
-    const validated = await safeValidateUIMessages<UI_MESSAGE>({ messages });
-    if (!validated.success) {
-      throw new BlazingAgentsError(
-        {
-          code: "invalid_response",
-          message: "The relay returned a malformed history message.",
-        },
-        { cause: validated.error }
-      );
-    }
-    // A Turn that commits while the pages are read can repeat a message on two pages.
+    const read = pages.flat();
+    const readIds = new Set(read.map((message) => message.id));
     return [
-      ...new Map(
-        validated.data.map((message) => [message.id, message])
-      ).values(),
+      ...kept.filter((message) => !readIds.has(message.id)),
+      // A Turn that commits while the pages are read can repeat a message on two pages.
+      ...new Map(read.map((message) => [message.id, message])).values(),
     ];
   }
 
@@ -349,6 +350,25 @@ export class BlazingAgentsChatTransport<
       );
     }
   }
+}
+
+async function validateHistory<UI_MESSAGE extends UIMessage>(
+  messages: unknown[]
+): Promise<UI_MESSAGE[]> {
+  if (messages.length === 0) {
+    return [];
+  }
+  const validated = await safeValidateUIMessages<UI_MESSAGE>({ messages });
+  if (!validated.success) {
+    throw new BlazingAgentsError(
+      {
+        code: "invalid_response",
+        message: "The relay returned a malformed history message.",
+      },
+      { cause: validated.error }
+    );
+  }
+  return validated.data;
 }
 
 function resolveOption<T>(value: Resolvable<T>): Promise<T> {

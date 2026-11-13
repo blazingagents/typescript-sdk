@@ -151,6 +151,21 @@ export function historyPage(data: unknown[], nextCursor: string | null = null) {
   return Response.json({ data, nextCursor });
 }
 
+/**
+ * Answers a history request as the relay pages the API: at most 200
+ * messages, newest page first, with `nextCursor` naming where the next older
+ * page ends.
+ */
+export function pagedHistory(stored: unknown[], call: RelayCall): Response {
+  const end =
+    call.body.cursor === undefined ? stored.length : Number(call.body.cursor);
+  const start = Math.max(0, end - 200);
+  return historyPage(
+    stored.slice(start, end),
+    start === 0 ? null : String(start)
+  );
+}
+
 export function relayError(status: number, code: string) {
   return Response.json(
     { error: { code, message: `${code} message.` } },

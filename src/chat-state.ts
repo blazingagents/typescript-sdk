@@ -116,7 +116,8 @@ export type ChatEffect<M extends UIMessage> =
   | { type: "regenerate" }
   | { type: "submitSteer"; message: UserMessage<M>; requestId: string }
   | { type: "show"; messages: M[] }
-  | { type: "loadHistory" }
+  /** `known`: messages already known to be stored, so the read can stop at the newest page that reaches them; empty reads every page. */
+  | { type: "loadHistory"; known: M[] }
   | { type: "abort" }
   /** Forget the stored Session and open a new conversation without one. */
   | { type: "forgetSession" }
@@ -189,7 +190,7 @@ function apply<M extends UIMessage>(
     case "restore":
       return {
         state: { ...state, phase: { kind: "restoring", load: "running" } },
-        effects: [{ type: "loadHistory" }],
+        effects: [{ type: "loadHistory", known: [] }],
       };
     case "credentialsChanged":
       if (phase.kind === "restoring" && phase.load !== "failed") {
@@ -289,7 +290,7 @@ function restoreAgain<M extends UIMessage>(state: ChatState<M>): Step<M> {
   return state.phase.kind === "restoring" && state.phase.load === "failed"
     ? {
         state: { ...state, phase: { kind: "restoring", load: "running" } },
-        effects: [{ type: "loadHistory" }],
+        effects: [{ type: "loadHistory", known: [] }],
       }
     : noEffects(state);
 }
@@ -347,7 +348,7 @@ function historyFailed<M extends UIMessage>(
     return phase.load === "stale"
       ? {
           state: { ...state, phase: { kind: "restoring", load: "running" } },
-          effects: [{ type: "loadHistory" }],
+          effects: [{ type: "loadHistory", known: [] }],
         }
       : noEffects({
           ...state,
@@ -423,7 +424,7 @@ function turnEnded<M extends UIMessage>(
       },
       effects: [
         { type: "show", messages: state.completed },
-        { type: "loadHistory" },
+        { type: "loadHistory", known: state.completed },
       ],
     };
   }
@@ -597,7 +598,7 @@ function drain<M extends UIMessage>(
   if (state.outbox.some(placedByHistory)) {
     return {
       state: { ...state, phase: { kind: "reconciling" } },
-      effects: [...effects, { type: "loadHistory" }],
+      effects: [...effects, { type: "loadHistory", known: state.completed }],
     };
   }
   const next = state.outbox.find((entry) => entry.stage === "waiting");

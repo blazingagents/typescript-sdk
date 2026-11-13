@@ -344,7 +344,7 @@ export class BlazingAgentsChat<M extends UIMessage = BlazingAgentsUIMessage> {
         chat.messages = effect.messages;
         return;
       case "loadHistory":
-        transport.loadHistory().then(
+        transport.loadHistory({ known: effect.known }).then(
           (messages) => this.#dispatch({ type: "historyLoaded", messages }, at),
           (error: Error) =>
             this.#dispatch(

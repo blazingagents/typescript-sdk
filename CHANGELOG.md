@@ -9,6 +9,7 @@
 - When the automatic approval continuation that follows a Turn fails, a message steered into that Turn stays in the transcript and its `send()` resolves `true`, because the Turn stored it. Before, it disappeared and resolved `false`. Messages queued meanwhile wait for the stored transcript and then go out, instead of resolving `false`.
 - `createChatRelay` and `createCompletionRelay` work when `resolveContext` reads the request body, for example to pick the Agent from an extra field the browser sends with the transport's `body` option. Before, the relay's own read of the body then failed and every request answered `500 internal_error`. The resolver gets the original request and the relay parses a copy.
 - A browser chat's `send()` now resolves `false` when the stored transcript cannot be read. Before, a message sent while the restore kept failing waited forever. The chat still reads the transcript again on new headers, the next `send()`, or `clearError()`.
+- `createChatRelay` and `createCompletionRelay` answer a `502 network_error` or `502 stream_error` with a fixed message, `The API could not be reached.` or `The API response stream failed.`, instead of the transport's own error text, which could name an internal host or port. The status and `code` are unchanged.
 
 ## 0.54.0
 

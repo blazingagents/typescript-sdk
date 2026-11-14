@@ -687,6 +687,47 @@ describe("createChatRelay", () => {
     expect(calls[0].signal?.aborted).toBe(true);
     expect(response.status).toBe(499);
   });
+
+  it("answers transport failures with a fixed message that names no host", async () => {
+    const unreachable = fakeApi(() =>
+      Promise.reject(
+        new TypeError("getaddrinfo ENOTFOUND api.internal.example:8443")
+      )
+    );
+    const locked = fakeApi(() => {
+      const response = chatReply();
+      response.body?.getReader();
+      return response;
+    });
+    const resolveContext = () => Promise.resolve(context);
+
+    const network = await createChatRelay({
+      client: unreachable.client,
+      resolveContext,
+    })(chatRequest({ message }));
+    const stream = await createChatRelay({
+      client: locked.client,
+      resolveContext,
+    })(chatRequest({ message }));
+
+    expect(network.status).toBe(502);
+    expect(stream.status).toBe(502);
+    const networkBody = await network.text();
+    expect(networkBody).not.toContain("api.internal.example");
+    expect(networkBody).not.toContain("ENOTFOUND");
+    expect(JSON.parse(networkBody)).toEqual({
+      error: {
+        code: "network_error",
+        message: "The API could not be reached.",
+      },
+    });
+    expect(await stream.json()).toEqual({
+      error: {
+        code: "stream_error",
+        message: "The API response stream failed.",
+      },
+    });
+  });
 });
 
 describe("createCompletionRelay", () => {

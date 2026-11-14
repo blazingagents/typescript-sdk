@@ -58,7 +58,7 @@ relay copies the API's `x-request-id` header when the API sent one.
 | `401` | `unauthorized` | The relay found no signed-in End-user. |
 | The API's status | The API's code | The API answered an error, such as `404 not_found`, `409 steer_not_available`, or `409 input_idempotency_conflict`. |
 | `499` | `request_aborted` | The browser aborted the request. Only relays whose runtime reports the abort send it (TypeScript, Go); the browser never reads it either way. |
-| `502` | The SDK's code | The API request failed another way, such as `network_error` or `stream_error`. |
+| `502` | The SDK's code | The API request failed another way, such as `network_error` or `stream_error`. The message is fixed per code and never carries the transport's error text, which can name internal hosts. |
 | `500` | `internal_error` | Anything else. The message never names the cause. |
 
 ## SDK relays

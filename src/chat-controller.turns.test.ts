@@ -1002,6 +1002,68 @@ describe("BlazingAgentsChat turns", () => {
     expect(await steered).toBe(true);
   });
 
+  it("keeps a steer its finished Turn committed when the next prompt's chat request fails", async () => {
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
+    const turn = await answerChat(relay, true);
+    const steered = chat.send("Also this");
+    const steer = await relay.next("steer");
+    turn.stream.push(...reply("reply-1", "Hi there"));
+    turn.stream.close();
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    const next = chat.send("Next question");
+    const prompt = await relay.next("chat");
+
+    steer.respond(Response.json({ state: "committed" }, { status: 202 }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    prompt.respond(relayError(502, "network_error"));
+
+    (await relay.next("history")).respond(
+      historyPage([
+        userMessage("user-1", "Hello"),
+        userMessage("user-2", "Also this"),
+        assistantMessage("reply-1", "Hi there"),
+      ])
+    );
+    expect(await steered).toBe(true);
+    expect(await next).toBe(false);
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    expect(transcript(chat.getSnapshot().messages)).toEqual([
+      "user: Hello",
+      "user: Also this",
+      "assistant: Hi there",
+    ]);
+    expect(chat.getSnapshot().error).toMatchObject({ code: "network_error" });
+    expect(relay.unread()).toEqual([]);
+  });
+
+  it("resends a steer accepted after its Turn finished when the next prompt's chat request fails", async () => {
+    const { chat, relay } = await startIdle();
+    chat.send("Hello");
+    const turn = await answerChat(relay, true);
+    const steered = chat.send("Also this");
+    const steer = await relay.next("steer");
+    turn.stream.push(...reply("reply-1", "Hi there"));
+    turn.stream.close();
+    await vi.waitFor(() => expect(chat.getSnapshot().status).toBe("idle"));
+    const next = chat.send("Next question");
+    const prompt = await relay.next("chat");
+
+    steer.respond(accepted());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    prompt.respond(relayError(502, "network_error"));
+
+    expect(await next).toBe(false);
+    const resent = await answerChat(relay);
+    expect(resent.call.body).toMatchObject({
+      message: { role: "user", parts: [{ type: "text", text: "Also this" }] },
+    });
+    resent.stream.push(...reply("reply-2", "Noted"));
+    resent.stream.close();
+    expect(await steered).toBe(true);
+    expect(historyReads(relay)).toBe(0);
+  });
+
   it("publishes each pending message in the snapshot that names it, across a send, a steer, a failed Turn, and an unclean end", async () => {
     const { chat, relay } = await startIdle();
     const published: BlazingAgentsChatSnapshot[] = [];

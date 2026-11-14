@@ -425,12 +425,25 @@ function turnEnded<M extends UIMessage>(
     };
   }
   if (phase.kind === "starting") {
-    // The relay never answered with a stream, so the Turn stored nothing.
+    // The relay never answered with a stream, so the prompt and the messages
+    // queued behind it roll back. Steers sent into the Turn before it are not
+    // this request's: as at that Turn's end, an accepted one is resent, and a
+    // read one waits for stored history.
+    const unsent = state.outbox.filter((entry) => entry.stage === "waiting");
     return {
-      state: { ...state, error, outbox: [], phase: { kind: "idle" } },
+      state: {
+        ...state,
+        error,
+        outbox: state.outbox
+          .filter((entry) => entry.stage !== "waiting")
+          .map((entry) =>
+            entry.stage === "accepted" ? resend(entry, newId) : entry
+          ),
+        phase: { kind: "idle" },
+      },
       effects: [
         { type: "show", messages: state.completed },
-        ...settlePending(state),
+        ...settlePending({ ...state, outbox: unsent }),
       ],
     };
   }

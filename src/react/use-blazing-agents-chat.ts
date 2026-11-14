@@ -40,7 +40,9 @@ export type UseBlazingAgentsChatResult<
  * component, started after mount and disposed on unmount. New `headers`, or
  * new values in the same `Headers` object, apply to the next request, even one
  * a child's effect sends in the same commit; the other options are read on the
- * first render.
+ * first render. So pass a `storageKey` per Agent and End-user when the origin
+ * has more than one, and remount the component with `key={userId}` when the
+ * signed-in End-user changes.
  * @param options - Relay endpoint, request options, and storage key.
  * @returns The chat's snapshot and its actions.
  */

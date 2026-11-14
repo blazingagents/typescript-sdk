@@ -39,7 +39,11 @@ export interface BlazingAgentsChatOptions {
    * localStorage key for the Session ID. Default `blazing-agents-session`;
    * `null` keeps the Session in memory only, as does storage that throws.
    * Read by `start()`, never by the constructor, so server rendering never
-   * touches storage.
+   * touches storage. The default key is shared by every chat on the origin:
+   * an app with several Agents, or several End-users signing in on one
+   * browser, passes a key per Agent and End-user, such as
+   * `chat:${agentId}:${userId}`, and creates a new chat when the signed-in
+   * End-user changes.
    */
   storageKey?: string | null;
 }

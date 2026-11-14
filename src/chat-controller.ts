@@ -39,7 +39,11 @@ export interface BlazingAgentsChatOptions {
    * localStorage key for the Session ID. Default `blazing-agents-session`;
    * `null` keeps the Session in memory only, as does storage that throws.
    * Read by `start()`, never by the constructor, so server rendering never
-   * touches storage.
+   * touches storage. The default key is shared by every chat on the origin:
+   * an app with several Agents, or several End-users signing in on one
+   * browser, passes a key per Agent and End-user, such as
+   * `chat:${agentId}:${userId}`, and creates a new chat when the signed-in
+   * End-user changes.
    */
   storageKey?: string | null;
 }
@@ -63,9 +67,10 @@ export interface BlazingAgentsChatSnapshot<
   readonly sessionId: string | undefined;
   /**
    * `restoring`: reading the stored transcript, or, after that read failed
-   * (see `error`), waiting for new headers, a `send`, or `clearError` to read
-   * it again. `running`: a Turn is starting, streaming, or being placed in
-   * stored history. `send` works in every status.
+   * (see `error`) and rolled back the messages sent during it, waiting for new
+   * headers, a `send`, or `clearError` to read it again. `running`: a Turn is
+   * starting, streaming, or being placed in stored history. `send` works in
+   * every status.
    */
   readonly status: "restoring" | "idle" | "running";
 }
@@ -509,7 +514,15 @@ function turnResult<M extends UIMessage>(
   return { outcome: "closed", messages };
 }
 
-/** The relay answers 404 for a deleted Session or another End-user's. */
+/**
+ * The relay answers 404 `not_found` for a deleted Session or another
+ * End-user's. Other 404 codes, such as `provider_not_found`, name a missing
+ * resource the Session still points at.
+ */
 function sessionGone(error: Error): boolean {
-  return BlazingAgentsError.isInstance(error) && error.status === 404;
+  return (
+    BlazingAgentsError.isInstance(error) &&
+    error.status === 404 &&
+    error.code === "not_found"
+  );
 }

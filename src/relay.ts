@@ -10,7 +10,7 @@ import {
 } from "./chat-relay-wire.ts";
 import { BlazingAgentsError } from "./errors.ts";
 import type { ChatFunctions } from "./functions.ts";
-import type { UserClient } from "./types.ts";
+import type { BlazingAgentsErrorCode, UserClient } from "./types.ts";
 
 export interface RelayContext {
   /**
@@ -34,7 +34,7 @@ interface RelayOptions<Method extends keyof UserClient> {
   client: { forUser(userId: string): Pick<UserClient, Method> };
   /**
    * Resolves authenticated Agent and end-user context, or null for an unauthenticated request.
-   * @param request - Incoming HTTP request.
+   * @param request - Incoming HTTP request. Its body is unread, so the resolver may read extras the browser sent in it; the relay parses its own copy.
    * @returns Authenticated context, or null when authentication fails.
    */
   resolveContext(request: Request): Promise<RelayContext | null>;
@@ -53,7 +53,8 @@ type ChatRelayClient = Pick<UserClient, "chat" | "continueChat" | "sessions">;
  * Every error body is `{ error: { code, message } }`: 400 `invalid_request`
  * for a malformed body or an unknown `op`, 401 `unauthorized`, the API's own
  * status and code (such as 404 `not_found` or 409 `steer_not_available`), 499
- * when the browser aborts, 502 for other SDK failures, and 500 otherwise.
+ * when the browser aborts, 502 for other SDK failures (with a fixed message for
+ * `network_error` and `stream_error`), and 500 otherwise.
  * @param options - Configuration for this operation.
  * @returns An HTTP handler that runs each request through `client.forUser(context.userId)`, so the API answers 404 for a Session outside that End-user's scope.
  */
@@ -62,12 +63,14 @@ export function createChatRelay(
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {
+      // The resolver may read the body too, so the relay reads its own copy.
+      const copy = request.clone();
       const context = await options.resolveContext(request);
       if (!context) {
         return errorResponse(401, "unauthorized", "Authentication required.");
       }
       const client = scopeTo(options.client, context.userId);
-      const body = relayRequestSchema.parse(await request.json());
+      const body = relayRequestSchema.parse(await copy.json());
       return await answer(client, context, body, request.signal);
     } catch (error) {
       return safeErrorResponse(error);
@@ -255,12 +258,13 @@ export function createCompletionRelay(
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     try {
+      const copy = request.clone();
       const context = await options.resolveContext(request);
       if (!context) {
         return errorResponse(401, "unauthorized", "Authentication required.");
       }
       const client = scopeTo(options.client, context.userId);
-      const body = completionBodySchema.parse(await request.json());
+      const body = completionBodySchema.parse(await copy.json());
       const result = await client.completion({
         agentId: context.agentId,
         metadata: context.metadata,
@@ -290,6 +294,14 @@ function scopeTo<Method extends keyof UserClient>(
   }
 }
 
+/** Fixed messages for failures whose SDK message can carry the transport's own text, such as an internal host name. */
+const TRANSPORT_ERROR_MESSAGES: Partial<
+  Record<BlazingAgentsErrorCode, string>
+> = {
+  network_error: "The API could not be reached.",
+  stream_error: "The API response stream failed.",
+};
+
 /**
  * Maps validation and SDK failures to safe public error responses.
  */
@@ -305,7 +317,12 @@ function safeErrorResponse(error: unknown): Response {
     if (requestId) {
       headers.set("x-request-id", requestId);
     }
-    return errorResponse(status, error.code, error.message, headers);
+    return errorResponse(
+      status,
+      error.code,
+      TRANSPORT_ERROR_MESSAGES[error.code] ?? error.message,
+      headers
+    );
   }
   return errorResponse(500, "internal_error", "Request failed.");
 }

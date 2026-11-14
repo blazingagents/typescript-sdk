@@ -219,6 +219,14 @@ snapshot also holds `status`, `pendingIds`, `sessionId`, `canRegenerate`, and
 `headers` as a function that returns the current ones, or pass new `headers`
 to the hook.
 
+Every chat on an origin keeps its Session under the same `localStorage` key,
+`blazing-agents-session`, unless you pass `storageKey`. An app with several
+Agents, or with several End-users who sign in on the same browser, passes a
+`storageKey` per Agent and End-user, such as `chat:${agentId}:${userId}`. When
+the signed-in End-user changes, create a new chat: in React, remount the
+component that calls the hook with `key={userId}`, since the hook reads
+`storageKey` on the first render only.
+
 `BlazingAgentsChatTransport` is the transport alone, for an AI SDK `Chat` that
 you run yourself. A relay written in another language follows the
 [browser relay contract](docs/relay-contract.md).

@@ -58,7 +58,7 @@ relay copies the API's `x-request-id` header when the API sent one.
 | `401` | `unauthorized` | The relay found no signed-in End-user. |
 | The API's status | The API's code | The API answered an error, such as `404 not_found`, `409 steer_not_available`, or `409 input_idempotency_conflict`. |
 | `499` | `request_aborted` | The browser aborted the request. Only relays whose runtime reports the abort send it (TypeScript, Go); the browser never reads it either way. |
-| `502` | The SDK's code | The API request failed another way, such as `network_error` or `stream_error`. |
+| `502` | The SDK's code | The API request failed another way, such as `network_error` or `stream_error`. The message is fixed per code and never carries the transport's error text, which can name internal hosts. |
 | `500` | `internal_error` | Anything else. The message never names the cause. |
 
 ## SDK relays
@@ -77,10 +77,10 @@ relay copies the API's `x-request-id` header when the API sent one.
 | `chat` `Location` header on the first reply | Takes the last path segment as the Session ID. A cross-origin relay must expose `Location` through CORS. |
 | `chat` stream that ends with a `finish` chunk | Treats the Turn as stored. |
 | `chat` stream that ends without a `finish` chunk: Stop, an `abort` chunk, an `error` chunk, or a dropped connection | Shows the stored transcript and reads `history` again. Each message sent for that Turn, steers included, stays when the history holds its message ID and rolls back when it does not. |
-| `chat` error response | Shows it as a `BlazingAgentsError` with the relay's status and `code`, and rolls back without reading `history`. A `404` also forgets the stored Session. |
+| `chat` error response | Shows it as a `BlazingAgentsError` with the relay's status and `code`, and rolls back the user message and the messages queued behind it without reading `history`. A steer sent into the Turn before it is not rolled back: one that Turn read stays and `history` places it, and one the relay accepted but no Turn read is sent again. When the request was a Tool approval continuation or a regenerate, it shows the stored transcript and reads `history` instead, because the Session may have moved on without it (another client decided the approval and the API answered `409 tool_approval_continuation_settled`), and messages queued meanwhile go out once it is read. A `404 not_found` also forgets the stored Session; any other `404` code, such as `provider_not_found`, keeps it. |
 | `history` `nextCursor` | Requests the next older page with it as `cursor`. Stops at `null`, at a cursor it already sent, or after 50 pages. When it reads history to place the messages of a Turn, it also stops at the first page whose oldest message it already holds. |
-| `history` `404` | Forgets the stored Session and starts the next message on a new one. |
-| `history` other errors | Shows the error. On restore, reads history again when the request headers change, on the next send, or on `clearError()`. After a Turn that ended without `finish`, rolls back every message sent for it. |
+| `history` `404 not_found` | Forgets the stored Session and starts the next message on a new one. Any other `404` code is handled as the other errors below. |
+| `history` other errors | Shows the error. On restore, rolls back the messages sent while it read, and reads history again when the request headers change, on the next send, or on `clearError()`. After a Turn that ended without `finish`, rolls back every message sent for it. |
 | `steer` `accepted`, or no answer because the request failed in transit | Waits for the Turn in flight. A steer that Turn has not read when its stream ends is sent again as `chat`, with a new message ID, and so is one answered when no Turn is in flight. |
 | `steer` `committed` | Treats the message as stored with the Turn. |
 | `steer` `not_placed` or `409 steer_not_available` | Sends the message as `chat`, with a new message ID, once the running Turn ends. |

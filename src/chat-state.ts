@@ -74,7 +74,7 @@ export interface ChatState<M extends UIMessage> {
 /**
  * How the AI SDK chat's request ended. `closed`: without an error or a Stop; the Turn
  * completed only if its stream carried `finish`. `sessionGone`: the relay
- * answered 404, so the Session is deleted or another End-user's.
+ * answered 404 `not_found`, so the Session is deleted or another End-user's.
  */
 export type TurnResult<M extends UIMessage> =
   | { outcome: "closed"; messages: M[] }
@@ -86,7 +86,7 @@ export type ChatEvent<M extends UIMessage> =
   | { type: "restore" }
   | { type: "credentialsChanged" }
   | { type: "historyLoaded"; messages: M[] }
-  /** `sessionGone`: the relay answered 404, so the Session is deleted or another End-user's. */
+  /** `sessionGone`: the relay answered 404 `not_found`, so the Session is deleted or another End-user's. */
   | { type: "historyFailed"; error: Error; sessionGone: boolean }
   | { type: "send"; sent: Sent<M> }
   | { type: "regenerate" }
@@ -345,16 +345,22 @@ function historyFailed<M extends UIMessage>(
         effects: [{ type: "forgetSession" }],
       };
     }
+    // Messages sent before the read failed roll back with it; otherwise a
+    // restore that keeps failing would leave their `send()` waiting forever.
     return phase.load === "stale"
       ? {
           state: { ...state, phase: { kind: "restoring", load: "running" } },
           effects: [{ type: "loadHistory", known: [] }],
         }
-      : noEffects({
-          ...state,
-          error,
-          phase: { kind: "restoring", load: "failed" },
-        });
+      : {
+          state: {
+            ...state,
+            error,
+            outbox: [],
+            phase: { kind: "restoring", load: "failed" },
+          },
+          effects: settlePending(state),
+        };
   }
   if (phase.kind === "reconciling") {
     // A completed Turn stored its steers, but where they sit is unknown; append
@@ -398,13 +404,46 @@ function turnEnded<M extends UIMessage>(
       effects: [...settlePending(state), { type: "forgetSession" }],
     };
   }
-  if (phase.kind === "starting") {
-    // The relay never answered with a stream, so the Turn stored nothing.
+  if (phase.kind === "starting" && !phase.prompt) {
+    // A failed approval continuation or regenerate stored nothing, but the
+    // Session may have moved on without it, as when another client decided
+    // the approval (409), and steers the finished Turn read are still unplaced.
+    // Stored history decides; queued messages wait for it.
     return {
-      state: { ...state, error, outbox: [], phase: { kind: "idle" } },
+      state: {
+        ...state,
+        error,
+        outbox: state.outbox.map((entry) =>
+          entry.stage === "accepted" ? resend(entry, newId) : entry
+        ),
+        phase: { kind: "reconciling" },
+      },
       effects: [
         { type: "show", messages: state.completed },
-        ...settlePending(state),
+        { type: "loadHistory", known: state.completed },
+      ],
+    };
+  }
+  if (phase.kind === "starting") {
+    // The relay never answered with a stream, so the prompt and the messages
+    // queued behind it roll back. Steers sent into the Turn before it are not
+    // this request's: as at that Turn's end, an accepted one is resent, and a
+    // read one waits for stored history.
+    const unsent = state.outbox.filter((entry) => entry.stage === "waiting");
+    return {
+      state: {
+        ...state,
+        error,
+        outbox: state.outbox
+          .filter((entry) => entry.stage !== "waiting")
+          .map((entry) =>
+            entry.stage === "accepted" ? resend(entry, newId) : entry
+          ),
+        phase: { kind: "idle" },
+      },
+      effects: [
+        { type: "show", messages: state.completed },
+        ...settlePending({ ...state, outbox: unsent }),
       ],
     };
   }

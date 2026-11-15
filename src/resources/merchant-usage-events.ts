@@ -50,7 +50,7 @@ export interface MerchantUsageEventsResource {
     input?: MerchantUsageEventsListOptions
   ): Promise<MerchantUsageEventsResponse>;
   /**
-   * Sends a `failed` event, or a `pending` event whose automatic delivery gave up, to the provider again. Retrying is safe: the provider drops duplicates by the event ID.
+   * Sends a `failed` event, or a `pending` event whose delivery stopped, to the provider again. Blazing Agents retries a stopped delivery on its own after 5, 10, 20 and 40 minutes; after the fourth automatic retry the event stays `pending` until you retry it. Retrying is safe: the provider drops duplicates by the event ID.
    * @param input - `eventId`; optional abortSignal.
    * @returns The merchant usage event response.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.

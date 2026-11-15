@@ -278,7 +278,8 @@ export type MerchantUsageSummaryResponse = z.infer<
 
 /**
  * The action a Tenant takes on an event. `automaticDeliveryStopped` is true
- * when automatic delivery has given up on a `pending` event.
+ * when the delivery of a `pending` event stopped. Blazing Agents retries it on
+ * its own four times; after that the event waits for the Tenant's retry.
  */
 export function merchantUsageEventNextAction(event: {
   automaticDeliveryStopped: boolean;

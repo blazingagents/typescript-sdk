@@ -19,24 +19,29 @@ import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
 
 export interface AgentSkillsResource {
   /**
-   * Copies the Skill to the selected Agents.
-   * @param input - Source `skillId`, destination `to.agentIds`, and optional abortSignal.
+   * Copies the Skill to the selected Agents. Retry a lost answer with the same `idempotencyKey` and each destination returns the copy it already has.
+   * @param input - Source `skillId`, destination `to.agentIds`, optional `idempotencyKey` (1 to 200 characters, one Agent's key), and optional abortSignal.
    * @returns The skill copy results.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   copy(
     input: {
+      idempotencyKey?: string;
       skillId: string;
       to: { agentIds: string[] };
     } & ResourceRequestOptions
   ): Promise<SkillCopyResults>;
   /**
-   * Creates the Skill.
-   * @param input - creation fields; optional abortSignal.
+   * Creates the Skill. Retry a lost answer with the same `idempotencyKey` and the request returns the Skill the first one created.
+   * @param input - creation fields; optional `idempotencyKey` (1 to 200 characters, one Agent's key) and abortSignal.
    * @returns The skill detail.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
-  create(input: CreateSkillBody & ResourceRequestOptions): Promise<SkillDetail>;
+  create(
+    input: CreateSkillBody & {
+      idempotencyKey?: string;
+    } & ResourceRequestOptions
+  ): Promise<SkillDetail>;
   /**
    * Deletes the Skill.
    * @param input - `skillId`; optional abortSignal.
@@ -92,13 +97,14 @@ export interface AgentSkillsResource {
     } & ResourceRequestOptions
   ): Promise<SkillDetail>;
   /**
-   * Uploads a Skill archive as multipart form data.
-   * @param input - Archive bytes in `source.file`, archive format in `source.type`, and optional abortSignal.
+   * Uploads a Skill archive as multipart form data. Retry a lost answer with the same `idempotencyKey` and the request returns the Skill the first one created.
+   * @param input - Archive bytes in `source.file`, archive format in `source.type`, optional `idempotencyKey` (1 to 200 characters, one Agent's key), and optional abortSignal.
    * @returns The skill detail.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   upload(
     input: {
+      idempotencyKey?: string;
       source: { file: Blob | Uint8Array; type: SkillArchiveType };
     } & ResourceRequestOptions
   ): Promise<SkillDetail>;
@@ -107,6 +113,17 @@ export interface AgentSkillsResource {
 export interface SkillsListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
+}
+
+/**
+ * Builds the `Idempotency-Key` header, or none when the caller set no key.
+ */
+function idempotencyHeaders(
+  idempotencyKey: string | undefined
+): Record<string, string> | undefined {
+  return idempotencyKey === undefined
+    ? undefined
+    : { "Idempotency-Key": idempotencyKey };
 }
 
 /**
@@ -129,19 +146,29 @@ export function createAgentSkillsResource(
   agentId: string
 ): AgentSkillsResource {
   return {
-    async copy({ skillId, to, abortSignal }) {
+    async copy({ skillId, to, idempotencyKey, abortSignal }) {
       return await requestJson(
         config,
         apiPath`/v1/agents/${agentId}/skills/${skillId}/copies`,
-        { json: to, method: "POST", signal: abortSignal },
+        {
+          headers: idempotencyHeaders(idempotencyKey),
+          json: to,
+          method: "POST",
+          signal: abortSignal,
+        },
         skillCopyResultsSchema
       );
     },
-    async create({ abortSignal, ...body }) {
+    async create({ idempotencyKey, abortSignal, ...body }) {
       return await requestJson(
         config,
         apiPath`/v1/agents/${agentId}/skills`,
-        { json: body, method: "POST", signal: abortSignal },
+        {
+          headers: idempotencyHeaders(idempotencyKey),
+          json: body,
+          method: "POST",
+          signal: abortSignal,
+        },
         skillDetailSchema
       );
     },
@@ -205,7 +232,7 @@ export function createAgentSkillsResource(
         skillDetailSchema
       );
     },
-    async upload({ source, abortSignal }) {
+    async upload({ source, idempotencyKey, abortSignal }) {
       const form = new FormData();
       form.set("type", source.type);
       const file =
@@ -216,7 +243,12 @@ export function createAgentSkillsResource(
       return await requestJson(
         config,
         apiPath`/v1/agents/${agentId}/skills/upload`,
-        { body: form, method: "POST", signal: abortSignal },
+        {
+          body: form,
+          headers: idempotencyHeaders(idempotencyKey),
+          method: "POST",
+          signal: abortSignal,
+        },
         skillDetailSchema
       );
     },

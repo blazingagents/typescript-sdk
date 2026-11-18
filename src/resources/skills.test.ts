@@ -26,6 +26,12 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
   return new BlazingAgents({ apiKey: "ba_test", baseUrl: BASE, fetch });
 }
 
+function skillsOf(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
+  return client(fetch).agent({ agentId }).skills;
+}
+
+type Skills = ReturnType<typeof skillsOf>;
+
 describe("client.agent(agentId).skills", () => {
   it("creates an Agent Skill from root SKILL.md JSON", async () => {
     const { fetch, calls } = createMockFetch({ body: skill });
@@ -285,6 +291,88 @@ describe("client.agent(agentId).skills", () => {
     expect(calls[0].init?.method).toBe("POST");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       agentIds: [destinationAgentId, failedAgentId],
+    });
+  });
+
+  describe("idempotencyKey", () => {
+    const destinationAgentId = "ag_fedcba9876543210";
+    const operations = {
+      copy: (skills: Skills, idempotencyKey?: string) =>
+        skills.copy({
+          idempotencyKey,
+          skillId,
+          to: { agentIds: [destinationAgentId] },
+        }),
+      create: (skills: Skills, idempotencyKey?: string) =>
+        skills.create({
+          content: markdown,
+          idempotencyKey,
+          path: "SKILL.md",
+        }),
+      upload: (skills: Skills, idempotencyKey?: string) =>
+        skills.upload({
+          idempotencyKey,
+          source: { file: Uint8Array.from([1, 2, 3]), type: "zip" },
+        }),
+    };
+
+    it.each(["create", "upload", "copy"] as const)(
+      "%s sends the Idempotency-Key header when the key is set",
+      async (operation) => {
+        const { fetch, calls } = createMockFetch({
+          body: operation === "copy" ? [] : skill,
+        });
+
+        await operations[operation](skillsOf(fetch), "retry-key");
+
+        const headers = new Headers(calls[0].init?.headers);
+        expect(headers.get("Idempotency-Key")).toBe("retry-key");
+        expect(headers.get("Authorization")).toBe("Bearer ba_test");
+      }
+    );
+
+    it.each(["create", "upload", "copy"] as const)(
+      "%s sends no Idempotency-Key header without a key",
+      async (operation) => {
+        const { fetch, calls } = createMockFetch({
+          body: operation === "copy" ? [] : skill,
+        });
+
+        await operations[operation](skillsOf(fetch));
+
+        const headers = new Headers(calls[0].init?.headers);
+        expect(headers.has("Idempotency-Key")).toBe(false);
+      }
+    );
+
+    it("create keeps the key out of the JSON body", async () => {
+      const { fetch, calls } = createMockFetch({ body: skill });
+
+      await operations.create(skillsOf(fetch), "key");
+
+      expect(JSON.parse(calls[0].init?.body as string)).toStrictEqual({
+        content: markdown,
+        path: "SKILL.md",
+      });
+    });
+
+    it("copy keeps the key out of the JSON body", async () => {
+      const { fetch, calls } = createMockFetch({ body: [] });
+
+      await operations.copy(skillsOf(fetch), "key");
+
+      expect(JSON.parse(calls[0].init?.body as string)).toStrictEqual({
+        agentIds: [destinationAgentId],
+      });
+    });
+
+    it("upload keeps the key out of the multipart form", async () => {
+      const { fetch, calls } = createMockFetch({ body: skill });
+
+      await operations.upload(skillsOf(fetch), "key");
+
+      const form = calls[0].init?.body as FormData;
+      expect([...form.keys()].sort()).toStrictEqual(["file", "type"]);
     });
   });
 });

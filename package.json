@@ -39,8 +39,9 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "bundle-size": "node scripts/check-bundle-size.ts",
-    "check": "npm run typecheck && npm run test && npm run bundle-size && npm run lint && npm run unused",
+    "check": "npm run generate -- --check && npm run typecheck && npm run test && npm run bundle-size && npm run lint && npm run unused",
     "fix": "ultracite fix",
+    "generate": "node scripts/generate-error-codes.ts",
     "lint": "ultracite check",
     "prepack": "npm run build",
     "test": "node scripts/check-test-imports.ts && vitest run --coverage",

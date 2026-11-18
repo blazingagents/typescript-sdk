@@ -316,6 +316,17 @@ describe("turnStreamErrorEventSchema", () => {
       { ...event, data: { ...event.data, code: "future_code" } },
     ],
     [
+      "the outdated approval of a continuation",
+      {
+        ...event,
+        data: {
+          code: "tool_approval_outdated",
+          message:
+            "The Agent's Connections, Skills or Workspace changed while this approval waited, so the approved Tool did not run. Send the message again.",
+        },
+      },
+    ],
+    [
       "a public error code with details",
       {
         ...event,

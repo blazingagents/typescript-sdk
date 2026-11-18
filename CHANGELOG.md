@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `tool_approval_outdated` joins the known error codes (`KnownBlazingAgentsErrorCode`). When an agent's connections, skills or workspace change while a tool approval waits, the continuation (`continueChat()`, or the approval answer of a browser chat) still answers with a `200` stream, and the approved tool does not run. The stream sends a `data-ba-error` event with this code before its `error` chunk, and both carry the same message. Send the user's message again. Before, the stream had only an `error` chunk that said the agent hit an error during generation.
+
 ## 0.54.1
 
 ### Fixed

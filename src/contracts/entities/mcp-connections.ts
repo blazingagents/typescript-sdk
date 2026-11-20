@@ -22,8 +22,6 @@ import {
   hasUniqueValues,
 } from "../utils.ts";
 
-const OPAQUE_MCP_OAUTH_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
-
 export const mcpConnectionAuthTypeSchema = z.enum([
   "none",
   "bearer",
@@ -285,14 +283,10 @@ export const mcpOauthAuthorizationLaunchResponseSchema = z
       .refine((value) => {
         const url = new URL(value);
         return (
-          url.pathname === "/v1/mcp/oauth/authorize" &&
+          (url.protocol === "https:" || url.protocol === "http:") &&
           url.username === "" &&
           url.password === "" &&
-          url.hash === "" &&
-          url.searchParams.size === 1 &&
-          OPAQUE_MCP_OAUTH_TOKEN_PATTERN.test(
-            url.searchParams.get("setup") ?? ""
-          )
+          url.hash === ""
         );
       }),
   })

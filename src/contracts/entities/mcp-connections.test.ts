@@ -366,19 +366,23 @@ describe("MCP connection schemas", () => {
     }
   });
 
-  it("parses only a Blazing OAuth initiation URL", () => {
-    const setupToken = "A".repeat(43);
+  it("parses an authorization URL without credentials or a fragment", () => {
+    const authorizationUrl =
+      "https://auth.example.com/authorize?client_id=ba&state=abc&code_challenge=xyz";
     expect(
-      mcpOauthAuthorizationLaunchResponseSchema.parse({
-        authorizationUrl: `https://app.example.com/v1/mcp/oauth/authorize?setup=${setupToken}`,
-      })
-    ).toBeDefined();
-    expect(
-      mcpOauthAuthorizationLaunchResponseSchema.safeParse({
-        authorizationUrl:
-          "https://app.example.com/v1/mcp/oauth/authorize?wrong=value",
-      }).success
-    ).toBe(false);
+      mcpOauthAuthorizationLaunchResponseSchema.parse({ authorizationUrl })
+    ).toEqual({ authorizationUrl });
+    for (const rejected of [
+      "https://user:pass@auth.example.com/authorize",
+      "https://auth.example.com/authorize#state",
+      "javascript:alert(1)",
+    ]) {
+      expect(
+        mcpOauthAuthorizationLaunchResponseSchema.safeParse({
+          authorizationUrl: rejected,
+        }).success
+      ).toBe(false);
+    }
   });
 
   it("rejects create fields reserved for future auth modes", () => {

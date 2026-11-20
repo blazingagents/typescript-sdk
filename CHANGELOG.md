@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `mcpOauthAuthorizationLaunchResponseSchema` accepts any `http` or `https` `authorizationUrl` without credentials or a fragment. `POST /v1/mcp-connections/{id}/connect` is moving to return the MCP provider's own authorization URL in place of a Blazing Agents setup link, so the schema no longer requires the `/v1/mcp/oauth/authorize?setup=` shape. Follow the returned URL in the browser that made the call, as before.
+
 ## 0.55.0
 
 ### Added

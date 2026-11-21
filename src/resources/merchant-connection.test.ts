@@ -92,16 +92,12 @@ describe("client.merchantConnection", () => {
   it("surfaces backend errors", async () => {
     const { fetch } = createMockFetch({
       body: {
-        error: {
-          code: "merchant_connection_not_found",
-          message: "No merchant connection.",
-        },
+        error: { code: "not_found", message: "No merchant connection." },
       },
       status: 404,
     });
-    await expect(client(fetch).merchantConnection.get()).rejects.toMatchObject({
-      code: "merchant_connection_not_found",
-      status: 404,
-    });
+    await expect(
+      client(fetch).merchantConnection.retire()
+    ).rejects.toMatchObject({ code: "not_found", status: 404 });
   });
 });

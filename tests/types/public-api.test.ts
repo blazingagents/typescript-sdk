@@ -36,7 +36,6 @@ const config: AgentConfig = agentConfigSchema.parse({
   autoCompaction: true,
   compactionReserveTokens: 16_384,
   memoryInjectionEnabled: false,
-  metadata: {},
 });
 const session: SessionResponse = sessionResponseSchema.parse({
   id: "ss_0123456789abcdef",

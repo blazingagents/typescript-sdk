@@ -36,7 +36,6 @@ it("forks through the installed package and exposes typed child fields", async (
       memoryInjectionEnabled: false,
       tools: [],
       instructions: "",
-      metadata: {},
       mcpConnectionIds: [],
       approvalInChat: { default: "full", overrides: [] },
       approvalInTasks: { default: "full", overrides: [] },

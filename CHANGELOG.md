@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `calendarDateSchema` is new. It is `z.iso.date()` without year `0000`, which PostgreSQL's `date` cannot hold. `spendingLimitSchema` takes it for `resetStartDate`, and `usageOverviewQuerySchema` and `sessionUsageQuerySchema` for `from` and `to`, so a request that names `0000-01-01` is refused as `validation_failed` where the API answered `500`.
+
 ## 0.56.0
 
 ### Changed

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import * as contracts from "./index.ts";
 
 const publicContractNames = [
+  "calendarDateSchema",
   "nextSpendingLimitReset",
   "spendingLimitPeriodSchema",
   "spendingLimitResetIntervalSchema",

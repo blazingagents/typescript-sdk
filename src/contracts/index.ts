@@ -327,3 +327,4 @@ export {
   promptIdSchema,
   sessionIdSchema,
 } from "./ids.ts";
+export { calendarDateSchema } from "./utils.ts";

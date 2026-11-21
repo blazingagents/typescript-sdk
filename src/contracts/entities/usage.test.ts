@@ -108,6 +108,27 @@ describe("usageOverviewQuerySchema", () => {
   });
 });
 
+describe("a usage range PostgreSQL's date cannot hold", () => {
+  const range = { from: "0000-12-30", to: "0001-01-02" };
+
+  it("starts at year 0001", () => {
+    expect(
+      usageOverviewQuerySchema.safeParse({
+        from: "0001-01-01",
+        to: "0001-01-03",
+      }).success
+    ).toBe(true);
+  });
+
+  it("refuses year 0000 in an overview or a Session range", () => {
+    expect(usageOverviewQuerySchema.safeParse(range).success).toBe(false);
+    expect(
+      sessionUsageQuerySchema.safeParse({ sessionIds: [sessionId], ...range })
+        .success
+    ).toBe(false);
+  });
+});
+
 describe("usageOverviewResponseSchema", () => {
   it("accepts bounded rankings and an optional model remainder", () => {
     const parsed = usageOverviewResponseSchema.parse({

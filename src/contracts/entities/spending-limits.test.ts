@@ -45,7 +45,7 @@ describe("spending-limit contracts", () => {
     ).toBe(false);
   });
 
-  it.each(["2026-02-30", "2026-1-1", "2026-01-31T00:00:00Z"])(
+  it.each(["2026-02-30", "2026-1-1", "2026-01-31T00:00:00Z", "0000-01-01"])(
     "rejects invalid date %s",
     (resetStartDate) => {
       expect(
@@ -53,6 +53,13 @@ describe("spending-limit contracts", () => {
       ).toBe(false);
     }
   );
+
+  it("accepts the first year PostgreSQL's date holds", () => {
+    expect(
+      spendingLimitSchema.safeParse({ ...config, resetStartDate: "0001-01-01" })
+        .success
+    ).toBe(true);
+  });
 
   it("rejects missing update values, unknown fields, and intervals", () => {
     expect(updateSpendingLimitBodySchema.safeParse({}).success).toBe(false);

@@ -12,6 +12,7 @@ import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
 export interface ArtifactsListOptions extends ResourceRequestOptions {
   agentId?: string;
   cursor?: string;
+  limit?: number;
   sessionId?: string;
 }
 
@@ -82,6 +83,7 @@ export function createArtifactsResource(config: HttpConfig): ArtifactsResource {
             agentId: options.agentId,
             sessionId: options.sessionId,
             cursor: options.cursor,
+            limit: options.limit,
           },
         },
         artifactsListResponseSchema

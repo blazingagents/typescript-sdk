@@ -100,6 +100,10 @@ describe("Skill creation, upload, file, and copy contracts", () => {
     }
   );
 
+  it("rejects a bare array of copy outcomes", () => {
+    expect(skillCopyResultsSchema.safeParse([]).success).toBe(false);
+  });
+
   it("accepts 1–30 distinct copy destinations", () => {
     const agentIds = Array.from(
       { length: 30 },
@@ -119,31 +123,33 @@ describe("Skill creation, upload, file, and copy contracts", () => {
   });
 
   it("parses ordered created and failed copy outcomes", () => {
-    const results = skillCopyResultsSchema.parse([
-      {
-        agentId: skill.agentId,
-        status: "created",
-        skill: { ...skill, files: [] },
-      },
-      {
-        agentId: skill.agentId,
-        status: "failed",
-        error: {
-          code: "skill_name_conflict",
-          message: "Name already exists.",
-          details: { name: skill.name },
+    const { data: results } = skillCopyResultsSchema.parse({
+      data: [
+        {
+          agentId: skill.agentId,
+          status: "created",
+          skill: { ...skill, files: [] },
         },
-      },
-      {
-        agentId: skill.agentId,
-        status: "failed",
-        error: {
-          code: "skill_name_conflict",
-          message: "Name already exists.",
-          param: "name",
+        {
+          agentId: skill.agentId,
+          status: "failed",
+          error: {
+            code: "skill_name_conflict",
+            message: "Name already exists.",
+            details: { name: skill.name },
+          },
         },
-      },
-    ]);
+        {
+          agentId: skill.agentId,
+          status: "failed",
+          error: {
+            code: "skill_name_conflict",
+            message: "Name already exists.",
+            param: "name",
+          },
+        },
+      ],
+    });
     expect(results.map((result) => result.status)).toEqual([
       "created",
       "failed",

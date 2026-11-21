@@ -13,7 +13,7 @@ const artifactId = "at_xxxxxxxxxxxxxxxx";
 const iso = "2026-07-04T00:00:00.000Z";
 
 const artifact = {
-  artifactId,
+  id: artifactId,
   agentId,
   tenantId,
   sessionId,
@@ -59,8 +59,7 @@ describe("active Artifact responses", () => {
 
   it("rejects a malformed Artifact id", () => {
     expect(
-      artifactListItemSchema.safeParse({ ...artifact, artifactId: "at_short" })
-        .success
+      artifactListItemSchema.safeParse({ ...artifact, id: "at_short" }).success
     ).toBe(false);
   });
 

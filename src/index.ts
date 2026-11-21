@@ -76,7 +76,6 @@ export type {
 } from "./contracts/entities/mcp-connections.ts";
 export type {
   CreateMerchantConnectionBody,
-  MerchantBindingResponse,
   MerchantBindingsResponse,
   MerchantConnection,
   MerchantConnectionResponse,
@@ -84,11 +83,9 @@ export type {
   MerchantGuard,
   MerchantProviderKind,
   MerchantUsageEvent,
-  MerchantUsageEventResponse,
   MerchantUsageEventStatus,
   MerchantUsageEventsResponse,
   MerchantUsageSummary,
-  MerchantUsageSummaryResponse,
   UpdateMerchantConnectionBody,
   UpsertMerchantBindingBody,
 } from "./contracts/entities/merchant.ts";

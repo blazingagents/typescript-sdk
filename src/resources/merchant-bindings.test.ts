@@ -17,14 +17,14 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 describe("client.merchantBindings", () => {
   it("lists bindings with the userId filter and pagination", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { bindings: [binding], nextCursor: "next" },
+      body: { data: [binding], nextCursor: "next" },
     });
     const result = await client(fetch).merchantBindings.list({
       cursor: "cursor 1",
       limit: 25,
       userId: "user-1",
     });
-    expect(result.bindings).toHaveLength(1);
+    expect(result.data).toEqual([binding]);
     expect(result.nextCursor).toBe("next");
     expect(calls[0].url).toBe(
       `${BASE}/v1/merchant-connection/bindings?cursor=cursor+1&limit=25&userId=user-1`
@@ -33,19 +33,19 @@ describe("client.merchantBindings", () => {
 
   it("lists without filters", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { bindings: [], nextCursor: null },
+      body: { data: [], nextCursor: null },
     });
     await client(fetch).merchantBindings.list();
     expect(calls[0].url).toBe(`${BASE}/v1/merchant-connection/bindings`);
   });
 
   it("put upserts a binding", async () => {
-    const { fetch, calls } = createMockFetch({ body: { binding } });
+    const { fetch, calls } = createMockFetch({ body: binding });
     const result = await client(fetch).merchantBindings.put({
       customerId: "cust_polar_1",
       userId: "user-1",
     });
-    expect(result.binding.customerId).toBe("cust_polar_1");
+    expect(result).toEqual(binding);
     expect(calls[0].url).toBe(`${BASE}/v1/merchant-connection/bindings/user-1`);
     expect(calls[0].init?.method).toBe("PUT");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
@@ -54,7 +54,7 @@ describe("client.merchantBindings", () => {
   });
 
   it("encodes a userId containing reserved characters", async () => {
-    const { fetch, calls } = createMockFetch({ body: { binding } });
+    const { fetch, calls } = createMockFetch({ body: binding });
     await client(fetch).merchantBindings.put({
       customerId: "cust_polar_1",
       userId: "user/1?x",

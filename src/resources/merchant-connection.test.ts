@@ -5,6 +5,7 @@ import { createMockFetch } from "../test/fixtures.ts";
 const BASE = "http://localhost:8787";
 const connection = {
   id: "mch_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   provider: "polar",
   environment: "sandbox",
   merchantAccountId: "org_test_account",
@@ -24,6 +25,7 @@ describe("client.merchantConnection", () => {
     const { fetch, calls } = createMockFetch({ body: { connection } });
     const result = await client(fetch).merchantConnection.get();
     expect(result.connection?.id).toBe(connection.id);
+    expect(result.connection?.tenantId).toBe(connection.tenantId);
     expect(result.connection?.guard.meterId).toBe("meter_1");
     expect(calls[0].url).toBe(`${BASE}/v1/merchant-connection`);
   });
@@ -36,7 +38,7 @@ describe("client.merchantConnection", () => {
 
   it("create posts the connection body", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { connection },
+      body: connection,
       status: 201,
     });
     const result = await client(fetch).merchantConnection.create({
@@ -45,7 +47,7 @@ describe("client.merchantConnection", () => {
       guard: { enabled: true, meterId: "meter_1", productIds: ["prod_1"] },
       provider: "polar",
     });
-    expect(result.connection?.id).toBe(connection.id);
+    expect(result).toEqual(connection);
     expect(calls[0].init?.method).toBe("POST");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       credential: "polar_oat_secret",
@@ -56,12 +58,26 @@ describe("client.merchantConnection", () => {
   });
 
   it("update patches the connection body", async () => {
-    const { fetch, calls } = createMockFetch({ body: { connection } });
-    await client(fetch).merchantConnection.update({ credential: "polar_new" });
+    const { fetch, calls } = createMockFetch({ body: connection });
+    const result = await client(fetch).merchantConnection.update({
+      credential: "polar_new",
+    });
+    expect(result).toEqual(connection);
     expect(calls[0].init?.method).toBe("PATCH");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       credential: "polar_new",
     });
+  });
+
+  it("rejects a created connection still wrapped under connection", async () => {
+    const { fetch } = createMockFetch({ body: { connection }, status: 201 });
+    await expect(
+      client(fetch).merchantConnection.create({
+        credential: "polar_oat_secret",
+        environment: "sandbox",
+        provider: "polar",
+      })
+    ).rejects.toMatchObject({ code: "invalid_response" });
   });
 
   it("retire deletes the connection", async () => {

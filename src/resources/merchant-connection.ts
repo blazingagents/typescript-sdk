@@ -1,7 +1,9 @@
 import {
   type CreateMerchantConnectionBody,
+  type MerchantConnection,
   type MerchantConnectionResponse,
   merchantConnectionResponseSchema,
+  merchantConnectionSchema,
   type UpdateMerchantConnectionBody,
 } from "../contracts/entities/merchant.ts";
 import { requestJson } from "../http.ts";
@@ -16,12 +18,12 @@ export interface MerchantConnectionResource {
   /**
    * Creates the merchant connection.
    * @param input - creation fields; optional abortSignal.
-   * @returns The merchant connection response.
+   * @returns The merchant connection.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   create(
     input: CreateMerchantConnectionBody & ResourceRequestOptions
-  ): Promise<MerchantConnectionResponse>;
+  ): Promise<MerchantConnection>;
   /**
    * Retrieves the merchant connection.
    * @param input - optional abortSignal.
@@ -39,12 +41,12 @@ export interface MerchantConnectionResource {
   /**
    * Updates the merchant connection.
    * @param input - fields to change; optional abortSignal.
-   * @returns The merchant connection response.
+   * @returns The merchant connection.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   update(
     input: UpdateMerchantConnectionBody & ResourceRequestOptions
-  ): Promise<MerchantConnectionResponse>;
+  ): Promise<MerchantConnection>;
 }
 
 /**
@@ -76,7 +78,7 @@ export function createMerchantConnectionResource(
           credentialBearing: true,
           signal: abortSignal,
         },
-        merchantConnectionResponseSchema
+        merchantConnectionSchema
       );
     },
     async update({ abortSignal, ...body }) {
@@ -89,7 +91,7 @@ export function createMerchantConnectionResource(
           credentialBearing: true,
           signal: abortSignal,
         },
-        merchantConnectionResponseSchema
+        merchantConnectionSchema
       );
     },
     async retire({ abortSignal } = {}) {

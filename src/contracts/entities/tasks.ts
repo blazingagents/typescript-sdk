@@ -120,9 +120,9 @@ const taskPromptSchema = z.string().trim().min(1).max(MAX_TASK_PROMPT_LENGTH);
 
 /**
  * `POST /v1/tasks` — schedule present = scheduled task; absent = on-demand.
- * `submit: true` enqueues a run immediately. An optional `idempotencyKey`
- * makes retries return the original Task and initial run id. Without a key,
- * each call creates a new Task. Run creation has its own idempotency key.
+ * `submit: true` enqueues a run immediately. An optional `Idempotency-Key`
+ * header makes retries return the original Task and initial run id. Without
+ * a key, each call creates a new Task. Run creation has its own key.
  */
 const taskFieldDescriptions = {
   agentId: "ID of the agent that runs the task. It cannot change later.",
@@ -141,14 +141,6 @@ const taskFieldDescriptions = {
 
 export const createTaskBodySchema = z
   .object({
-    idempotencyKey: z
-      .string()
-      .trim()
-      .min(1)
-      .optional()
-      .describe(
-        "Retry the same creation with this key to return the current task and its original initial run. Changed requests or deleted tasks return a conflict."
-      ),
     agentId: agentIdSchema.describe(taskFieldDescriptions.agentId),
     name: taskNameSchema.describe(taskFieldDescriptions.name),
     prompt: taskPromptSchema.describe(taskFieldDescriptions.prompt),
@@ -185,20 +177,6 @@ export const updateTaskBodySchema = z
   .refine(hasObjectKeys, {
     message: atLeastOneFieldMessage,
   });
-
-// `POST /v1/tasks/{taskId}/runs` — optional client idempotency key.
-export const createTaskRunBodySchema = z
-  .object({
-    idempotencyKey: z
-      .string()
-      .trim()
-      .min(1)
-      .optional()
-      .describe(
-        "Your own key for this run. Retrying with the same key returns the same run instead of starting another."
-      ),
-  })
-  .strict();
 
 /**
  * Task run status. `blocked` is the soft-block terminal state for an expected
@@ -332,7 +310,6 @@ export type TaskRunResponse = z.infer<typeof taskRunResponseSchema>;
 export type TaskRunsListResponse = z.infer<typeof taskRunsListResponseSchema>;
 export type CreateTaskBody = z.input<typeof createTaskBodySchema>;
 export type UpdateTaskBody = z.infer<typeof updateTaskBodySchema>;
-export type CreateTaskRunBody = z.infer<typeof createTaskRunBodySchema>;
 export type CreateTaskResponse = z.infer<typeof createTaskResponseSchema>;
 export type CreateTaskRunResponse = z.infer<typeof createTaskRunResponseSchema>;
 export type TaskRunMessagesResponse = z.infer<

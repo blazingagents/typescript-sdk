@@ -1,7 +1,6 @@
 import {
   type CreateTaskBody,
   type CreateTaskResponse,
-  type CreateTaskRunBody,
   type CreateTaskRunResponse,
   createTaskResponseSchema,
   createTaskRunResponseSchema,
@@ -17,7 +16,7 @@ import {
   tasksListResponseSchema,
   type UpdateTaskBody,
 } from "../contracts/entities/tasks.ts";
-import { apiPath, requestJson } from "../http.ts";
+import { apiPath, idempotencyHeaders, requestJson } from "../http.ts";
 import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
 
 export interface TasksListOptions extends ResourceRequestOptions {
@@ -49,21 +48,26 @@ export interface TasksResource {
     input: { taskId: string; runId: string } & ResourceRequestOptions
   ): Promise<void>;
   /**
-   * Creates the Task.
-   * @param input - creation fields; optional abortSignal.
+   * Creates the Task. Retry a lost answer with the same `idempotencyKey` and the request returns the current Task and its original initial run.
+   * @param input - creation fields; optional `idempotencyKey` and abortSignal.
    * @returns The create task response.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   create(
-    input: CreateTaskBody & ResourceRequestOptions
+    input: CreateTaskBody & {
+      idempotencyKey?: string;
+    } & ResourceRequestOptions
   ): Promise<CreateTaskResponse>;
   /**
-   * Creates a Task run.
-   * @param input - `taskId`; creation fields; optional abortSignal.
+   * Creates a Task run. Retry with the same `idempotencyKey` and the request returns the same run instead of starting another.
+   * @param input - `taskId`; optional `idempotencyKey` and abortSignal.
    * @returns The create task run response.
    */
   createRun(
-    input: CreateTaskRunBody & { taskId: string } & ResourceRequestOptions
+    input: {
+      idempotencyKey?: string;
+      taskId: string;
+    } & ResourceRequestOptions
   ): Promise<CreateTaskRunResponse>;
   /**
    * Deletes the Task.
@@ -135,11 +139,12 @@ export interface TasksResource {
  */
 export function createTasksResource(config: HttpConfig): TasksResource {
   return {
-    async create({ abortSignal, ...body }) {
+    async create({ idempotencyKey, abortSignal, ...body }) {
       return await requestJson(
         config,
         "/v1/tasks",
         {
+          headers: idempotencyHeaders(idempotencyKey),
           json: body,
           signal: abortSignal,
           method: "POST",
@@ -189,11 +194,15 @@ export function createTasksResource(config: HttpConfig): TasksResource {
         signal: abortSignal,
       });
     },
-    async createRun({ taskId, abortSignal, ...body }) {
+    async createRun({ taskId, idempotencyKey, abortSignal }) {
       return await requestJson(
         config,
         apiPath`/v1/tasks/${taskId}/runs`,
-        { json: body, method: "POST", signal: abortSignal },
+        {
+          headers: idempotencyHeaders(idempotencyKey),
+          method: "POST",
+          signal: abortSignal,
+        },
         createTaskRunResponseSchema
       );
     },

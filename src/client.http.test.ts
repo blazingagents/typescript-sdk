@@ -104,7 +104,7 @@ describe("client requests", () => {
     await expect(
       client(fetch).agents.delete({
         agentId: "ag_0123456789abcdef",
-        includeArtifacts: false,
+        deleteArtifacts: false,
       })
     ).resolves.toBeUndefined();
     expect(callArgs(fetch, 0)[1]).toMatchObject({ method: "DELETE" });
@@ -738,6 +738,7 @@ describe("credential echo", () => {
   describe("submitted secret", () => {
     const provider = (name: string, extra = "unused") => ({
       id: "prv_0123456789abcdef",
+      tenantId: "ten_0123456789abcdef",
       name,
       providerType: "openrouter",
       baseUrl: null,

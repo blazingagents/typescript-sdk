@@ -6,6 +6,7 @@ import { createMockFetch } from "../test/fixtures.ts";
 const BASE = "http://localhost:8787";
 const sessionListItem = {
   id: "ss_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   messageCount: 2,
   lastMessagePreview: "hi",
   userId: "",

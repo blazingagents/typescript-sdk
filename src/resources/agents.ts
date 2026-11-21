@@ -37,14 +37,14 @@ export interface AgentsResource {
   create(input: CreateAgentBody & ResourceRequestOptions): Promise<Agent>;
   /**
    * Deletes the Agent while preserving its attached Workspace.
-   * @param input - `agentId`; optional abortSignal; includeArtifacts controls Artifact deletion.
+   * @param input - `agentId`; optional abortSignal; deleteArtifacts controls Artifact deletion.
    * @returns Resolves when the operation completes.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response; `agent_busy` (409) while the Agent has a live Turn or a queued or running Task run.
    */
   delete(
     input: {
       agentId: string;
-      includeArtifacts: boolean;
+      deleteArtifacts: boolean;
     } & ResourceRequestOptions
   ): Promise<void>;
   /**
@@ -191,7 +191,7 @@ export function createUserAgentsResource(
       {
         json: body,
         signal: abortSignal,
-        method: "PUT",
+        method: "PATCH",
       },
       agentResponseSchema
     );
@@ -271,10 +271,10 @@ export function createUserAgentsResource(
         mcpAttachmentResponseSchema
       );
     },
-    async delete({ agentId, includeArtifacts, abortSignal }) {
+    async delete({ agentId, deleteArtifacts, abortSignal }) {
       await requestJson<void>(config, apiPath`/v1/agents/${agentId}`, {
         method: "DELETE",
-        query: { includeArtifacts },
+        query: { deleteArtifacts },
         signal: abortSignal,
       });
     },

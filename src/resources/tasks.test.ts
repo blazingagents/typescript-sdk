@@ -97,6 +97,27 @@ describe("client.tasks", () => {
     expect(result.runId).toBeNull();
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].url).toBe(`${BASE}/v1/tasks`);
+    expect(
+      new Headers(calls[0].init?.headers).get("Idempotency-Key")
+    ).toBeNull();
+  });
+
+  it("create sends its idempotencyKey as the Idempotency-Key header", async () => {
+    const { fetch, calls } = createMockFetch({
+      body: { task: taskRow, runId: null },
+    });
+    await client(fetch).tasks.create({
+      agentId: "ag_0123456789abcdef",
+      idempotencyKey: "once",
+      name: "Daily",
+      prompt: "Run",
+    });
+    expect(new Headers(calls[0].init?.headers).get("Idempotency-Key")).toBe(
+      "once"
+    );
+    expect(JSON.parse(calls[0].init?.body as string)).not.toHaveProperty(
+      "idempotencyKey"
+    );
   });
 
   it("create threads end-user attribution (userId + metadata) into the body", async () => {
@@ -242,18 +263,21 @@ describe("client.tasks", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].url).toBe(`${BASE}/v1/tasks/tk_0123456789abcdef/runs`);
-    expect(JSON.parse(calls[0].init?.body as string)).toEqual({
-      idempotencyKey: "key1",
-    });
+    expect(new Headers(calls[0].init?.headers).get("Idempotency-Key")).toBe(
+      "key1"
+    );
+    expect(calls[0].init?.body).toBeFalsy();
   });
 
-  it("createRun with no body sends an empty object", async () => {
+  it("createRun without a key sends no Idempotency-Key header", async () => {
     const { fetch, calls } = createMockFetch({
       body: { runId: "tr_0123456789abcdef" },
     });
     const c = client(fetch);
     await c.tasks.createRun({ taskId: "tk_0123456789abcdef" });
-    expect(JSON.parse(calls[0].init?.body as string)).toEqual({});
+    expect(
+      new Headers(calls[0].init?.headers).get("Idempotency-Key")
+    ).toBeNull();
   });
 
   it("listRuns gets /v1/tasks/:id/runs", async () => {

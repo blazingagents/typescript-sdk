@@ -41,7 +41,7 @@ export const sessionActivitySchema = z
   .strip();
 
 export const sessionInputResponseSchema = z
-  .object({ data: sessionInputSchema, activity: sessionActivitySchema })
+  .object({ input: sessionInputSchema, activity: sessionActivitySchema })
   .strip();
 
 export const sessionInputsResponseSchema = z

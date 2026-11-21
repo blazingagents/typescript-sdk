@@ -5,6 +5,7 @@ import { createMockFetch } from "../test/fixtures.ts";
 const BASE = "http://localhost:8787";
 const row = {
   id: "mcp_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   name: "Tools",
   url: "https://mcp.example.com/",
   authType: "none",
@@ -134,10 +135,10 @@ describe("client.mcpConnections", () => {
 
   it("lists", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { mcpConnections: [row] },
+      body: { data: [row] },
     });
     const result = await client(fetch).mcpConnections.list();
-    expect(result.mcpConnections).toHaveLength(1);
+    expect(result.data).toEqual([row]);
     expect(calls[0].url).toBe(`${BASE}/v1/mcp-connections`);
   });
 

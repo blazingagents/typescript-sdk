@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   createMemoryBodySchema,
   memoriesListResponseSchema,
-  memoryResponseSchema,
   memorySchema,
   updateMemoryBodySchema,
 } from "./memories.ts";
@@ -64,6 +63,16 @@ describe("memorySchema", () => {
     );
   });
 
+  it("strips extra fields", () => {
+    expect(
+      memorySchema.parse({ ...baseMemory, extra: true })
+    ).not.toHaveProperty("extra");
+  });
+
+  it("rejects the record wrapped under memory", () => {
+    expect(memorySchema.safeParse({ memory: baseMemory }).success).toBe(false);
+  });
+
   it("strips searchVector from the response", () => {
     expect(
       memorySchema.parse({ ...baseMemory, searchVector: "'dark':2" })
@@ -73,20 +82,6 @@ describe("memorySchema", () => {
   it("rejects a record missing lifecycle timestamps", () => {
     const { lastAccessedAt: _lastAccessedAt, ...withoutTouch } = baseMemory;
     expect(memorySchema.safeParse(withoutTouch).success).toBe(false);
-  });
-});
-
-describe("memoryResponseSchema", () => {
-  it("wraps the record under memory", () => {
-    expect(memoryResponseSchema.parse({ memory: baseMemory })).toStrictEqual({
-      memory: baseMemory,
-    });
-  });
-
-  it("strips extra fields", () => {
-    expect(
-      memoryResponseSchema.parse({ memory: baseMemory, extra: true })
-    ).not.toHaveProperty("extra");
   });
 });
 

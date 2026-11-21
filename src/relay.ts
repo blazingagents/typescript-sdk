@@ -195,7 +195,7 @@ async function relaySteer(
     abortSignal: signal,
   });
   return Response.json(
-    { state: receipt.data.state } satisfies z.input<
+    { state: receipt.input.state } satisfies z.input<
       typeof relaySteerReceiptSchema
     >,
     { status: 202 }

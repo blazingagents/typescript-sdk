@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { paginatedResponseSchema } from "../api.ts";
 import {
   agentIdSchema,
   merchantConnectionIdSchema,
   merchantUsageEventIdSchema,
   providerKeyFragmentSchema,
   sessionIdSchema,
+  tenantIdSchema,
   turnIdSchema,
 } from "../ids.ts";
 import {
@@ -50,6 +52,7 @@ export type MerchantGuard = z.infer<typeof merchantGuardSchema>;
 export const merchantConnectionSchema = z
   .object({
     id: merchantConnectionIdSchema,
+    tenantId: tenantIdSchema,
     provider: merchantProviderSchema,
     environment: merchantEnvironmentSchema,
     merchantAccountId: z.string().min(1),
@@ -62,6 +65,7 @@ export const merchantConnectionSchema = z
   .strip();
 export type MerchantConnection = z.infer<typeof merchantConnectionSchema>;
 
+/** `GET /v1/merchant-connection`: `connection` is `null` while none exists. */
 export const merchantConnectionResponseSchema = z
   .object({ connection: merchantConnectionSchema.nullable() })
   .strip();
@@ -124,12 +128,9 @@ export type MerchantCustomerBinding = z.infer<
   typeof merchantCustomerBindingSchema
 >;
 
-export const merchantBindingsResponseSchema = z
-  .object({
-    bindings: z.array(merchantCustomerBindingSchema),
-    nextCursor: z.string().nullable(),
-  })
-  .strip();
+export const merchantBindingsResponseSchema = paginatedResponseSchema(
+  merchantCustomerBindingSchema
+);
 export type MerchantBindingsResponse = z.infer<
   typeof merchantBindingsResponseSchema
 >;
@@ -144,13 +145,6 @@ export const upsertMerchantBindingBodySchema = z
   .strict();
 export type UpsertMerchantBindingBody = z.infer<
   typeof upsertMerchantBindingBodySchema
->;
-
-export const merchantBindingResponseSchema = z
-  .object({ binding: merchantCustomerBindingSchema })
-  .strip();
-export type MerchantBindingResponse = z.infer<
-  typeof merchantBindingResponseSchema
 >;
 
 export const merchantUsageEventStatusSchema = z.enum([
@@ -176,6 +170,7 @@ export const merchantUsageEventNextActionSchema = z.enum([
 export const merchantUsageEventSchema = z
   .object({
     id: merchantUsageEventIdSchema,
+    tenantId: tenantIdSchema,
     turnId: turnIdSchema,
     connectionId: merchantConnectionIdSchema,
     provider: merchantProviderSchema,
@@ -203,19 +198,9 @@ export const merchantUsageEventSchema = z
   .strip();
 export type MerchantUsageEvent = z.infer<typeof merchantUsageEventSchema>;
 
-export const merchantUsageEventResponseSchema = z
-  .object({ event: merchantUsageEventSchema })
-  .strip();
-export type MerchantUsageEventResponse = z.infer<
-  typeof merchantUsageEventResponseSchema
->;
-
-export const merchantUsageEventsResponseSchema = z
-  .object({
-    events: z.array(merchantUsageEventSchema),
-    nextCursor: z.string().nullable(),
-  })
-  .strip();
+export const merchantUsageEventsResponseSchema = paginatedResponseSchema(
+  merchantUsageEventSchema
+);
 export type MerchantUsageEventsResponse = z.infer<
   typeof merchantUsageEventsResponseSchema
 >;
@@ -268,13 +253,6 @@ export const merchantUsageSummaryQuerySchema = z
       ),
   })
   .strict();
-
-export const merchantUsageSummaryResponseSchema = z
-  .object({ summary: merchantUsageSummarySchema })
-  .strip();
-export type MerchantUsageSummaryResponse = z.infer<
-  typeof merchantUsageSummaryResponseSchema
->;
 
 /**
  * The action a Tenant takes on an event. `automaticDeliveryStopped` is true

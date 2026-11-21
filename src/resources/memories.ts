@@ -1,9 +1,9 @@
 import {
   type CreateMemoryBody,
   type MemoriesListResponse,
-  type MemoryResponse,
+  type Memory,
   memoriesListResponseSchema,
-  memoryResponseSchema,
+  memorySchema,
   type UpdateMemoryBody,
 } from "../contracts/entities/memories.ts";
 import { apiPath, requestJson } from "../http.ts";
@@ -13,12 +13,12 @@ export interface MemoriesResource {
   /**
    * Creates the Memory.
    * @param input - `agentId`; creation fields; optional abortSignal.
-   * @returns The memory response.
+   * @returns The memory.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   create(
     input: CreateMemoryBody & { agentId: string } & ResourceRequestOptions
-  ): Promise<MemoryResponse>;
+  ): Promise<Memory>;
   /**
    * Deletes the Memory.
    * @param input - `agentId`, `memoryId`; optional abortSignal.
@@ -31,12 +31,12 @@ export interface MemoriesResource {
   /**
    * Retrieves the Memory.
    * @param input - `agentId`, `memoryId`; optional abortSignal.
-   * @returns The memory response.
+   * @returns The memory.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   get(
     input: { agentId: string; memoryId: string } & ResourceRequestOptions
-  ): Promise<MemoryResponse>;
+  ): Promise<Memory>;
   /**
    * Lists one page of Memory records.
    * @param input - `agentId`; filters and pagination options.
@@ -49,7 +49,7 @@ export interface MemoriesResource {
   /**
    * Updates the Memory.
    * @param input - `agentId`, `memoryId`; fields to change; optional abortSignal.
-   * @returns The memory response.
+   * @returns The memory.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   update(
@@ -57,7 +57,7 @@ export interface MemoriesResource {
       agentId: string;
       memoryId: string;
     } & ResourceRequestOptions
-  ): Promise<MemoryResponse>;
+  ): Promise<Memory>;
 }
 
 export interface MemoriesListOptions extends ResourceRequestOptions {
@@ -97,7 +97,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
         config,
         apiPath`/v1/agents/${agentId}/memories`,
         { json: body, signal: abortSignal, method: "POST" },
-        memoryResponseSchema
+        memorySchema
       );
     },
     async get({ agentId, memoryId, abortSignal }) {
@@ -105,7 +105,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
         config,
         apiPath`/v1/agents/${agentId}/memories/${memoryId}`,
         { signal: abortSignal },
-        memoryResponseSchema
+        memorySchema
       );
     },
     async update({ agentId, memoryId, abortSignal, ...body }) {
@@ -113,7 +113,7 @@ export function createMemoriesResource(config: HttpConfig): MemoriesResource {
         config,
         apiPath`/v1/agents/${agentId}/memories/${memoryId}`,
         { json: body, signal: abortSignal, method: "PATCH" },
-        memoryResponseSchema
+        memorySchema
       );
     },
     async delete({ agentId, memoryId, abortSignal }) {

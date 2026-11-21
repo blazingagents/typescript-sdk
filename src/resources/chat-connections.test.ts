@@ -46,9 +46,9 @@ function setup(body: unknown = connection, status = 200) {
 
 describe("chatConnections", () => {
   it("lists connections with optional cancellation", async () => {
-    const { client, calls } = setup({ chatConnections: [connection] });
+    const { client, calls } = setup({ data: [connection] });
     await expect(client.chatConnections.list()).resolves.toEqual({
-      chatConnections: [connection],
+      data: [connection],
     });
     const abortSignal = new AbortController().signal;
     await client.chatConnections.list({ abortSignal });

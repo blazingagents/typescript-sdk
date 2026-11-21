@@ -30,7 +30,7 @@ it("uses installed steer receipts and streams explicit batches and one-call appr
   };
   const second = { ...message, id: "user-2" };
   const receipt: SessionInputResponse = {
-    data: {
+    input: {
       requestId: "draft/1",
       sequence: 1,
       message,
@@ -43,7 +43,7 @@ it("uses installed steer receipts and streams explicit batches and one-call appr
     activity,
   };
   const page: SessionInputsResponse = {
-    data: [receipt.data],
+    data: [receipt.input],
     nextCursor: null,
     activity,
   };
@@ -105,7 +105,7 @@ it("uses installed steer receipts and streams explicit batches and one-call appr
     expect(
       await client.sessions.submitInput({
         ...target,
-        requestId: receipt.data.requestId,
+        requestId: receipt.input.requestId,
         message,
       })
     ).toEqual(sessionInputResponseSchema.parse(receipt));

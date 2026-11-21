@@ -116,7 +116,7 @@ export function createWorkspacesResource(
       return await requestJson(
         config,
         apiPath`/v1/workspaces/${workspaceId}`,
-        { json: body, signal: abortSignal, method: "PUT" },
+        { json: body, signal: abortSignal, method: "PATCH" },
         workspaceSchema
       );
     },

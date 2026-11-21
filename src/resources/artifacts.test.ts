@@ -4,7 +4,7 @@ import { createMockFetch } from "../test/fixtures.ts";
 
 const baseUrl = "http://localhost:8787";
 const artifact = {
-  artifactId: "at_0123456789abcdef",
+  id: "at_0123456789abcdef",
   agentId: "ag_0123456789abcdef",
   tenantId: "ten_0123456789abcdef",
   sessionId: "ss_0123456789abcdef",
@@ -26,9 +26,9 @@ describe("client.artifacts", () => {
     const { fetch, calls } = createMockFetch({ body: artifact });
 
     await expect(
-      client(fetch).artifacts.get({ artifactId: artifact.artifactId })
+      client(fetch).artifacts.get({ artifactId: artifact.id })
     ).resolves.toEqual(artifact);
-    expect(calls[0].url).toBe(`${baseUrl}/v1/artifacts/${artifact.artifactId}`);
+    expect(calls[0].url).toBe(`${baseUrl}/v1/artifacts/${artifact.id}`);
   });
 
   it("creates and validates a direct R2 download URL", async () => {
@@ -38,13 +38,13 @@ describe("client.artifacts", () => {
 
     await expect(
       client(fetch).artifacts.createDownloadUrl({
-        artifactId: artifact.artifactId,
+        artifactId: artifact.id,
       })
     ).resolves.toEqual({ expiresAt, url });
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.body).toBeNull();
     expect(calls[0].url).toBe(
-      `${baseUrl}/v1/artifacts/${artifact.artifactId}/download-url`
+      `${baseUrl}/v1/artifacts/${artifact.id}/download-url`
     );
   });
 
@@ -53,6 +53,7 @@ describe("client.artifacts", () => {
     [{ agentId: artifact.agentId }, `?agentId=${artifact.agentId}`],
     [{ sessionId: artifact.sessionId }, `?sessionId=${artifact.sessionId}`],
     [{ cursor: "next page" }, "?cursor=next+page"],
+    [{ limit: 7 }, "?limit=7"],
   ])("serializes list options %#", async (options, suffix) => {
     const { fetch, calls } = createMockFetch({
       body: { data: [], nextCursor: null },
@@ -75,9 +76,9 @@ describe("client.artifacts", () => {
   it("deletes through the Tenant-level Artifact route", async () => {
     const { fetch, calls } = createMockFetch({ status: 204, text: "" });
 
-    await client(fetch).artifacts.delete({ artifactId: artifact.artifactId });
+    await client(fetch).artifacts.delete({ artifactId: artifact.id });
     expect(calls[0].init?.method).toBe("DELETE");
-    expect(calls[0].url).toBe(`${baseUrl}/v1/artifacts/${artifact.artifactId}`);
+    expect(calls[0].url).toBe(`${baseUrl}/v1/artifacts/${artifact.id}`);
   });
 
   it("rejects malformed detail and download URL responses", async () => {
@@ -90,12 +91,12 @@ describe("client.artifacts", () => {
 
     await expect(
       client(invalidDetail.fetch).artifacts.get({
-        artifactId: artifact.artifactId,
+        artifactId: artifact.id,
       })
     ).rejects.toBeDefined();
     await expect(
       client(invalidUrl.fetch).artifacts.createDownloadUrl({
-        artifactId: artifact.artifactId,
+        artifactId: artifact.id,
       })
     ).rejects.toBeDefined();
   });

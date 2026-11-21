@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type ApiErrorCode, paginatedResponseSchema } from "../api.ts";
-import { agentIdSchema, sessionIdSchema } from "../ids.ts";
+import { agentIdSchema, sessionIdSchema, tenantIdSchema } from "../ids.ts";
 import { toolExecutionReferenceSchema } from "./agent-approval.ts";
 import { agentConfigSchema, agentResponseSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
@@ -8,12 +8,13 @@ import { chatRequestBodySchema } from "./chat.ts";
 import { sessionMessageSchema } from "./session-messages.ts";
 
 /**
- * `GET /v1/agents/{agentId}/sessions` list item. `agentId`/`tenantId` never
- * leak to the wire; `userId`/`metadata` come from the first successful Turn.
+ * `GET /v1/agents/{agentId}/sessions` list item. `userId`/`metadata` come
+ * from the first successful Turn.
  */
 export const sessionListItemSchema = z
   .object({
     id: sessionIdSchema,
+    tenantId: tenantIdSchema,
     messageCount: z.number().int().nonnegative(),
     lastMessagePreview: z.string().nullable(),
     userId: userIdSchema,

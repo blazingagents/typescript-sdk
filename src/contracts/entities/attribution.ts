@@ -27,7 +27,7 @@ export const metadataSchema = z
  * The create-body shape for an attributed resource: both fields optional
  * with tenant-level defaults (`userId: ''`, `metadata: {}`). `userId` is
  * set at creation and immutable — update bodies accept `metadata` only
- * (they do not include `userId`, so a `userId` in a PUT body is rejected
+ * (they do not include `userId`, so a `userId` in an update body is rejected
  * by the update body's `.strict()`).
  */
 export const attributionCreateInputSchema = z

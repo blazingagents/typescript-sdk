@@ -45,6 +45,19 @@ const MIN_SUBSTRING_SECRET_LENGTH = 8;
 const DOT_OR_EMPTY_SEGMENTS = new Set(["", ".", ".."]);
 
 /**
+ * Builds the `Idempotency-Key` header, or none when the caller set no key.
+ * @param idempotencyKey - The caller's retry identity, if any.
+ * @returns The header to send, or `undefined`.
+ */
+export function idempotencyHeaders(
+  idempotencyKey: string | undefined
+): Record<string, string> | undefined {
+  return idempotencyKey === undefined
+    ? undefined
+    : { "Idempotency-Key": idempotencyKey };
+}
+
+/**
  * Builds an endpoint path, encoding each interpolated value so it stays inside
  * one path segment. `encodeURIComponent` leaves `.` and `..` unchanged, and
  * URL normalization would resolve them against the parent path, so those and

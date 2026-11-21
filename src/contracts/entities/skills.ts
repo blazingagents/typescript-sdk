@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paginatedResponseSchema } from "../api.ts";
+import { listResponseSchema, paginatedResponseSchema } from "../api.ts";
 import { agentIdSchema, skillIdSchema, tenantIdSchema } from "../ids.ts";
 import {
   MAX_SKILL_COPY_DESTINATIONS,
@@ -127,7 +127,7 @@ export const skillCopyResultSchema = z.discriminatedUnion("status", [
   skillCopyFailedResultSchema,
 ]);
 
-export const skillCopyResultsSchema = z.array(skillCopyResultSchema);
+export const skillCopyResultsSchema = listResponseSchema(skillCopyResultSchema);
 
 export type Skill = z.infer<typeof skillSchema>;
 export type SkillDetail = z.infer<typeof skillDetailSchema>;

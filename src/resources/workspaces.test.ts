@@ -86,7 +86,7 @@ describe("client.workspaces", () => {
       })
     ).resolves.toMatchObject({ name: null });
     expect(calls[0].url).toBe(`${BASE}/v1/workspaces/${workspace.id}`);
-    expect(calls[0].init?.method).toBe("PUT");
+    expect(calls[0].init?.method).toBe("PATCH");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       metadata: { project: "alpha" },
       name: null,

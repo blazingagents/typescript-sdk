@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { providerIdSchema, providerKeyFragmentSchema } from "../ids.ts";
+import { listResponseSchema } from "../api.ts";
+import {
+  providerIdSchema,
+  providerKeyFragmentSchema,
+  tenantIdSchema,
+} from "../ids.ts";
 import { MAX_PROVIDER_NAME_LENGTH } from "../limitations.ts";
 
 /**
@@ -27,12 +32,13 @@ const providerNameSchema = z
 const providerBaseUrlSchema = z.string().trim().min(1).url().or(z.literal(""));
 
 /**
- * `GET /v1/providers/{id}` wire response. The Vault pointer and tenant id
- * stay internal.
+ * `GET /v1/providers/{providerId}` wire response. The Vault pointer stays
+ * internal.
  */
 export const providerResponseSchema = z
   .object({
     id: providerIdSchema,
+    tenantId: tenantIdSchema,
     name: providerNameSchema,
     providerType: providerTypeSchema,
     baseUrl: z.string().nullable(),
@@ -49,24 +55,13 @@ export const providerListItemSchema = providerResponseSchema.omit({
 
 export type ProviderListItem = z.infer<typeof providerListItemSchema>;
 
-export const providersResponseSchema = z
-  .object({
-    providers: z.array(providerListItemSchema),
-  })
-  .strip();
+export const providersResponseSchema = listResponseSchema(
+  providerListItemSchema
+);
 
-export const providerModelsResponseSchema = z
-  .object({
-    models: z.array(
-      z
-        .object({
-          id: z.string().trim().min(1),
-        })
-        .strip()
-    ),
-  })
-  .strip()
-  .meta({ id: "ProviderModelList" });
+export const providerModelsResponseSchema = listResponseSchema(
+  z.object({ id: z.string().trim().min(1) }).strip()
+).meta({ id: "ProviderModelList" });
 
 /**
  * `POST /v1/providers` — name, type, optional base URL, and the API key
@@ -127,7 +122,7 @@ export type ProvidersResponse = z.infer<typeof providersResponseSchema>;
 export type ProviderModelsResponse = z.infer<
   typeof providerModelsResponseSchema
 >;
-export type ProviderModel = ProviderModelsResponse["models"][number];
+export type ProviderModel = ProviderModelsResponse["data"][number];
 export interface DeleteProviderOptions {
   confirmSnapshotInvalidation?: boolean;
 }

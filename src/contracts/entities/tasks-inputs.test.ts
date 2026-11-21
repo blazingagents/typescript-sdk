@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { agentId } from "../test/fixtures/tasks.ts";
 import {
   createTaskBodySchema,
-  createTaskRunBodySchema,
   taskRunStatusSchema,
   updateTaskBodySchema,
 } from "./tasks.ts";
@@ -115,7 +114,7 @@ describe("createTaskBodySchema", () => {
     ).toBe(true);
   });
 
-  it("accepts an idempotency key when creating and submitting a task", () => {
+  it("refuses an idempotency key in the body, which travels as a header", () => {
     expect(
       createTaskBodySchema.safeParse({
         agentId,
@@ -124,7 +123,7 @@ describe("createTaskBodySchema", () => {
         submit: true,
         idempotencyKey: "once",
       }).success
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("rejects a malformed agentId", () => {
@@ -166,18 +165,6 @@ describe("updateTaskBodySchema", () => {
     expect(updateTaskBodySchema.safeParse({ userId: "u-42" }).success).toBe(
       false
     );
-  });
-});
-
-describe("createTaskRunBodySchema", () => {
-  it("accepts an empty body", () => {
-    expect(createTaskRunBodySchema.parse({})).toStrictEqual({});
-  });
-
-  it("accepts an idempotency key", () => {
-    expect(
-      createTaskRunBodySchema.parse({ idempotencyKey: "once" })
-    ).toStrictEqual({ idempotencyKey: "once" });
   });
 });
 

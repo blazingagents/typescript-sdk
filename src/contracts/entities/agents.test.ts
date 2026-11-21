@@ -54,7 +54,6 @@ const baseAgentConfig = {
   memoryInjectionEnabled: false,
   tools: [],
   instructions: "Build carefully.",
-  metadata: {},
   mcpConnectionIds: [],
 };
 
@@ -139,7 +138,7 @@ describe("Agent current and config contracts", () => {
     ).not.toHaveProperty(field);
   });
 
-  it("keeps identity, Workspace, and Skills outside saved configurations", () => {
+  it("keeps identity, Workspace, Skills, and metadata outside saved configurations", () => {
     expect(agentConfigSchema.parse(baseAgentConfig)).toEqual(baseAgentConfig);
     expect(
       agentConfigSchema.parse({ ...baseAgentConfig, workspaceId })
@@ -147,6 +146,9 @@ describe("Agent current and config contracts", () => {
     expect(
       agentConfigSchema.parse({ ...baseAgentConfig, skills: [] })
     ).not.toHaveProperty("skills");
+    expect(
+      agentConfigSchema.parse({ ...baseAgentConfig, metadata: { crm: "x" } })
+    ).not.toHaveProperty("metadata");
     expect(
       agentConfigSchema.parse({
         ...baseAgentConfig,

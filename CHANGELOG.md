@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `metadata` is at most 128 KiB as JSON (`JSON.stringify`, counted in UTF-8 bytes) on every resource that takes it: agents, workspaces, prompts, tasks, sessions started by a turn, and stateless generation. `metadataSchema` refuses a larger value, and the API answers `400 validation_failed`. Before, the only bound was the 15 MiB request body.
+
+### Removed
+
+- `agentConfig`, the configuration a session or task run saves, no longer holds the agent's `metadata`. `sessions.get()` and `tasks.getRun()` return it without that key, and `AgentConfig` drops it. The session and the task run keep their own `metadata`. For the agent's, read the agent: a session is read by its agent's ID, and a task run carries `agentId`.
+
+  ```ts
+  const run = await client.tasks.getRun({ taskId, runId });
+  const agent = await client.agents.get({ agentId: run.agentId });
+  console.log(agent.metadata);
+  ```
+
 ## 0.55.1
 
 ### Changed

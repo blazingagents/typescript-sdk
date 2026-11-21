@@ -47,6 +47,9 @@ export const MAX_MCP_ATTACHMENT_METADATA_KEY_LENGTH = 64;
 export const MAX_AGENT_NAME_LENGTH = 80;
 export const MAX_AGENT_INSTRUCTIONS_LENGTH = 3000;
 
+/** Metadata — 128 KiB of compact JSON on every resource that takes it. */
+export const MAX_METADATA_BYTES = 128 * 1024;
+
 /** Artifacts — 10 MiB per file. */
 export const MAX_ARTIFACT_BYTES = 10 * 1024 * 1024;
 

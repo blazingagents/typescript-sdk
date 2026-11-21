@@ -165,7 +165,6 @@ export const agentConfigSchema = z
     memoryInjectionEnabled: agentResponseSchema.shape.memoryInjectionEnabled,
     tools: agentResponseSchema.shape.tools,
     instructions: agentResponseSchema.shape.instructions,
-    metadata: agentResponseSchema.shape.metadata,
     mcpConnectionIds: agentResponseSchema.shape.mcpConnectionIds,
   })
   .strip()
@@ -203,7 +202,8 @@ const agentFieldDescriptions = {
   instructions: "Instructions the agent follows on every turn.",
   userId:
     "Your end user's ID, used for attribution. An empty string means a tenant-level agent. It cannot change after creation.",
-  metadata: "Your own key-value data, returned unchanged.",
+  metadata:
+    "Your own key-value data, returned unchanged. At most 128 KiB as JSON.",
   mcpConnectionIds: "IDs of the MCP connections attached to the agent.",
 } as const;
 

@@ -124,7 +124,16 @@ const models: Record<string, z.ZodType> = {
  * reports, with the reason. The platform sends these fields until it adopts
  * this release; delete each entry once the spec drops it.
  */
-const allowedDifferences: Record<string, string> = {};
+const DROPPED_SNAPSHOT_METADATA =
+  "agentConfig no longer copies the Agent's metadata; a caller reads the Agent.";
+const allowedDifferences: Record<string, string> = {
+  "Session.agentConfig.metadata: in the spec, missing from the SDK":
+    DROPPED_SNAPSHOT_METADATA,
+  "TaskRunList.data[].agentConfig.metadata: in the spec, missing from the SDK":
+    DROPPED_SNAPSHOT_METADATA,
+  "TaskRun.agentConfig.metadata: in the spec, missing from the SDK":
+    DROPPED_SNAPSHOT_METADATA,
+};
 
 type Root = object;
 

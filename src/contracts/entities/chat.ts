@@ -339,7 +339,7 @@ export const chatRequestBodySchema = z
     metadata: metadataSchema
       .optional()
       .describe(
-        "Your own key-value data. Recorded on a new session and on the turn's usage. An omitted value records the session's metadata on the turn's usage."
+        "Your own key-value data. Recorded on a new session and on the turn's usage. An omitted value records the session's metadata on the turn's usage. At most 128 KiB as JSON."
       ),
     /**
      * `chatFunctionDefinitionsSchema` validates the value; `z.custom` is opaque
@@ -427,7 +427,9 @@ export const generationRequestBodySchema = z
       .describe("Your end user's ID, used for usage attribution."),
     metadata: metadataSchema
       .default({})
-      .describe("Your own key-value data, recorded with the usage."),
+      .describe(
+        "Your own key-value data, recorded with the usage. At most 128 KiB as JSON."
+      ),
   })
   .strict()
   .refine(

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_METADATA_BYTES } from "../limitations.ts";
 
 /**
  * End-user attribution — the uniform ownership dimension on every
@@ -13,7 +14,14 @@ import { z } from "zod";
  */
 export const userIdSchema = z.string();
 
-export const metadataSchema = z.record(z.string(), z.unknown());
+export const metadataSchema = z
+  .record(z.string(), z.unknown())
+  .refine(
+    (metadata) =>
+      new TextEncoder().encode(JSON.stringify(metadata)).length <=
+      MAX_METADATA_BYTES,
+    { message: "Metadata must be at most 128 KiB as JSON." }
+  );
 
 /**
  * The create-body shape for an attributed resource: both fields optional

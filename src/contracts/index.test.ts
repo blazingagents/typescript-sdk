@@ -4,6 +4,7 @@ import * as contracts from "./index.ts";
 
 const publicContractNames = [
   "calendarDateSchema",
+  "instantSchema",
   "nextSpendingLimitReset",
   "spendingLimitPeriodSchema",
   "spendingLimitResetIntervalSchema",

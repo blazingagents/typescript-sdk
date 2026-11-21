@@ -17,6 +17,24 @@ describe("schedule config schemas", () => {
     ).toStrictEqual({ expression: "0 9 * * 1-5", timezone: "UTC" });
   });
 
+  it("refuses a once time PostgreSQL's timestamptz cannot hold", () => {
+    expect(
+      taskOnceConfigSchema.safeParse({ at: "0001-01-01T00:00:00Z" }).success
+    ).toBe(true);
+    expect(
+      taskOnceConfigSchema.safeParse({ at: "2026-01-01T00:00:00+15:59" })
+        .success
+    ).toBe(true);
+    for (const at of [
+      "0000-01-01T00:00:00Z",
+      "0001-01-01T00:00:00+05:00",
+      "2026-01-01T00:00:00+16:00",
+      "2026-01-01T00:00:00-23:59",
+    ]) {
+      expect(taskOnceConfigSchema.safeParse({ at }).success).toBe(false);
+    }
+  });
+
   it("defaults cron timezone to UTC", () => {
     expect(
       taskCronConfigSchema.parse({ expression: "0 9 * * *" })

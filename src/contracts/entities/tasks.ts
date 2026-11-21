@@ -13,7 +13,11 @@ import {
   MAX_TASK_PROMPT_LENGTH,
   MIN_TASK_INTERVAL_MS,
 } from "../limitations.ts";
-import { atLeastOneFieldMessage, hasObjectKeys } from "../utils.ts";
+import {
+  atLeastOneFieldMessage,
+  hasObjectKeys,
+  instantSchema,
+} from "../utils.ts";
 import { agentConfigSchema } from "./agents.ts";
 import { metadataSchema, userIdSchema } from "./attribution.ts";
 import { sessionMessagesResponseSchema } from "./sessions.ts";
@@ -26,7 +30,7 @@ export const taskScheduleKindSchema = z.enum(["once", "interval", "cron"]);
 
 export const taskOnceConfigSchema = z
   .object({
-    at: z.iso.datetime({ offset: true }),
+    at: instantSchema,
   })
   .strict();
 

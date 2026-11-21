@@ -43,6 +43,22 @@ describe("metadataSchema", () => {
     expect(Object.prototype).not.toHaveProperty("polluted");
   });
 
+  it("accepts 128 KiB of JSON and refuses one byte more, counted in UTF-8", () => {
+    const empty = JSON.stringify({ note: "" }).length;
+    expect(
+      metadataSchema.safeParse({ note: "x".repeat(128 * 1024 - empty) }).success
+    ).toBe(true);
+    expect(
+      metadataSchema.safeParse({ note: "x".repeat(128 * 1024 - empty + 1) })
+        .success
+    ).toBe(false);
+    expect(
+      metadataSchema.safeParse({
+        note: "é".repeat(Math.ceil((128 * 1024 - empty) / 2)),
+      }).success
+    ).toBe(false);
+  });
+
   it("rejects non-objects", () => {
     expect(metadataSchema.safeParse("nope").success).toBe(false);
     expect(metadataSchema.safeParse([1, 2]).success).toBe(false);

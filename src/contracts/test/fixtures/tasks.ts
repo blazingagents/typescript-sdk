@@ -30,7 +30,6 @@ export const agentConfigFixture: AgentConfig = {
   autoCompaction: true,
   compactionReserveTokens: 16_384,
   memoryInjectionEnabled: false,
-  metadata: {},
 };
 
 export function createTaskFixture(overrides: Partial<Task> = {}): Task {

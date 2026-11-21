@@ -136,7 +136,7 @@ const taskFieldDescriptions = {
   userId:
     "Your end user's ID, used for attribution. An empty string means a tenant-level task. It cannot change after creation.",
   metadata:
-    "Your own key-value data, returned unchanged and copied to each run.",
+    "Your own key-value data, returned unchanged and copied to each run. At most 128 KiB as JSON.",
 } as const;
 
 export const createTaskBodySchema = z
@@ -177,7 +177,9 @@ export const updateTaskBodySchema = z
     enabled: z.boolean().optional().describe(taskFieldDescriptions.enabled),
     metadata: metadataSchema
       .optional()
-      .describe("Your own key-value data. Replaces the current metadata."),
+      .describe(
+        "Your own key-value data. Replaces the current metadata. At most 128 KiB as JSON."
+      ),
   })
   .strict()
   .refine(hasObjectKeys, {

@@ -66,7 +66,9 @@ export const createWorkspaceBodySchema = z
       ),
     metadata: metadataSchema
       .default({})
-      .describe("Your own key-value data, returned as sent."),
+      .describe(
+        "Your own key-value data, returned as sent. At most 128 KiB as JSON."
+      ),
     networkPolicy: workspaceNetworkPolicySchema
       .default({ mode: "unrestricted" })
       .describe(networkPolicyDescription),
@@ -83,7 +85,7 @@ export const updateWorkspaceBodySchema = z
       ),
     metadata: metadataSchema
       .optional()
-      .describe("Replaces the workspace's metadata."),
+      .describe("Replaces the workspace's metadata. At most 128 KiB as JSON."),
     networkPolicy: workspaceNetworkPolicySchema
       .optional()
       .describe(`Replaces the network policy. ${networkPolicyDescription}`),

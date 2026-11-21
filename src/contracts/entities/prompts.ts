@@ -98,7 +98,8 @@ const promptFieldDescriptions = {
     "Message template, up to 10,240 characters. Mark each variable as `{{name}}`; names match `[A-Za-z_][A-Za-z0-9_]*`, and a template can use up to 10 of them.",
   agentId:
     "ID of an agent in your tenant to link the prompt to, or `null` for no link. Deleting the agent also deletes its linked prompts.",
-  metadata: "Your own key-value data, returned unchanged.",
+  metadata:
+    "Your own key-value data, returned unchanged. At most 128 KiB as JSON.",
 } as const;
 
 export const promptsListQuerySchema = z

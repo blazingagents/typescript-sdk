@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `instantSchema` is new. It is `z.iso.datetime({ offset: true })` without what PostgreSQL's `timestamptz` cannot hold: year `0000`, an instant before year `0001` in UTC, and an offset of 16 hours or more. A `once` schedule's `at` takes it, so `0000-01-01T00:00:00Z`, `0001-01-01T00:00:00+05:00` and `2026-01-01T00:00:00+23:59` are refused as `validation_failed` where the API answered `500`.
+
 ## 0.57.0
 
 The API's shapes follow one rule per subject, so a list, a record, a retry and a missing record read the same on every resource. Each change below breaks the call it names.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { calendarDateSchema } from "../utils.ts";
 
 export const spendingLimitResetIntervalSchema = z.enum([
   "daily",
@@ -9,7 +10,7 @@ export const spendingLimitResetIntervalSchema = z.enum([
 export const spendingLimitSchema = z
   .object({
     amountUsd: z.number().positive().max(1_000_000_000).multipleOf(0.000_001),
-    resetStartDate: z.iso.date(),
+    resetStartDate: calendarDateSchema,
     resetInterval: spendingLimitResetIntervalSchema,
   })
   .strict()

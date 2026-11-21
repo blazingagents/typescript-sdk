@@ -6,7 +6,7 @@ import {
   MAX_USAGE_OVERVIEW_TOP_N,
   MAX_USAGE_RANGE_DAYS,
 } from "../limitations.ts";
-import { hasUniqueValues } from "../utils.ts";
+import { calendarDateSchema, hasUniqueValues } from "../utils.ts";
 import { userIdSchema } from "./attribution.ts";
 
 /**
@@ -45,14 +45,12 @@ function validateUsageRange(
 }
 
 const usageRangeFields = {
-  from: z.iso
-    .date()
+  from: calendarDateSchema
     .optional()
     .describe(
       "First UTC day to include, as `YYYY-MM-DD`. Send it with `to`, or leave both out for the last 30 days ending today."
     ),
-  to: z.iso
-    .date()
+  to: calendarDateSchema
     .optional()
     .describe(
       `Last UTC day to include, as \`YYYY-MM-DD\`. It must not be before \`from\` and can be at most ${MAX_USAGE_RANGE_DAYS} days after it.`

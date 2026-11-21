@@ -17,8 +17,11 @@ import {
 const sessionId = "ss_xxxxxxxxxxxxxxxx";
 const iso = "2026-07-04T00:00:00.000Z";
 
+const tenantId = "ten_xxxxxxxxxxxxxxxx";
+
 const baseSession = {
   id: sessionId,
+  tenantId,
   messageCount: 3,
   lastMessagePreview: "Hello",
   userId: "",
@@ -86,6 +89,18 @@ describe("sessionListItemSchema", () => {
     ).toBe(true);
   });
 
+  it("requires the Tenant ID", () => {
+    expect(
+      sessionListItemSchema.safeParse({ ...baseSession, tenantId: undefined })
+        .success
+    ).toBe(false);
+    expect(
+      sessionListItemSchema.safeParse({ ...baseSession, tenantId: "nope" })
+        .success
+    ).toBe(false);
+    expect(sessionListItemSchema.parse(baseSession).tenantId).toBe(tenantId);
+  });
+
   it("strips fields outside the public Session projection", () => {
     expect(
       sessionListItemSchema.parse({
@@ -93,12 +108,6 @@ describe("sessionListItemSchema", () => {
         agentId: "ag_xxxxxxxxxxxxxxxx",
       })
     ).not.toHaveProperty("agentId");
-    expect(
-      sessionListItemSchema.parse({
-        ...baseSession,
-        tenantId: "ten_xxxxxxxxxxxxxxxx",
-      })
-    ).not.toHaveProperty("tenantId");
     expect(
       sessionListItemSchema.parse({ ...baseSession, extra: true })
     ).not.toHaveProperty("extra");

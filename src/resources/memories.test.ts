@@ -50,13 +50,13 @@ describe("client.memories", () => {
   });
 
   it("create posts to /v1/agents/:agentId/memories", async () => {
-    const { fetch, calls } = createMockFetch({ body: { memory: memoryRow } });
+    const { fetch, calls } = createMockFetch({ body: memoryRow });
     const c = client(fetch);
     const result = await c.memories.create({
       agentId,
       text: "Prefers dark mode",
     });
-    expect(result.memory.id).toBe(memoryId);
+    expect(result.id).toBe(memoryId);
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].url).toBe(`${BASE}/v1/agents/${agentId}/memories`);
     const body = JSON.parse(calls[0].init?.body as string);
@@ -65,7 +65,7 @@ describe("client.memories", () => {
 
   it("create threads the userId partition into the body", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { memory: { ...memoryRow, userId: "user-42" } },
+      body: { ...memoryRow, userId: "user-42" },
     });
     const c = client(fetch);
     const result = await c.memories.create({
@@ -73,23 +73,23 @@ describe("client.memories", () => {
       text: "Prefers dark mode",
       userId: "user-42",
     });
-    expect(result.memory.userId).toBe("user-42");
+    expect(result.userId).toBe("user-42");
     const body = JSON.parse(calls[0].init?.body as string);
     expect(body.userId).toBe("user-42");
   });
 
   it("get gets /v1/agents/:agentId/memories/:memoryId", async () => {
-    const { fetch, calls } = createMockFetch({ body: { memory: memoryRow } });
+    const { fetch, calls } = createMockFetch({ body: memoryRow });
     const c = client(fetch);
     const result = await c.memories.get({ agentId, memoryId });
-    expect(result.memory.text).toBe("Prefers dark mode");
+    expect(result.text).toBe("Prefers dark mode");
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/memories/${memoryId}`
     );
   });
 
   it("update PATCHes /v1/agents/:agentId/memories/:memoryId with { text }", async () => {
-    const { fetch, calls } = createMockFetch({ body: { memory: memoryRow } });
+    const { fetch, calls } = createMockFetch({ body: memoryRow });
     const c = client(fetch);
     const controller = new AbortController();
     await c.memories.update({
@@ -118,10 +118,17 @@ describe("client.memories", () => {
   });
 
   it("rejects malformed success payloads", async () => {
-    const { fetch } = createMockFetch({ body: { memory: { id: 1 } } });
+    const { fetch } = createMockFetch({ body: { id: 1 } });
     await expect(
       client(fetch).memories.get({ agentId, memoryId })
     ).rejects.toBeDefined();
+  });
+
+  it("rejects a record still wrapped under memory", async () => {
+    const { fetch } = createMockFetch({ body: { memory: memoryRow } });
+    await expect(
+      client(fetch).memories.get({ agentId, memoryId })
+    ).rejects.toMatchObject({ code: "invalid_response" });
   });
 
   it("rejects malformed list payloads", async () => {

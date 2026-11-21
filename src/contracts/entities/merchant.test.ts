@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   createMerchantConnectionBodySchema,
+  merchantBindingsResponseSchema,
+  merchantConnectionResponseSchema,
   merchantConnectionSchema,
   merchantCustomerBindingSchema,
   merchantGuardSchema,
   merchantUsageEventNextAction,
   merchantUsageEventSchema,
+  merchantUsageEventsResponseSchema,
   merchantUsageSummarySchema,
   updateMerchantConnectionBodySchema,
 } from "./merchant.ts";
@@ -14,6 +17,7 @@ const iso = "2026-09-01T00:00:00.000Z";
 
 const connection = {
   id: "mch_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   provider: "polar",
   environment: "sandbox",
   merchantAccountId: "org_test_account",
@@ -26,6 +30,7 @@ const connection = {
 
 const usageEvent = {
   id: "mev_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   turnId: "turn_0123456789abcdef",
   connectionId: "mch_0123456789abcdef",
   provider: "polar",
@@ -58,6 +63,13 @@ describe("merchantConnectionSchema", () => {
     );
   });
 
+  it("requires the Tenant ID", () => {
+    expect(
+      merchantConnectionSchema.safeParse({ ...connection, tenantId: undefined })
+        .success
+    ).toBe(false);
+  });
+
   it("strips extra fields and never carries a credential", () => {
     const parsed = merchantConnectionSchema.parse({
       ...connection,
@@ -70,6 +82,20 @@ describe("merchantConnectionSchema", () => {
     expect(
       merchantConnectionSchema.safeParse({ ...connection, id: "bad" }).success
     ).toBe(false);
+  });
+});
+
+describe("merchantConnectionResponseSchema", () => {
+  it("wraps the connection under connection", () => {
+    expect(
+      merchantConnectionResponseSchema.parse({ connection })
+    ).toStrictEqual({ connection });
+  });
+
+  it("answers null while no connection exists", () => {
+    expect(
+      merchantConnectionResponseSchema.parse({ connection: null })
+    ).toStrictEqual({ connection: null });
   });
 });
 
@@ -152,15 +178,39 @@ describe("merchant connection bodies", () => {
   });
 });
 
+const binding = {
+  userId: "user-1",
+  customerId: "cust_polar_1",
+  createdAt: iso,
+  updatedAt: iso,
+};
+
 describe("merchantCustomerBindingSchema", () => {
   it("parses a binding", () => {
-    const binding = {
-      userId: "user-1",
-      customerId: "cust_polar_1",
-      createdAt: iso,
-      updatedAt: iso,
-    };
     expect(merchantCustomerBindingSchema.parse(binding)).toStrictEqual(binding);
+  });
+});
+
+describe("merchantBindingsResponseSchema", () => {
+  it("pages bindings under data with a nullable next cursor", () => {
+    expect(
+      merchantBindingsResponseSchema.parse({
+        data: [binding],
+        nextCursor: "cursor-2",
+      })
+    ).toStrictEqual({ data: [binding], nextCursor: "cursor-2" });
+    expect(
+      merchantBindingsResponseSchema.parse({ data: [], nextCursor: null })
+    ).toStrictEqual({ data: [], nextCursor: null });
+  });
+
+  it("rejects the removed bindings key", () => {
+    expect(
+      merchantBindingsResponseSchema.safeParse({
+        bindings: [binding],
+        nextCursor: null,
+      }).success
+    ).toBe(false);
   });
 });
 
@@ -189,6 +239,13 @@ describe("merchantUsageEventSchema", () => {
     ).toBe(false);
   });
 
+  it("requires the Tenant ID", () => {
+    expect(
+      merchantUsageEventSchema.safeParse({ ...usageEvent, tenantId: undefined })
+        .success
+    ).toBe(false);
+  });
+
   it("drops the removed workflowIssue field", () => {
     expect(
       merchantUsageEventSchema.parse({
@@ -196,6 +253,26 @@ describe("merchantUsageEventSchema", () => {
         workflowIssue: "recovery_exhausted",
       })
     ).toStrictEqual(usageEvent);
+  });
+});
+
+describe("merchantUsageEventsResponseSchema", () => {
+  it("pages events under data with a nullable next cursor", () => {
+    expect(
+      merchantUsageEventsResponseSchema.parse({
+        data: [usageEvent],
+        nextCursor: null,
+      })
+    ).toStrictEqual({ data: [usageEvent], nextCursor: null });
+  });
+
+  it("rejects the removed events key", () => {
+    expect(
+      merchantUsageEventsResponseSchema.safeParse({
+        events: [usageEvent],
+        nextCursor: null,
+      }).success
+    ).toBe(false);
   });
 });
 

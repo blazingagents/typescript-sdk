@@ -133,7 +133,7 @@ const requests: [
   [
     "agents.delete",
     (c, o) =>
-      c.agents.delete({ agentId: "agent", includeArtifacts: true, ...o }),
+      c.agents.delete({ agentId: "agent", deleteArtifacts: true, ...o }),
   ],
   ["agents.enable", (c, o) => c.agents.enable({ agentId: "agent", ...o })],
   ["agents.disable", (c, o) => c.agents.disable({ agentId: "agent", ...o })],

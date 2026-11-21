@@ -155,7 +155,7 @@ describe("installed SDK consumer contract", () => {
 
       if (
         request.url === `/v1/workspaces/${workspace.id}` &&
-        request.method === "PUT"
+        request.method === "PATCH"
       ) {
         response.writeHead(200, { "content-type": "application/json" });
         response.end(
@@ -174,7 +174,7 @@ describe("installed SDK consumer contract", () => {
       }
 
       if (
-        request.method === "PUT" &&
+        request.method === "PATCH" &&
         request.url === `/v1/agents/${agent.id}`
       ) {
         response.writeHead(200, { "content-type": "application/json" });
@@ -245,17 +245,19 @@ describe("installed SDK consumer contract", () => {
       ) {
         response.writeHead(201, { "content-type": "application/json" });
         response.end(
-          JSON.stringify([
-            {
-              agentId: "ag_1111111111111111",
-              skill: {
-                ...skill,
+          JSON.stringify({
+            data: [
+              {
                 agentId: "ag_1111111111111111",
-                id: "skill_1111111111111111",
+                skill: {
+                  ...skill,
+                  agentId: "ag_1111111111111111",
+                  id: "skill_1111111111111111",
+                },
+                status: "created",
               },
-              status: "created",
-            },
-          ])
+            ],
+          })
         );
         return;
       }
@@ -502,17 +504,19 @@ describe("installed SDK consumer contract", () => {
       skillId: skill.id,
       to: { agentIds: ["ag_1111111111111111"] },
     });
-    expect(copyResults).toEqual([
-      {
-        agentId: "ag_1111111111111111",
-        skill: {
-          ...skill,
+    expect(copyResults).toEqual({
+      data: [
+        {
           agentId: "ag_1111111111111111",
-          id: "skill_1111111111111111",
+          skill: {
+            ...skill,
+            agentId: "ag_1111111111111111",
+            id: "skill_1111111111111111",
+          },
+          status: "created",
         },
-        status: "created",
-      },
-    ]);
+      ],
+    });
 
     await expect(skills.delete({ skillId: skill.id })).resolves.toBeUndefined();
     await expect(

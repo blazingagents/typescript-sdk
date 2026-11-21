@@ -53,7 +53,7 @@ describe("session input contracts", () => {
   );
 
   it("retains native message fields and message contents on not-placed receipts", () => {
-    const data = {
+    const input = {
       ...receipt,
       state: "not_placed",
       reason: "stopped",
@@ -70,8 +70,14 @@ describe("session input contracts", () => {
       },
     };
     expect(
-      sessionInputResponseSchema.parse({ data, activity, future: true })
-    ).toEqual({ data, activity });
+      sessionInputResponseSchema.parse({ input, activity, future: true })
+    ).toEqual({ input, activity });
+  });
+
+  it("rejects the removed data key on a single receipt", () => {
+    expect(
+      sessionInputResponseSchema.safeParse({ data: receipt, activity }).success
+    ).toBe(false);
   });
 
   it.each(["accepted", "committed", "not_placed"])(
@@ -105,9 +111,9 @@ describe("session input contracts", () => {
     { ...receipt, sequence: 0 },
     { ...receipt, state: "applied" },
     { ...receipt, message: { ...message, role: "assistant" } },
-  ])("rejects malformed receipts %j", (data) => {
+  ])("rejects malformed receipts %j", (input) => {
     expect(
-      sessionInputResponseSchema.safeParse({ data, activity }).success
+      sessionInputResponseSchema.safeParse({ input, activity }).success
     ).toBe(false);
   });
 

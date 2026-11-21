@@ -21,7 +21,7 @@ export const artifactFilenameSchema = z
  */
 export const artifactListItemSchema = z
   .object({
-    artifactId: artifactIdSchema,
+    id: artifactIdSchema,
     agentId: agentIdSchema,
     tenantId: tenantIdSchema,
     sessionId: sessionIdSchema,

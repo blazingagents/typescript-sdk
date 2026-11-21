@@ -172,7 +172,7 @@ const storedPage = [
 ];
 
 const steerReceipt = {
-  data: {
+  input: {
     requestId: "steer-1",
     sequence: 1,
     message,

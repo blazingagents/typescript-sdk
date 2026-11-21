@@ -5,6 +5,7 @@ import {
   agentsListQuerySchema,
   agentsResponseSchema,
 } from "./entities/agents.ts";
+import { providersResponseSchema } from "./entities/providers.ts";
 
 describe("known error codes", () => {
   it("types the contract's codes and the client's own, and no other string", () => {
@@ -107,5 +108,20 @@ describe("paginated list envelopes", () => {
       agentsResponseSchema.parse({ data: [], nextCursor: null, extra: true })
     ).not.toHaveProperty("extra");
     expect(agentsResponseSchema.safeParse({ data: [] }).success).toBe(false);
+  });
+});
+
+describe("whole-list envelopes", () => {
+  it("carry every record under data and no cursor", () => {
+    expect(
+      providersResponseSchema.parse({ data: [], nextCursor: "next" })
+    ).toStrictEqual({ data: [] });
+  });
+
+  it("require data and refuse the removed providers key", () => {
+    expect(providersResponseSchema.safeParse({}).success).toBe(false);
+    expect(providersResponseSchema.safeParse({ providers: [] }).success).toBe(
+      false
+    );
   });
 });

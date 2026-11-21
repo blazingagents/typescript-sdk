@@ -35,12 +35,6 @@ export const memorySchema = z
   })
   .strip();
 
-export const memoryResponseSchema = z
-  .object({
-    memory: memorySchema,
-  })
-  .strip();
-
 export const memoriesListResponseSchema = paginatedResponseSchema(memorySchema);
 
 export const createMemoryBodySchema = z
@@ -62,7 +56,6 @@ export const updateMemoryBodySchema = z
   })
   .strict();
 export type Memory = z.infer<typeof memorySchema>;
-export type MemoryResponse = z.infer<typeof memoryResponseSchema>;
 export type MemoriesListResponse = z.infer<typeof memoriesListResponseSchema>;
 export type CreateMemoryBody = z.input<typeof createMemoryBodySchema>;
 export type UpdateMemoryBody = z.infer<typeof updateMemoryBodySchema>;

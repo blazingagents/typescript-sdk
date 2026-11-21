@@ -17,6 +17,7 @@ it("forks through the installed package and exposes typed child fields", async (
   };
   const child: SessionResponse = sessionResponseSchema.parse({
     id: "ss_child01234567890",
+    tenantId: "ten_0123456789abcdef",
     messageCount: 2,
     lastMessagePreview: "hello",
     userId: "user",

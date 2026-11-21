@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { mcpConnectionIdSchema } from "../ids.ts";
+import { listResponseSchema } from "../api.ts";
+import { mcpConnectionIdSchema, tenantIdSchema } from "../ids.ts";
 import {
   MAX_MCP_ATTACHMENT_METADATA_KEY_LENGTH,
   MAX_MCP_ATTACHMENT_METADATA_KEYS,
@@ -123,6 +124,7 @@ const authTypeDescription =
 export const mcpConnectionResponseSchema = z
   .object({
     id: mcpConnectionIdSchema,
+    tenantId: tenantIdSchema,
     name: mcpConnectionNameSchema,
     url: mcpConnectionUrlSchema,
     authType: mcpConnectionAuthTypeSchema,
@@ -137,11 +139,9 @@ export const mcpConnectionResponseSchema = z
   })
   .strip();
 
-export const mcpConnectionsResponseSchema = z
-  .object({
-    mcpConnections: z.array(mcpConnectionResponseSchema),
-  })
-  .strip();
+export const mcpConnectionsResponseSchema = listResponseSchema(
+  mcpConnectionResponseSchema
+);
 
 export const forwardedMetadataKeysSchema = z
   .array(z.string().min(1).max(MAX_MCP_ATTACHMENT_METADATA_KEY_LENGTH))
@@ -160,11 +160,9 @@ export const mcpAttachmentResponseSchema = z
   })
   .strip();
 
-export const mcpAttachmentsResponseSchema = z
-  .object({
-    mcpAttachments: z.array(mcpAttachmentResponseSchema),
-  })
-  .strip();
+export const mcpAttachmentsResponseSchema = listResponseSchema(
+  mcpAttachmentResponseSchema
+);
 
 export const updateMcpAttachmentBodySchema = z
   .object({

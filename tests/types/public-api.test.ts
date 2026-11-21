@@ -40,6 +40,7 @@ const config: AgentConfig = agentConfigSchema.parse({
 });
 const session: SessionResponse = sessionResponseSchema.parse({
   id: "ss_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   messageCount: 0,
   lastMessagePreview: null,
   userId: "",
@@ -295,6 +296,50 @@ sdk.tasks
     finishedAt: messages.finishedAt,
     status: messages.status,
   }));
+sdk.tasks
+  .create({
+    agentId: "ag_0123456789abcdef",
+    name: "nightly",
+    prompt: "run",
+    idempotencyKey: "creation-key",
+  })
+  .then(({ task }) => task.id.toUpperCase());
+// @ts-expect-error a run's idempotency key is the only field besides its Task
+sdk.tasks.createRun({ taskId: "tk_0123456789abcdef", prompt: "run" });
+sdk.providers
+  .list()
+  .then(({ data }) => data.map((provider) => provider.tenantId.toUpperCase()));
+sdk.providers
+  .listModels({ providerId: "prv_0123456789abcdef" })
+  .then(({ data }) => data.map((model) => model.id.toUpperCase()));
+sdk.mcpConnections
+  .list()
+  .then(({ data }) => data.map((connection) => connection.tenantId));
+sdk.chatConnections.list().then(({ data }) => data.map((c) => c.id));
+sdk.memories
+  .get({ agentId: "ag_0123456789abcdef", memoryId: "mem_0123456789abcdef" })
+  .then((memory) => memory.text.toUpperCase());
+sdk.memories
+  .get({ agentId: "ag_0123456789abcdef", memoryId: "mem_0123456789abcdef" })
+  // @ts-expect-error a Memory is returned bare, with no memory wrapper
+  .then((memory) => memory.memory);
+sdk.merchantConnection
+  .create({
+    credential: "polar_oat_secret",
+    environment: "sandbox",
+    provider: "polar",
+  })
+  .then((connection) => connection.tenantId.toUpperCase());
+sdk.merchantConnection.get().then(({ connection }) => connection?.tenantId);
+sdk.merchantBindings
+  .put({ userId: "user-1", customerId: "cust_1" })
+  .then((binding) => binding.customerId.toUpperCase());
+sdk.merchantUsageEvents
+  .get({ eventId: "mev_0123456789abcdef" })
+  .then((event) => event.tenantId.toUpperCase());
+sdk.merchantUsageEvents
+  .summary()
+  .then((summary) => summary.counts.pending.toFixed(0));
 // @ts-expect-error unknown task fields are rejected
 sdk.tasks.update({ taskId: "tk_0123456789abcdef", unknown: true });
 sdk
@@ -364,6 +409,9 @@ sdk.chat({
 });
 // @ts-expect-error deletion requires an explicit artifact choice
 sdk.agents.delete({ agentId: "ag_0123456789abcdef", abortSignal });
+sdk.agents.delete({ agentId: "ag_0123456789abcdef", deleteArtifacts: true });
+// @ts-expect-error the artifact choice is named deleteArtifacts
+sdk.agents.delete({ agentId: "ag_0123456789abcdef", includeArtifacts: true });
 // @ts-expect-error Session deletion requires an explicit artifact choice
 sdk.sessions.delete({
   agentId: "ag_0123456789abcdef",

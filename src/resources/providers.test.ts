@@ -6,6 +6,7 @@ import { createMockFetch } from "../test/fixtures.ts";
 const BASE = "http://localhost:8787";
 const providerRow = {
   id: "prv_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   name: "OpenAI",
   providerType: "openai",
   baseUrl: null,
@@ -49,6 +50,7 @@ describe("client.providers", () => {
       apiKey: "sk-x",
     });
     expect(provider.id).toBe("prv_0123456789abcdef");
+    expect(provider.tenantId).toBe("ten_0123456789abcdef");
     expect(calls[0].url).toBe(`${BASE}/v1/providers`);
     expect(calls[0].init?.method).toBe("POST");
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
@@ -84,13 +86,14 @@ describe("client.providers", () => {
 
   it("list gets /v1/providers", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { providers: [providerRow] },
+      body: { data: [providerRow] },
     });
     const c = client(fetch);
     const result = await c.providers.list();
-    expect(result.providers).toEqual([
+    expect(result.data).toEqual([
       {
         id: providerRow.id,
+        tenantId: providerRow.tenantId,
         name: providerRow.name,
         providerType: providerRow.providerType,
         createdAt: providerRow.createdAt,
@@ -128,12 +131,12 @@ describe("client.providers", () => {
 
   it("listModels gets /v1/providers/:id/models", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { models: [{ id: "gpt-4.1" }] },
+      body: { data: [{ id: "gpt-4.1" }] },
     });
     const result = await client(fetch).providers.listModels({
       providerId: "prv_0123456789abcdef",
     });
-    expect(result.models).toEqual([{ id: "gpt-4.1" }]);
+    expect(result.data).toEqual([{ id: "gpt-4.1" }]);
     expect(calls[0].url).toBe(
       `${BASE}/v1/providers/prv_0123456789abcdef/models`
     );

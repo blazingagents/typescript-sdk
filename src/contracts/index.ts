@@ -127,14 +127,12 @@ export type {
 export {
   createMemoryBodySchema,
   memoriesListResponseSchema,
-  memoryResponseSchema,
   memorySchema,
   memoryTextSchema,
   updateMemoryBodySchema,
 } from "./entities/memories.ts";
 export {
   createMerchantConnectionBodySchema,
-  merchantBindingResponseSchema,
   merchantBindingsResponseSchema,
   merchantConnectionResponseSchema,
   merchantConnectionSchema,
@@ -144,12 +142,10 @@ export {
   merchantProviderSchema,
   merchantUsageEventNextAction,
   merchantUsageEventNextActionSchema,
-  merchantUsageEventResponseSchema,
   merchantUsageEventSchema,
   merchantUsageEventStatusSchema,
   merchantUsageEventsResponseSchema,
   merchantUsageSummaryQuerySchema,
-  merchantUsageSummaryResponseSchema,
   merchantUsageSummarySchema,
   updateMerchantConnectionBodySchema,
   upsertMerchantBindingBodySchema,
@@ -267,7 +263,6 @@ export type {
 export {
   createTaskBodySchema,
   createTaskResponseSchema,
-  createTaskRunBodySchema,
   createTaskRunResponseSchema,
   taskCronConfigSchema,
   taskIntervalConfigSchema,

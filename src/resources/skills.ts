@@ -10,6 +10,7 @@ import {
 } from "../contracts/entities/skills.ts";
 import {
   apiPath,
+  idempotencyHeaders,
   isRequestAborted,
   requestAbortedError,
   requestJson,
@@ -113,17 +114,6 @@ export interface AgentSkillsResource {
 export interface SkillsListOptions extends ResourceRequestOptions {
   cursor?: string;
   limit?: number;
-}
-
-/**
- * Builds the `Idempotency-Key` header, or none when the caller set no key.
- */
-function idempotencyHeaders(
-  idempotencyKey: string | undefined
-): Record<string, string> | undefined {
-  return idempotencyKey === undefined
-    ? undefined
-    : { "Idempotency-Key": idempotencyKey };
 }
 
 /**

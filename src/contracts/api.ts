@@ -39,6 +39,14 @@ export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
 export const cursorSchema = z.string().trim().min(1);
 
 /**
+ * Creates a schema for a whole list, which no cursor pages.
+ * @param itemSchema - Item Schema.
+ */
+export function listResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
+  return z.object({ data: z.array(itemSchema) }).strip();
+}
+
+/**
  * Creates a schema for a data page and nullable next cursor.
  * @param itemSchema - Item Schema.
  */

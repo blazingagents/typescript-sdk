@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased
+
+The API's shapes follow one rule per subject, so a list, a record, a retry and a missing record read the same on every resource. Each change below breaks the call it names.
+
+### Changed
+
+- Every list returns its records under `data`. `providers.list()`, `providers.listModels()`, `mcpConnections.list()`, `chatConnections.list()` and `agents.listMcpAttachments()` return `{ data }`, and `merchantBindings.list()` and `merchantUsageEvents.list()` return `{ data, nextCursor }`. `skills.copy()` returns `{ data }` in place of a bare array.
+
+  ```ts
+  const { data: providers } = await client.providers.list();
+  const { data: results } = await client.agent({ agentId }).skills.copy({ skillId, to: { agentIds } });
+  ```
+
+- A single record comes back bare. `memories.create()`, `get()` and `update()` return the `Memory`, `merchantBindings.put()` the `MerchantCustomerBinding`, `merchantUsageEvents.get()`, `retry()` and `discard()` the `MerchantUsageEvent`, `merchantUsageEvents.summary()` the `MerchantUsageSummary`, and `merchantConnection.create()` and `update()` the `MerchantConnection`. `merchantConnection.get()` still returns `{ connection }`, which is `null` while you have none.
+
+  ```ts
+  const memory = await client.memories.get({ agentId, memoryId }); // was (await ...).memory
+  ```
+
+- `sessions.submitInput()` returns `{ input, activity }`, where it returned `{ data, activity }`.
+- An artifact's ID is `id`, where it was `artifactId`. Methods still take `artifactId`.
+- Providers, MCP connections, sessions, the merchant connection and merchant usage events carry `tenantId`, like every other record.
+- `agents.update()` and `workspaces.update()` send `PATCH`, since they change only the fields you send.
+- `agents.delete()` takes `deleteArtifacts`, the name `sessions.delete()` uses, where it took `includeArtifacts`.
+- `tasks.create()` and `tasks.createRun()` send `idempotencyKey` as the `Idempotency-Key` header, as skills and forks do; `createRun()` sends no body. The option keeps its name.
+- A record the path names answers `404 not_found` when it is missing: a provider, a workspace, a skill, the merchant connection, a merchant binding or a merchant usage event. A record a request reaches through another keeps its own code, such as `provider_not_found` for an agent's provider on a turn. An MCP connection an agent lists is `404 mcp_connection_not_found`, and a model its provider does not offer is `422 model_not_found`.
+
+### Added
+
+- `artifacts.list()` takes `limit`, from 1 to 100.
+
+### Removed
+
+- `memoryResponseSchema`, `merchantBindingResponseSchema`, `merchantUsageEventResponseSchema`, `merchantUsageSummaryResponseSchema`, `createTaskRunBodySchema` and their types. Use `memorySchema`, `merchantCustomerBindingSchema`, `merchantUsageEventSchema` and `merchantUsageSummarySchema`.
+- The error codes `skill_not_found`, `merchant_connection_not_found`, `merchant_binding_not_found`, `merchant_event_not_found` and `agent_mcp_connection_not_found`. Read `not_found`, or `mcp_connection_not_found` for an agent's MCP connection.
+
 ## 0.56.1
 
 ### Fixed

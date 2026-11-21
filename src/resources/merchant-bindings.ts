@@ -1,8 +1,8 @@
 import {
-  type MerchantBindingResponse,
   type MerchantBindingsResponse,
-  merchantBindingResponseSchema,
+  type MerchantCustomerBinding,
   merchantBindingsResponseSchema,
+  merchantCustomerBindingSchema,
   type UpsertMerchantBindingBody,
 } from "../contracts/entities/merchant.ts";
 import { apiPath, requestJson } from "../http.ts";
@@ -37,14 +37,14 @@ export interface MerchantBindingsResource {
   /**
    * Validates and saves the end-user merchant binding.
    * @param input - `userId`; fields to change; optional abortSignal.
-   * @returns The merchant binding response.
+   * @returns The merchant binding.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   put(
     input: UpsertMerchantBindingBody & {
       userId: string;
     } & ResourceRequestOptions
-  ): Promise<MerchantBindingResponse>;
+  ): Promise<MerchantCustomerBinding>;
 }
 
 /**
@@ -72,7 +72,7 @@ export function createMerchantBindingsResource(
         config,
         apiPath`/v1/merchant-connection/bindings/${userId}`,
         { json: body, method: "PUT", signal: abortSignal },
-        merchantBindingResponseSchema
+        merchantCustomerBindingSchema
       );
     },
     async delete({ userId, abortSignal }) {

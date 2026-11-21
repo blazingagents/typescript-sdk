@@ -1,11 +1,11 @@
 import {
-  type MerchantUsageEventResponse,
+  type MerchantUsageEvent,
   type MerchantUsageEventStatus,
   type MerchantUsageEventsResponse,
-  type MerchantUsageSummaryResponse,
-  merchantUsageEventResponseSchema,
+  type MerchantUsageSummary,
+  merchantUsageEventSchema,
   merchantUsageEventsResponseSchema,
-  merchantUsageSummaryResponseSchema,
+  merchantUsageSummarySchema,
 } from "../contracts/entities/merchant.ts";
 import { apiPath, requestJson } from "../http.ts";
 import type { HttpConfig, ResourceRequestOptions } from "../types.ts";
@@ -25,21 +25,21 @@ export interface MerchantUsageEventsResource {
   /**
    * Discards the merchant usage event.
    * @param input - `eventId`; optional abortSignal.
-   * @returns The merchant usage event response.
+   * @returns The merchant usage event.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   discard(
     input: { eventId: string } & ResourceRequestOptions
-  ): Promise<MerchantUsageEventResponse>;
+  ): Promise<MerchantUsageEvent>;
   /**
    * Retrieves the merchant usage event.
    * @param input - `eventId`; optional abortSignal.
-   * @returns The merchant usage event response.
+   * @returns The merchant usage event.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   get(
     input: { eventId: string } & ResourceRequestOptions
-  ): Promise<MerchantUsageEventResponse>;
+  ): Promise<MerchantUsageEvent>;
   /**
    * Lists one page of merchant usage event records.
    * @param input - filters and pagination options.
@@ -52,21 +52,21 @@ export interface MerchantUsageEventsResource {
   /**
    * Sends a `failed` event, or a `pending` event whose delivery stopped, to the provider again. Blazing Agents retries a stopped delivery on its own after 5, 10, 20 and 40 minutes; after the fourth automatic retry the event stays `pending` until you retry it. Retrying is safe: the provider drops duplicates by the event ID.
    * @param input - `eventId`; optional abortSignal.
-   * @returns The merchant usage event response.
+   * @returns The merchant usage event.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   retry(
     input: { eventId: string } & ResourceRequestOptions
-  ): Promise<MerchantUsageEventResponse>;
+  ): Promise<MerchantUsageEvent>;
   /**
    * Retrieves merchant usage delivery totals for the selected day range.
    * @param input - Lookback window in `days` and optional abortSignal.
-   * @returns The merchant usage summary response.
+   * @returns The merchant usage summary.
    * @throws BlazingAgentsError - If the request fails, is aborted, or returns an invalid response.
    */
   summary(
     input?: { days?: number } & ResourceRequestOptions
-  ): Promise<MerchantUsageSummaryResponse>;
+  ): Promise<MerchantUsageSummary>;
 }
 
 /**
@@ -93,7 +93,7 @@ export function createMerchantUsageEventsResource(
         config,
         apiPath`/v1/merchant-usage-events/${eventId}`,
         { signal: abortSignal },
-        merchantUsageEventResponseSchema
+        merchantUsageEventSchema
       );
     },
     async summary({ abortSignal, ...query } = {}) {
@@ -101,7 +101,7 @@ export function createMerchantUsageEventsResource(
         config,
         "/v1/merchant-usage-events/summary",
         { query, signal: abortSignal },
-        merchantUsageSummaryResponseSchema
+        merchantUsageSummarySchema
       );
     },
     async retry({ eventId, abortSignal }) {
@@ -109,7 +109,7 @@ export function createMerchantUsageEventsResource(
         config,
         apiPath`/v1/merchant-usage-events/${eventId}/retry`,
         { method: "POST", signal: abortSignal },
-        merchantUsageEventResponseSchema
+        merchantUsageEventSchema
       );
     },
     async discard({ eventId, abortSignal }) {
@@ -117,7 +117,7 @@ export function createMerchantUsageEventsResource(
         config,
         apiPath`/v1/merchant-usage-events/${eventId}/discard`,
         { method: "POST", signal: abortSignal },
-        merchantUsageEventResponseSchema
+        merchantUsageEventSchema
       );
     },
   };

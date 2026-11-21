@@ -5,6 +5,7 @@ import { createMockFetch } from "../test/fixtures.ts";
 const BASE = "http://localhost:8787";
 const event = {
   id: "mev_0123456789abcdef",
+  tenantId: "ten_0123456789abcdef",
   turnId: "turn_0123456789abcdef",
   connectionId: "mch_0123456789abcdef",
   provider: "polar",
@@ -57,14 +58,14 @@ function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
 describe("client.merchantUsageEvents", () => {
   it("lists events with the status filter and pagination", async () => {
     const { fetch, calls } = createMockFetch({
-      body: { events: [event], nextCursor: "next" },
+      body: { data: [event], nextCursor: "next" },
     });
     const result = await client(fetch).merchantUsageEvents.list({
       cursor: "cursor 1",
       limit: 10,
       status: "pending",
     });
-    expect(result.events[0]?.id).toBe(event.id);
+    expect(result.data).toEqual([event]);
     expect(result.nextCursor).toBe("next");
     expect(calls[0].url).toBe(
       `${BASE}/v1/merchant-usage-events?cursor=cursor+1&limit=10&status=pending`
@@ -72,28 +73,29 @@ describe("client.merchantUsageEvents", () => {
   });
 
   it("gets a single event", async () => {
-    const { fetch, calls } = createMockFetch({ body: { event } });
+    const { fetch, calls } = createMockFetch({ body: event });
     const result = await client(fetch).merchantUsageEvents.get({
       eventId: event.id,
     });
-    expect(result.event.nextAction).toBe("wait");
+    expect(result.nextAction).toBe("wait");
+    expect(result.tenantId).toBe(event.tenantId);
     expect(calls[0].url).toBe(`${BASE}/v1/merchant-usage-events/${event.id}`);
   });
 
   it("summary passes the days window", async () => {
-    const { fetch, calls } = createMockFetch({ body: { summary } });
+    const { fetch, calls } = createMockFetch({ body: summary });
     const result = await client(fetch).merchantUsageEvents.summary({
       days: 7,
     });
-    expect(result.summary.counts.accepted).toBe(2);
-    expect(result.summary.daily[0]?.day).toBe("2026-09-01");
+    expect(result.counts.accepted).toBe(2);
+    expect(result.daily[0]?.day).toBe("2026-09-01");
     expect(calls[0].url).toBe(
       `${BASE}/v1/merchant-usage-events/summary?days=7`
     );
   });
 
   it("summary defaults to no query", async () => {
-    const { fetch, calls } = createMockFetch({ body: { summary } });
+    const { fetch, calls } = createMockFetch({ body: summary });
     await client(fetch).merchantUsageEvents.summary();
     expect(calls[0].url).toBe(`${BASE}/v1/merchant-usage-events/summary`);
   });
@@ -102,12 +104,12 @@ describe("client.merchantUsageEvents", () => {
     "%s posts to the event action",
     async (action) => {
       const { fetch, calls } = createMockFetch({
-        body: { event: { ...event, status: "pending" } },
+        body: { ...event, status: "pending" },
       });
       const result = await client(fetch).merchantUsageEvents[action]({
         eventId: event.id,
       });
-      expect(result.event.id).toBe(event.id);
+      expect(result.id).toBe(event.id);
       expect(calls[0].url).toBe(
         `${BASE}/v1/merchant-usage-events/${event.id}/${action}`
       );

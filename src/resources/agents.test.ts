@@ -249,7 +249,7 @@ describe("client.agents", () => {
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef`);
   });
 
-  it("update PUTs /v1/agents/:id", async () => {
+  it("update PATCHes /v1/agents/:id", async () => {
     const { fetch, calls } = createMockFetch({
       body: agentRow({ name: "Renamed" }),
     });
@@ -259,7 +259,7 @@ describe("client.agents", () => {
       name: "Renamed",
     });
     expect(agent.name).toBe("Renamed");
-    expect(calls[0].init?.method).toBe("PUT");
+    expect(calls[0].init?.method).toBe("PATCH");
     expect(calls[0].url).toBe(`${BASE}/v1/agents/ag_0123456789abcdef`);
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({
       name: "Renamed",
@@ -294,7 +294,7 @@ describe("client.agents", () => {
       updatedAt: timestamp,
     };
     const listed = createMockFetch({
-      body: { mcpAttachments: [attachment] },
+      body: { data: [attachment] },
     });
     const updated = createMockFetch({
       body: {
@@ -308,7 +308,7 @@ describe("client.agents", () => {
       client(listed.fetch).agents.listMcpAttachments({
         agentId: "ag_0123456789abcdef",
       })
-    ).resolves.toEqual({ mcpAttachments: [attachment] });
+    ).resolves.toEqual({ data: [attachment] });
     await expect(
       client(updated.fetch).agents.updateMcpAttachment({
         agentId: "ag_0123456789abcdef",
@@ -362,11 +362,11 @@ describe("client.agents", () => {
     const c = client(fetch);
     await c.agents.delete({
       agentId: "ag_0123456789abcdef",
-      includeArtifacts: false,
+      deleteArtifacts: false,
     });
     expect(calls[0].init?.method).toBe("DELETE");
     expect(calls[0].url).toBe(
-      `${BASE}/v1/agents/ag_0123456789abcdef?includeArtifacts=false`
+      `${BASE}/v1/agents/ag_0123456789abcdef?deleteArtifacts=false`
     );
   });
 

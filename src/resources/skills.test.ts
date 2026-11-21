@@ -275,7 +275,7 @@ describe("client.agent(agentId).skills", () => {
         status: "failed",
       },
     ];
-    const { fetch, calls } = createMockFetch({ body: results });
+    const { fetch, calls } = createMockFetch({ body: { data: results } });
 
     await expect(
       client(fetch)
@@ -284,7 +284,7 @@ describe("client.agent(agentId).skills", () => {
           skillId,
           to: { agentIds: [destinationAgentId, failedAgentId] },
         })
-    ).resolves.toEqual(results);
+    ).resolves.toEqual({ data: results });
     expect(calls[0].url).toBe(
       `${BASE}/v1/agents/${agentId}/skills/${skillId}/copies`
     );
@@ -320,7 +320,7 @@ describe("client.agent(agentId).skills", () => {
       "%s sends the Idempotency-Key header when the key is set",
       async (operation) => {
         const { fetch, calls } = createMockFetch({
-          body: operation === "copy" ? [] : skill,
+          body: operation === "copy" ? { data: [] } : skill,
         });
 
         await operations[operation](skillsOf(fetch), "retry-key");
@@ -335,7 +335,7 @@ describe("client.agent(agentId).skills", () => {
       "%s sends no Idempotency-Key header without a key",
       async (operation) => {
         const { fetch, calls } = createMockFetch({
-          body: operation === "copy" ? [] : skill,
+          body: operation === "copy" ? { data: [] } : skill,
         });
 
         await operations[operation](skillsOf(fetch));
@@ -357,7 +357,7 @@ describe("client.agent(agentId).skills", () => {
     });
 
     it("copy keeps the key out of the JSON body", async () => {
-      const { fetch, calls } = createMockFetch({ body: [] });
+      const { fetch, calls } = createMockFetch({ body: { data: [] } });
 
       await operations.copy(skillsOf(fetch), "key");
 

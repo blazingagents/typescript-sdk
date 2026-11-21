@@ -13,10 +13,10 @@ describe("providerModelsResponseSchema", () => {
   it("accepts the normalized models envelope", () => {
     expect(
       providerModelsResponseSchema.parse({
-        models: [{ id: "claude-3-7-sonnet" }, { id: "gpt-4.1" }],
+        data: [{ id: "claude-3-7-sonnet" }, { id: "gpt-4.1" }],
       })
     ).toEqual({
-      models: [{ id: "claude-3-7-sonnet" }, { id: "gpt-4.1" }],
+      data: [{ id: "claude-3-7-sonnet" }, { id: "gpt-4.1" }],
     });
   });
 });
@@ -39,6 +39,7 @@ const baseProvider = {
 
 const baseProviderResponse = {
   id: providerId,
+  tenantId,
   name: "OpenRouter",
   providerType: "openrouter" as const,
   baseUrl: null,
@@ -82,13 +83,19 @@ describe("providerResponseSchema", () => {
     ).not.toHaveProperty("vaultSecretId");
   });
 
-  it("strips the internal-only tenantId field", () => {
+  it("carries the Tenant ID", () => {
+    expect(providerResponseSchema.parse(baseProviderResponse).tenantId).toBe(
+      tenantId
+    );
+  });
+
+  it("requires the Tenant ID", () => {
     expect(
-      providerResponseSchema.parse({
+      providerResponseSchema.safeParse({
         ...baseProviderResponse,
-        tenantId,
-      })
-    ).not.toHaveProperty("tenantId");
+        tenantId: undefined,
+      }).success
+    ).toBe(false);
   });
 
   it("strips extra fields", () => {
@@ -125,13 +132,14 @@ describe("providerResponseSchema", () => {
 });
 
 describe("providersResponseSchema", () => {
-  it("wraps wire-shape rows under providers", () => {
+  it("wraps wire-shape rows under data", () => {
     expect(
-      providersResponseSchema.parse({ providers: [baseProviderResponse] })
+      providersResponseSchema.parse({ data: [baseProviderResponse] })
     ).toStrictEqual({
-      providers: [
+      data: [
         {
           id: providerId,
+          tenantId,
           name: "OpenRouter",
           providerType: "openrouter",
           createdAt: iso,
@@ -143,8 +151,8 @@ describe("providersResponseSchema", () => {
 
   it("strips internal fields from stored rows", () => {
     expect(
-      providersResponseSchema.parse({ providers: [baseProvider] })
-    ).not.toHaveProperty("providers.0.vaultSecretId");
+      providersResponseSchema.parse({ data: [baseProvider] })
+    ).not.toHaveProperty("data.0.vaultSecretId");
   });
 });
 

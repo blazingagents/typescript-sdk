@@ -15,7 +15,7 @@ const message = {
   parts: [{ type: "text" as const, text: "Compare costs" }],
 };
 const activity = { state: "running", turnId };
-const data = {
+const receipt = {
   requestId: "draft/one?two#three",
   sequence: 1,
   message,
@@ -25,7 +25,7 @@ const data = {
   updatedAt: "2026-10-04T10:00:00Z",
   reason: null,
 };
-const response = { data, activity };
+const response = { input: receipt, activity };
 function client(fetch: ReturnType<typeof createMockFetch>["fetch"]) {
   return new BlazingAgents({ apiKey: "ba_test", baseUrl: base, fetch });
 }
@@ -37,7 +37,7 @@ describe("durable session inputs", () => {
     await client(fetch).sessions.submitInput({
       ...target,
       agentId,
-      requestId: data.requestId,
+      requestId: receipt.requestId,
       message,
     });
     expect(calls[0].url).toBe(
@@ -48,13 +48,13 @@ describe("durable session inputs", () => {
   it("preserves request identity and payload across retries and user scoping", async () => {
     const { fetch, calls } = createMockFetch({ body: response, status: 202 });
     const scoped = client(fetch).forUser("alice");
-    const input = { ...target, requestId: data.requestId, message };
+    const input = { ...target, requestId: receipt.requestId, message };
     await expect(scoped.sessions.submitInput(input)).resolves.toEqual(response);
     await scoped.sessions.submitInput(input);
     expect(calls).toHaveLength(2);
     expect(calls.map((call) => call.init?.body)).toEqual([
-      JSON.stringify({ requestId: data.requestId, message }),
-      JSON.stringify({ requestId: data.requestId, message }),
+      JSON.stringify({ requestId: receipt.requestId, message }),
+      JSON.stringify({ requestId: receipt.requestId, message }),
     ]);
     expect(calls[0].url).toBe(`${path}/inputs`);
     expect(calls[0].init?.method).toBe("POST");
@@ -68,12 +68,12 @@ describe("durable session inputs", () => {
     const abortSignal = new AbortController().signal;
     await client(fetch).sessions.submitInput({
       ...target,
-      requestId: data.requestId,
+      requestId: receipt.requestId,
       message,
       abortSignal,
     });
     expect(calls[0].init?.body).toBe(
-      JSON.stringify({ requestId: data.requestId, message })
+      JSON.stringify({ requestId: receipt.requestId, message })
     );
     expect(calls[0].init?.signal).toBe(abortSignal);
   });
@@ -81,8 +81,8 @@ describe("durable session inputs", () => {
   it("recovers ordered receipts with a pagination cursor and background activity", async () => {
     const body = {
       data: [
-        data,
-        { ...data, requestId: "second", sequence: 2, state: "not_placed" },
+        receipt,
+        { ...receipt, requestId: "second", sequence: 2, state: "not_placed" },
       ],
       nextCursor: "next",
       activity,
@@ -128,21 +128,32 @@ describe("durable session inputs", () => {
     await expect(
       client(fetch).sessions.submitInput({
         ...target,
-        requestId: data.requestId,
+        requestId: receipt.requestId,
         message,
       })
     ).rejects.toMatchObject({ code, status: 409 });
     expect(calls).toHaveLength(1);
   });
 
+  it("rejects a receipt still carried under data", async () => {
+    const { fetch } = createMockFetch({ body: { data: receipt, activity } });
+    await expect(
+      client(fetch).sessions.submitInput({
+        ...target,
+        requestId: receipt.requestId,
+        message,
+      })
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
   it("rejects malformed receipt responses", async () => {
     const { fetch } = createMockFetch({
-      body: { data: { ...data, sequence: -1 }, activity },
+      body: { input: { ...receipt, sequence: -1 }, activity },
     });
     await expect(
       client(fetch).sessions.submitInput({
         ...target,
-        requestId: data.requestId,
+        requestId: receipt.requestId,
         message,
       })
     ).rejects.toMatchObject({ code: "invalid_response" });

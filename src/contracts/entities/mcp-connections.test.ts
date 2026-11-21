@@ -77,6 +77,7 @@ describe("MCP connection schemas", () => {
   it("parses a public response and response envelope", () => {
     const response = {
       id: connectionId,
+      tenantId,
       name: "Docs server",
       url: "https://mcp.example.com/tools",
       authType: "none" as const,
@@ -98,8 +99,14 @@ describe("MCP connection schemas", () => {
       }).success
     ).toBe(false);
     expect(
-      mcpConnectionsResponseSchema.parse({ mcpConnections: [response] })
-    ).toEqual({ mcpConnections: [response] });
+      mcpConnectionResponseSchema.safeParse({
+        ...response,
+        tenantId: undefined,
+      }).success
+    ).toBe(false);
+    expect(mcpConnectionsResponseSchema.parse({ data: [response] })).toEqual({
+      data: [response],
+    });
   });
 
   it("parses strict typed live-test outcomes", () => {
@@ -156,6 +163,7 @@ describe("MCP connection schemas", () => {
 
     const connection = mcpConnectionResponseSchema.parse({
       id: connectionId,
+      tenantId,
       name: baseConnection.name,
       url: baseConnection.url,
       authType: baseConnection.authType,
@@ -470,9 +478,9 @@ describe("MCP connection schemas", () => {
     };
 
     expect(mcpAttachmentResponseSchema.parse(attachment)).toEqual(attachment);
-    expect(
-      mcpAttachmentsResponseSchema.parse({ mcpAttachments: [attachment] })
-    ).toEqual({ mcpAttachments: [attachment] });
+    expect(mcpAttachmentsResponseSchema.parse({ data: [attachment] })).toEqual({
+      data: [attachment],
+    });
     expect(
       updateMcpAttachmentBodySchema.parse({ forwardUserId: false })
     ).toEqual({ forwardUserId: false });

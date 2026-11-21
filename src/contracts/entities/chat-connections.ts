@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listResponseSchema } from "../api.ts";
 import {
   agentIdSchema,
   chatConnectionIdSchema,
@@ -191,9 +192,8 @@ export type UpdateChatConnectionBody = z.output<
   typeof updateChatConnectionBodySchema
 >;
 
-export const chatConnectionsResponseSchema = z
-  .object({ chatConnections: chatConnectionSchema.array() })
-  .strip();
+export const chatConnectionsResponseSchema =
+  listResponseSchema(chatConnectionSchema);
 export type ChatConnectionsResponse = z.output<
   typeof chatConnectionsResponseSchema
 >;

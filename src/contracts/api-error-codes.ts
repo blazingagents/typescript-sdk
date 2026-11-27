@@ -53,6 +53,7 @@ export const apiErrorCodes = [
   "session_busy",
   "session_turn_unresponsive",
   "session_fork_unavailable",
+  "session_history_too_large",
   "session_fork_deleted",
   "message_id_conflict",
   "session_version_mismatch",

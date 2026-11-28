@@ -17,6 +17,8 @@ const usageResponse = {
       outputTokens: 5,
       requestCount: 1,
       durationMs: 100,
+      costUsd: 0.0123,
+      unpricedTurnCount: 2,
     },
   ],
   totals: {
@@ -24,6 +26,8 @@ const usageResponse = {
     outputTokens: 5,
     requestCount: 1,
     durationMs: 100,
+    costUsd: 0.0123,
+    unpricedTurnCount: 2,
   },
 };
 
@@ -51,6 +55,8 @@ describe("client.usage", () => {
       outputTokens: 0,
       requestCount: 0,
       durationMs: 0,
+      costUsd: 0,
+      unpricedTurnCount: 0,
     };
     const response = { data: [{ sessionId, totals }] };
     const { fetch, calls } = createMockFetch({ body: response });
@@ -80,6 +86,10 @@ describe("client.usage", () => {
       limit: 50,
     });
     expect(result.totals.requestCount).toBe(1);
+    expect(result.totals.costUsd).toBe(0.0123);
+    expect(result.totals.unpricedTurnCount).toBe(2);
+    expect(result.buckets[0].costUsd).toBe(0.0123);
+    expect(result.buckets[0].unpricedTurnCount).toBe(2);
     expect(calls[0].url).toContain("from=2026-01-01");
     expect(calls[0].url).toContain("to=2026-01-31");
     expect(calls[0].url).toContain("agentId=ag_0123456789abcdef");

@@ -78,6 +78,22 @@ export const usageOverviewQuerySchema = z
   .strict()
   .superRefine(validateUsageRange);
 
+const usageCostFields = {
+  costUsd: z
+    .number()
+    .nonnegative()
+    .describe(
+      "Estimated US-dollar model cost of the priced Turns: the amount the provider billed when it reported one, else the model catalogue's price for the token counts. Excludes platform compute, storage, Workspace and network charges. Turns counted in `unpricedTurnCount` add nothing to it."
+    ),
+  unpricedTurnCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe(
+      "Turns that used tokens but have no model cost, such as a model the catalogue does not price; `costUsd` leaves them out, so a nonzero count means `costUsd` is a lower bound."
+    ),
+};
+
 /**
  * Usage bucket — one row per group. `sessionId` is the platform session id
  * (`ss_…`) or `null` for the `''` stateless sentinel (mapped at the read
@@ -98,6 +114,7 @@ export const usageBucketSchema = z
     outputTokens: z.number().int().nonnegative(),
     requestCount: z.number().int().nonnegative(),
     durationMs: z.number().int().nonnegative(),
+    ...usageCostFields,
   })
   .strip();
 
@@ -107,6 +124,7 @@ export const usageTotalsSchema = z
     outputTokens: z.number().int().nonnegative(),
     requestCount: z.number().int().nonnegative(),
     durationMs: z.number().int().nonnegative(),
+    ...usageCostFields,
   })
   .strip();
 

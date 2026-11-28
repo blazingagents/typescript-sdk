@@ -141,6 +141,8 @@ describe("installed SDK contracts", () => {
         outputTokens: 0,
         requestCount: 0,
         durationMs: 0,
+        costUsd: 0,
+        unpricedTurnCount: 0,
       },
       daily: [],
       byAgent: [],

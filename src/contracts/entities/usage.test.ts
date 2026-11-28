@@ -13,6 +13,8 @@ const totals = {
   outputTokens: 5,
   requestCount: 1,
   durationMs: 100,
+  costUsd: 0.0123,
+  unpricedTurnCount: 2,
 };
 
 const bucket = {
@@ -24,6 +26,12 @@ const bucket = {
   model: null,
   ...totals,
 };
+
+function without(value: Record<string, unknown>, key: string) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([name]) => name !== key)
+  );
+}
 
 const agentId = "ag_xxxxxxxxxxxxxxxx";
 const sessionId = "ss_xxxxxxxxxxxxxxxx";
@@ -60,6 +68,8 @@ describe("session usage", () => {
               outputTokens: 0,
               requestCount: 0,
               durationMs: 0,
+              costUsd: 0,
+              unpricedTurnCount: 0,
             },
           },
         ],
@@ -225,11 +235,56 @@ describe("usageResponseSchema", () => {
             outputTokens: 50,
             requestCount: 1,
             durationMs: 1234,
+            costUsd: 0.5,
+            unpricedTurnCount: 0,
           },
         ],
         totals,
       }).success
     ).toBe(true);
+  });
+
+  it("carries the model cost and the unpriced Turn count", () => {
+    const parsed = usageResponseSchema.parse({
+      buckets: [bucket],
+      totals,
+    });
+    expect(parsed.totals.costUsd).toBe(0.0123);
+    expect(parsed.totals.unpricedTurnCount).toBe(2);
+    expect(parsed.buckets[0].costUsd).toBe(0.0123);
+    expect(parsed.buckets[0].unpricedTurnCount).toBe(2);
+  });
+
+  it("requires both cost fields on a bucket and on the totals", () => {
+    for (const missing of ["costUsd", "unpricedTurnCount"]) {
+      expect(
+        usageResponseSchema.safeParse({
+          buckets: [],
+          totals: without(totals, missing),
+        }).success
+      ).toBe(false);
+      expect(
+        usageResponseSchema.safeParse({
+          buckets: [without(bucket, missing)],
+          totals,
+        }).success
+      ).toBe(false);
+    }
+  });
+
+  it("rejects a negative cost and a fractional or negative unpriced Turn count", () => {
+    for (const invalid of [
+      { costUsd: -0.01 },
+      { unpricedTurnCount: 1.5 },
+      { unpricedTurnCount: -1 },
+    ]) {
+      expect(
+        usageResponseSchema.safeParse({
+          buckets: [],
+          totals: { ...totals, ...invalid },
+        }).success
+      ).toBe(false);
+    }
   });
 
   it("accepts all-null group keys for a totals-only bucket", () => {

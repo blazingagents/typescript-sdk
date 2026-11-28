@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Usage buckets and totals now carry `costUsd` and `unpricedTurnCount`.
+
 ## 0.57.1
 
 ### Fixed

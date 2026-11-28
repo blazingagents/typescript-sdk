@@ -125,25 +125,7 @@ const models: Record<string, z.ZodType> = {
  * Field differences the SDK keeps on purpose, keyed by the path the walk
  * reports, with the reason. Delete each entry once the spec and the SDK agree.
  */
-const COST_FIELDS_AHEAD_OF_SPEC =
-  "Usage buckets and totals carry costUsd and unpricedTurnCount before the platform contract states them.";
-const allowedDifferences: Record<string, string> = Object.fromEntries(
-  [
-    "Usage.buckets[]",
-    "Usage.totals",
-    "UsageOverview.totals",
-    "UsageOverview.daily[]",
-    "UsageOverview.byAgent[]",
-    "UsageOverview.byUser[]",
-    "UsageOverview.byModel[]",
-    "SessionUsage.data[].totals",
-  ].flatMap((path) =>
-    ["costUsd", "unpricedTurnCount"].map((field) => [
-      `${path}.${field}: in the SDK, missing from the spec`,
-      COST_FIELDS_AHEAD_OF_SPEC,
-    ])
-  )
-);
+const allowedDifferences: Record<string, string> = {};
 
 type Root = object;
 
